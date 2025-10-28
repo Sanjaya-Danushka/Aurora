@@ -11,87 +11,97 @@ from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread
 from PyQt6.QtGui import QColor, QFont, QIcon
 from PyQt6.QtCore import QSize
 
-# Modern Dark Theme
+# Modern Glassmorphism Theme
 DARK_STYLESHEET = """
 QMainWindow {
-    background-color: #1a1a1a;
+    background-color: #0f0f0f;
 }
 
 QWidget {
-    background-color: #1a1a1a;
+    background-color: #0f0f0f;
     color: #e8e8e8;
 }
 
 QLineEdit {
-    background-color: #252525;
+    background-color: rgba(255, 255, 255, 0.05);
     color: #e8e8e8;
-    border: 2px solid #3a3a3a;
-    border-radius: 6px;
-    padding: 8px;
-    font-size: 11px;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-family: 'Segoe UI', 'Ubuntu', sans-serif;
 }
 
 QLineEdit:focus {
-    border: 2px solid #00d4ff;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(0, 212, 255, 0.6);
 }
 
 QPushButton {
-    background-color: #2d2d2d;
+    background-color: rgba(255, 255, 255, 0.08);
     color: #e8e8e8;
-    border: none;
-    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
     padding: 12px 24px;
-    font-weight: bold;
+    font-weight: 600;
     font-size: 13px;
     font-family: 'Segoe UI', 'Ubuntu', sans-serif;
 }
 
 QPushButton:hover {
-    background-color: #3a3a3a;
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 QPushButton:pressed {
-    background-color: #4a4a4a;
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
 QPushButton#installBtn {
-    background-color: #10b981;
-    color: #ffffff;
-    font-weight: bold;
+    background-color: rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #10b981;
+    font-weight: 600;
     font-size: 14px;
 }
 
 QPushButton#installBtn:hover {
-    background-color: #059669;
+    background-color: rgba(16, 185, 129, 0.3);
+    border: 1px solid rgba(16, 185, 129, 0.6);
 }
 
 QPushButton#removeBtn {
-    background-color: #ef4444;
-    color: #ffffff;
-    font-weight: bold;
+    background-color: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+    font-weight: 600;
     font-size: 14px;
 }
 
 QPushButton#removeBtn:hover {
-    background-color: #dc2626;
+    background-color: rgba(239, 68, 68, 0.3);
+    border: 1px solid rgba(239, 68, 68, 0.6);
 }
 
 QPushButton#localBtn {
-    background-color: #00d4ff;
-    color: #1a1a1a;
-    font-weight: bold;
+    background-color: rgba(0, 212, 255, 0.2);
+    border: 1px solid rgba(0, 212, 255, 0.4);
+    color: #00d4ff;
+    font-weight: 600;
     font-size: 14px;
 }
 
 QPushButton#localBtn:hover {
-    background-color: #00e6ff;
+    background-color: rgba(0, 212, 255, 0.3);
+    border: 1px solid rgba(0, 212, 255, 0.6);
 }
 
 QTableWidget {
-    background-color: #252525;
-    alternate-background-color: #1f2937;
-    gridline-color: #3a3a3a;
-    border: none;
+    background-color: rgba(255, 255, 255, 0.02);
+    alternate-background-color: rgba(255, 255, 255, 0.04);
+    gridline-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
 }
 
 QTableWidget::item {
@@ -100,25 +110,26 @@ QTableWidget::item {
 }
 
 QTableWidget::item:selected {
-    background-color: #00d4ff;
-    color: #1a1a1a;
+    background-color: rgba(0, 212, 255, 0.3);
+    color: #00d4ff;
 }
 
 QHeaderView::section {
-    background-color: #2d2d2d;
+    background-color: rgba(255, 255, 255, 0.05);
     color: #00d4ff;
-    padding: 8px;
+    padding: 10px;
     border: none;
-    font-weight: bold;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 QTextEdit {
-    background-color: #252525;
+    background-color: rgba(255, 255, 255, 0.02);
     color: #e8e8e8;
-    border: 2px solid #3a3a3a;
-    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
     font-family: 'Courier New';
-    font-size: 10px;
+    font-size: 11px;
 }
 
 QLabel {
@@ -126,20 +137,28 @@ QLabel {
 }
 
 QLabel#headerLabel {
-    color: #00d4ff;
+    color: #ffffff;
     font-size: 20px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 QLabel#sectionLabel {
     color: #00d4ff;
     font-size: 12px;
-    font-weight: bold;
+    font-weight: 600;
 }
 
 QFrame {
-    background-color: #1a1a1a;
+    background-color: transparent;
     border: none;
+}
+
+QSplitter::handle {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+QSplitter::handle:hover {
+    background-color: rgba(0, 212, 255, 0.2);
 }
 """
 
@@ -185,13 +204,41 @@ class CommandWorker(QObject):
 class ArchPkgManagerPyQt(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Arch Linux Package Manager")
+        self.setWindowTitle("Aurora - Arch Package Manager")
         self.setGeometry(100, 100, 1200, 800)
         self.setStyleSheet(DARK_STYLESHEET)
+        
+        # Set lightweight icon
+        self.set_minimal_icon()
         
         self.updating = False
         self.setup_ui()
         self.center_window()
+    
+    def set_minimal_icon(self):
+        """Set minimal Aurora icon - lightweight, no heavy graphics"""
+        from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont
+        pixmap = QPixmap(64, 64)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Simple circle background
+        painter.setBrush(QColor(0, 212, 255))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(4, 4, 56, 56)
+        
+        # Letter A
+        font = QFont("Segoe UI", 32, QFont.Weight.Bold)
+        painter.setFont(font)
+        painter.setPen(QColor(26, 26, 26))
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "A")
+        
+        painter.end()
+        
+        icon = QIcon(pixmap)
+        self.setWindowIcon(icon)
     
     def center_window(self):
         screen = QApplication.primaryScreen()
@@ -281,15 +328,21 @@ class ArchPkgManagerPyQt(QMainWindow):
     
     def create_header(self):
         header = QFrame()
-        header.setStyleSheet("background-color: #00d4ff;")
+        header.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+                    stop:0 #00d4ff, stop:1 #0099cc);
+                border: none;
+            }
+        """)
         header.setFixedHeight(70)
         
         layout = QVBoxLayout(header)
         layout.setContentsMargins(16, 0, 16, 0)
         
-        title = QLabel("📦  Arch Linux Package Manager")
+        title = QLabel("✨ Aurora - Arch Package Manager")
         title.setObjectName("headerLabel")
-        title.setStyleSheet("color: #1a1a1a; font-size: 20px; font-weight: bold;")
+        title.setStyleSheet("color: #ffffff; font-size: 20px; font-weight: bold;")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         
         return header

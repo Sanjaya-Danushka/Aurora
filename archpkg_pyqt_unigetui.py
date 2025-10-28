@@ -260,6 +260,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.current_view = "updates"
         self.updating = False
         self.all_packages = []
+        self.search_results = []
         self.packages_per_page = 10
         self.current_page = 0
         self.loader_thread = None
@@ -576,6 +577,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.header_label.setText(header_text)
         self.header_info.setText(info_text)
         
+        self.update_table_columns(view_id)
+        
         # Load data for view
         if view_id == "updates":
             self.load_updates()
@@ -587,6 +590,26 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         elif view_id == "bundles":
             self.package_table.setRowCount(0)
             self.log("Package bundles feature")
+    
+    def update_table_columns(self, view_id):
+        if view_id == "installed":
+            self.package_table.setColumnCount(6)
+            self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Source", "Status"])
+            self.package_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            self.package_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            self.package_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+            self.package_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+            self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+            self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        else:
+            self.package_table.setColumnCount(6)
+            self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "New Version", "Source"])
+            self.package_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            self.package_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            self.package_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+            self.package_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+            self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+            self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
     
     def load_updates(self):
         self.log("Checking for updates...")
@@ -624,16 +647,51 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             try:
                 result = subprocess.run(["pacman", "-Q"], capture_output=True, text=True, timeout=60)
                 packages = []
+                updates = {}
+                
                 if result.returncode == 0 and result.stdout:
-                    for line in result.stdout.strip().split('\n'):
+                    lines = result.stdout.strip().split('\n')
+                    for i, line in enumerate(lines):
                         if line.strip():
                             parts = line.split()
                             if len(parts) >= 2:
                                 packages.append({
                                     'name': parts[0],
                                     'version': parts[1],
-                                    'id': parts[0]
+                                    'id': parts[0],
+                                    'source': 'pacman',
+                                    'has_update': False
                                 })
+                        if i % 100 == 0 and i > 0:
+                            import time
+                            time.sleep(0.01)
+                
+                result_updates = subprocess.run(["pacman", "-Qu"], capture_output=True, text=True, timeout=30)
+                if result_updates.returncode == 0 and result_updates.stdout:
+                    for line in result_updates.stdout.strip().split('\n'):
+                        if line.strip():
+                            parts = line.split()
+                            if len(parts) >= 2:
+                                updates[parts[0]] = parts[2] if len(parts) > 2 else parts[1]
+                
+                for pkg in packages:
+                    if pkg['name'] in updates:
+                        pkg['has_update'] = True
+                        pkg['new_version'] = updates[pkg['name']]
+                
+                result_aur = subprocess.run(["pacman", "-Qm"], capture_output=True, text=True, timeout=30)
+                aur_packages = set()
+                if result_aur.returncode == 0 and result_aur.stdout:
+                    for line in result_aur.stdout.strip().split('\n'):
+                        if line.strip():
+                            parts = line.split()
+                            if len(parts) >= 1:
+                                aur_packages.add(parts[0])
+                
+                for pkg in packages:
+                    if pkg['name'] in aur_packages:
+                        pkg['source'] = 'AUR'
+                
                 self.packages_ready.emit(packages)
             except Exception as e:
                 self.log(f"Error: {str(e)}")
@@ -649,12 +707,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.log(f"Loaded {len(packages)} packages total. Showing first 10...")
     
     def display_page(self):
+        self.package_table.setUpdatesEnabled(False)
         start = self.current_page * self.packages_per_page
         end = start + self.packages_per_page
         page_packages = self.all_packages[start:end]
         
         for pkg in page_packages:
-            self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg['version'], "pacman")
+            if self.current_view == "installed":
+                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'), pkg)
+            else:
+                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'))
+        
+        self.package_table.setUpdatesEnabled(True)
         
         has_more = end < len(self.all_packages)
         self.load_more_btn.setVisible(has_more)
@@ -666,20 +730,31 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.current_page += 1
         start = self.current_page * self.packages_per_page
         end = start + self.packages_per_page
-        page_packages = self.all_packages[start:end]
         
+        if hasattr(self, 'search_results') and self.search_results:
+            page_packages = self.search_results[start:end]
+            total = len(self.search_results)
+        else:
+            page_packages = self.all_packages[start:end]
+            total = len(self.all_packages)
+        
+        self.package_table.setUpdatesEnabled(False)
         for pkg in page_packages:
-            self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg['version'], "pacman")
+            if self.current_view == "installed":
+                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'), pkg)
+            else:
+                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'))
+        self.package_table.setUpdatesEnabled(True)
         
-        has_more = end < len(self.all_packages)
+        has_more = end < total
         self.load_more_btn.setVisible(has_more)
         if has_more:
-            remaining = len(self.all_packages) - end
+            remaining = total - end
             self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
         else:
-            self.log("All packages loaded")
+            self.log("All results loaded")
     
-    def add_package_row(self, name, pkg_id, version, new_version, source):
+    def add_package_row(self, name, pkg_id, version, new_version, source, pkg_data=None):
         row = self.package_table.rowCount()
         self.package_table.insertRow(row)
         
@@ -690,16 +765,52 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.package_table.setItem(row, 1, QTableWidgetItem(name))
         self.package_table.setItem(row, 2, QTableWidgetItem(pkg_id))
         self.package_table.setItem(row, 3, QTableWidgetItem(version))
-        self.package_table.setItem(row, 4, QTableWidgetItem(new_version))
-        self.package_table.setItem(row, 5, QTableWidgetItem(source))
+        
+        if self.current_view == "installed" and pkg_data:
+            self.package_table.setItem(row, 4, QTableWidgetItem(pkg_data.get('source', 'pacman')))
+            status = "⬆️ Update available" if pkg_data.get('has_update') else "✓ Up to date"
+            status_item = QTableWidgetItem(status)
+            if pkg_data.get('has_update'):
+                status_item.setForeground(QColor(255, 165, 0))
+            else:
+                status_item.setForeground(QColor(16, 185, 129))
+            self.package_table.setItem(row, 5, status_item)
+        elif self.package_table.columnCount() > 4:
+            self.package_table.setItem(row, 4, QTableWidgetItem(new_version))
+            self.package_table.setItem(row, 5, QTableWidgetItem(source))
     
     def filter_packages(self):
         query = self.search_input.text().lower()
-        for row in range(self.package_table.rowCount()):
-            name_item = self.package_table.item(row, 1)
-            if name_item:
-                visible = query in name_item.text().lower()
-                self.package_table.setRowHidden(row, not visible)
+        
+        if not query:
+            self.current_page = 0
+            self.package_table.setRowCount(0)
+            self.display_page()
+            return
+        
+        self.search_results = [pkg for pkg in self.all_packages if query in pkg['name'].lower()]
+        self.current_page = 0
+        
+        self.package_table.setUpdatesEnabled(False)
+        self.package_table.setRowCount(0)
+        
+        start = 0
+        end = min(10, len(self.search_results))
+        for pkg in self.search_results[start:end]:
+            if self.current_view == "installed":
+                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'), pkg)
+            else:
+                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'))
+        
+        self.package_table.setUpdatesEnabled(True)
+        
+        has_more = end < len(self.search_results)
+        self.load_more_btn.setVisible(has_more)
+        if has_more:
+            remaining = len(self.search_results) - end
+            self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
+        
+        self.log(f"Found {len(self.search_results)} packages matching '{query}'. Showing first 10...")
     
     def refresh_packages(self):
         if self.current_view == "updates":

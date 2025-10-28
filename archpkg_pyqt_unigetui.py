@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
                              QLabel, QFileDialog, QMessageBox, QHeaderView, QFrame, QSplitter,
                              QScrollArea, QCheckBox, QListWidget, QListWidgetItem)
-from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize
+from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer
 from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
 
 DARK_STYLESHEET = """
@@ -250,6 +250,7 @@ class CommandWorker(QObject):
 class ArchPkgManagerUniGetUI(QMainWindow):
     packages_ready = pyqtSignal(list)
     discover_results_ready = pyqtSignal(list)
+    search_timer = QTimer()
     
     def __init__(self):
         super().__init__()
@@ -269,7 +270,27 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.discover_results_ready.connect(self.display_discover_results)
         self.setup_ui()
         self.center_window()
-    
+        
+        # Debounce search input
+        self.search_timer.setInterval(300)
+        self.search_timer.setSingleShot(True)
+        self.search_timer.timeout.connect(self.perform_search)
+        self.search_input.textChanged.connect(self.on_search_text_changed)
+
+    def on_search_text_changed(self):
+        self.search_timer.start()
+
+    def perform_search(self):
+        query = self.search_input.text().strip()
+        if len(query) < 3:
+            self.package_table.setRowCount(0)
+            self.log("Type a package name to search in AUR and official repositories")
+            return
+        if self.current_view == "discover":
+            self.search_discover_packages(query)
+        else:
+            self.filter_packages()
+
     def set_minimal_icon(self):
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.GlobalColor.transparent)
@@ -424,7 +445,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         search_input.setPlaceholderText("Search for packages")
         search_input.setFixedWidth(250)
         search_input.setFixedHeight(36)
-        search_input.textChanged.connect(self.filter_packages)
         self.search_input = search_input
         layout.addWidget(search_input)
         
@@ -928,7 +948,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.log(f"Search error: {str(e)}")
         
         Thread(target=search_in_thread, daemon=True).start()
-    
+
     def display_discover_results(self, packages=None):
         if packages is not None:
             self.search_results = packages
@@ -963,7 +983,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
         
         self.log(f"Found {len(filtered)} packages")
-    
+
     def refresh_packages(self):
         if self.current_view == "updates":
             self.load_updates()
@@ -1049,7 +1069,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
         
         self.log(f"Showing {len(filtered[:10])} of {len(filtered)} packages")
-    
+
     def select_all_sources(self):
         for checkbox in self.source_checkboxes.values():
             checkbox.setChecked(True)

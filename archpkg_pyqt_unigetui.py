@@ -249,6 +249,7 @@ class CommandWorker(QObject):
 
 class ArchPkgManagerUniGetUI(QMainWindow):
     packages_ready = pyqtSignal(list)
+    discover_results_ready = pyqtSignal(list)
     
     def __init__(self):
         super().__init__()
@@ -265,6 +266,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.current_page = 0
         self.loader_thread = None
         self.packages_ready.connect(self.on_packages_loaded)
+        self.discover_results_ready.connect(self.display_discover_results)
         self.setup_ui()
         self.center_window()
     
@@ -455,16 +457,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         sources_label.setObjectName("sectionLabel")
         self.sources_layout.addWidget(sources_label)
         
-        select_all_btn = QPushButton("Select all")
-        select_all_btn.setFixedHeight(28)
-        select_all_btn.clicked.connect(self.select_all_sources)
-        self.sources_layout.addWidget(select_all_btn)
-        
-        clear_btn = QPushButton("Clear selection")
-        clear_btn.setFixedHeight(28)
-        clear_btn.clicked.connect(self.clear_sources)
-        self.sources_layout.addWidget(clear_btn)
-        
         sources = ["Scoop", "Chocolatey", "Winget", "PowerShell", "Pip"]
         self.source_checkboxes = {}
         for source in sources:
@@ -478,19 +470,24 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.addSpacing(12)
         
         # Filters Section
+        self.filters_section = QWidget()
+        filters_layout = QVBoxLayout(self.filters_section)
+        filters_layout.setContentsMargins(0, 0, 0, 0)
+        filters_layout.setSpacing(8)
+        
         filters_label = QLabel("Filters")
         filters_label.setObjectName("sectionLabel")
-        layout.addWidget(filters_label)
+        filters_layout.addWidget(filters_label)
         
         filter_options = ["Updates available", "Installed"]
         self.filter_checkboxes = {}
         for option in filter_options:
             checkbox = QCheckBox(option)
             checkbox.setChecked(True)
-            checkbox.stateChanged.connect(self.apply_filters)
             self.filter_checkboxes[option] = checkbox
-            layout.addWidget(checkbox)
+            filters_layout.addWidget(checkbox)
         
+        layout.addWidget(self.filters_section)
         layout.addStretch()
         
         return panel
@@ -594,7 +591,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_installed_packages()
         elif view_id == "discover":
             self.package_table.setRowCount(0)
-            self.log("Use search to discover packages")
+            self.log("Type a package name to search in AUR and official repositories")
         elif view_id == "bundles":
             self.package_table.setRowCount(0)
             self.log("Package bundles feature")
@@ -602,8 +599,33 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def update_filters_panel(self, view_id):
         if view_id == "installed":
             self.sources_section.setVisible(False)
+            self.filters_section.setVisible(True)
+        elif view_id == "discover":
+            self.sources_section.setVisible(True)
+            self.filters_section.setVisible(False)
+            self.update_discover_sources()
         else:
             self.sources_section.setVisible(True)
+            self.filters_section.setVisible(True)
+    
+    def update_discover_sources(self):
+        while self.sources_layout.count() > 1:
+            item = self.sources_layout.takeAt(1)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        sources = ["pacman", "AUR"]
+        self.source_checkboxes = {}
+        for source in sources:
+            checkbox = QCheckBox(source)
+            checkbox.setChecked(True)
+            checkbox.stateChanged.connect(self.apply_source_filter)
+            self.source_checkboxes[source] = checkbox
+            self.sources_layout.addWidget(checkbox)
+    
+    def apply_source_filter(self):
+        if self.current_view == "discover" and self.search_results:
+            self.display_discover_results()
     
     def update_table_columns(self, view_id):
         if view_id == "installed":
@@ -615,6 +637,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        elif view_id == "discover":
+            self.package_table.setColumnCount(7)
+            self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Description", "Source", "Tags"])
+            self.package_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            self.package_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            self.package_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+            self.package_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+            self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+            self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+            self.package_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
         else:
             self.package_table.setColumnCount(6)
             self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "New Version", "Source"])
@@ -768,6 +800,21 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         else:
             self.log("All results loaded")
     
+    def add_discover_row(self, pkg):
+        row = self.package_table.rowCount()
+        self.package_table.insertRow(row)
+        
+        checkbox = QCheckBox()
+        checkbox.setChecked(True)
+        self.package_table.setCellWidget(row, 0, checkbox)
+        
+        self.package_table.setItem(row, 1, QTableWidgetItem(pkg['name']))
+        self.package_table.setItem(row, 2, QTableWidgetItem(pkg['id']))
+        self.package_table.setItem(row, 3, QTableWidgetItem(pkg['version']))
+        self.package_table.setItem(row, 4, QTableWidgetItem(pkg.get('description', '')))
+        self.package_table.setItem(row, 5, QTableWidgetItem(pkg['source']))
+        self.package_table.setItem(row, 6, QTableWidgetItem(pkg.get('tags', '')))
+    
     def add_package_row(self, name, pkg_id, version, new_version, source, pkg_data=None):
         row = self.package_table.rowCount()
         self.package_table.insertRow(row)
@@ -799,32 +846,123 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if not query:
             self.current_page = 0
             self.package_table.setRowCount(0)
-            self.display_page()
+            if self.current_view != "discover":
+                self.display_page()
             return
         
-        self.search_results = [pkg for pkg in self.all_packages if query in pkg['name'].lower()]
-        self.current_page = 0
+        if self.current_view == "discover":
+            self.search_discover_packages(query)
+        else:
+            self.search_results = [pkg for pkg in self.all_packages if query in pkg['name'].lower()]
+            self.current_page = 0
+            
+            self.package_table.setUpdatesEnabled(False)
+            self.package_table.setRowCount(0)
+            
+            start = 0
+            end = min(10, len(self.search_results))
+            for pkg in self.search_results[start:end]:
+                if self.current_view == "installed":
+                    self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'), pkg)
+                else:
+                    self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'))
+            
+            self.package_table.setUpdatesEnabled(True)
+            
+            has_more = end < len(self.search_results)
+            self.load_more_btn.setVisible(has_more)
+            if has_more:
+                remaining = len(self.search_results) - end
+                self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
+            
+            self.log(f"Found {len(self.search_results)} packages matching '{query}'. Showing first 10...")
+    
+    def search_discover_packages(self, query):
+        self.log(f"Searching for '{query}' in AUR and official repositories...")
+        self.package_table.setRowCount(0)
+        self.search_results = []
+        
+        def search_in_thread():
+            try:
+                packages = []
+                
+                result = subprocess.run(["pacman", "-Ss", query], capture_output=True, text=True, timeout=30)
+                if result.returncode == 0 and result.stdout:
+                    lines = result.stdout.strip().split('\n')
+                    i = 0
+                    while i < len(lines):
+                        if lines[i].strip() and '/' in lines[i]:
+                            parts = lines[i].split()
+                            if len(parts) >= 2:
+                                name = parts[0].split('/')[-1]
+                                version = parts[1]
+                                packages.append({
+                                    'name': name,
+                                    'version': version,
+                                    'id': name,
+                                    'source': 'pacman',
+                                    'has_update': False
+                                })
+                        i += 1
+                
+                result_aur = subprocess.run(["curl", "-s", f"https://aur.archlinux.org/rpc/?v=5&type=search&by=name&arg={query}"], capture_output=True, text=True, timeout=10)
+                if result_aur.returncode == 0:
+                    try:
+                        data = json.loads(result_aur.stdout)
+                        if data.get('results'):
+                            for pkg in data['results']:
+                                packages.append({
+                                    'name': pkg.get('Name', ''),
+                                    'version': pkg.get('Version', ''),
+                                    'id': pkg.get('Name', ''),
+                                    'source': 'AUR',
+                                    'has_update': False,
+                                    'description': pkg.get('Description', ''),
+                                    'tags': ', '.join(pkg.get('Keywords', []))
+                                })
+                    except:
+                        pass
+                
+                self.discover_results_ready.emit(packages)
+            except Exception as e:
+                self.log(f"Search error: {str(e)}")
+        
+        Thread(target=search_in_thread, daemon=True).start()
+    
+    def display_discover_results(self, packages=None):
+        if packages is not None:
+            self.search_results = packages
+        
+        show_pacman = self.source_checkboxes.get("pacman", QCheckBox()).isChecked() if isinstance(self.source_checkboxes.get("pacman"), QCheckBox) else True
+        show_aur = self.source_checkboxes.get("AUR", QCheckBox()).isChecked() if isinstance(self.source_checkboxes.get("AUR"), QCheckBox) else True
+        
+        filtered = []
+        for pkg in self.search_results:
+            if pkg['source'] == 'pacman' and show_pacman:
+                filtered.append(pkg)
+            elif pkg['source'] == 'AUR' and show_aur:
+                filtered.append(pkg)
         
         self.package_table.setUpdatesEnabled(False)
         self.package_table.setRowCount(0)
         
         start = 0
-        end = min(10, len(self.search_results))
-        for pkg in self.search_results[start:end]:
-            if self.current_view == "installed":
-                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'), pkg)
+        end = min(10, len(filtered))
+        for pkg in filtered[start:end]:
+            if self.current_view == "discover":
+                self.add_discover_row(pkg)
             else:
-                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'))
+                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg['version'], pkg['source'])
         
         self.package_table.setUpdatesEnabled(True)
         
-        has_more = end < len(self.search_results)
+        has_more = end < len(filtered)
         self.load_more_btn.setVisible(has_more)
         if has_more:
-            remaining = len(self.search_results) - end
+            remaining = len(filtered) - end
             self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
         
-        self.log(f"Found {len(self.search_results)} packages matching '{query}'. Showing first 10...")
+        self.log(f"Found {len(filtered)} packages")
     
     def refresh_packages(self):
         if self.current_view == "updates":

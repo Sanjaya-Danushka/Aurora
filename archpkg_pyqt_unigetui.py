@@ -446,20 +446,24 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(12)
         
-        # Sources Section
+        self.sources_section = QWidget()
+        self.sources_layout = QVBoxLayout(self.sources_section)
+        self.sources_layout.setContentsMargins(0, 0, 0, 0)
+        self.sources_layout.setSpacing(8)
+        
         sources_label = QLabel("Sources")
         sources_label.setObjectName("sectionLabel")
-        layout.addWidget(sources_label)
+        self.sources_layout.addWidget(sources_label)
         
         select_all_btn = QPushButton("Select all")
         select_all_btn.setFixedHeight(28)
         select_all_btn.clicked.connect(self.select_all_sources)
-        layout.addWidget(select_all_btn)
+        self.sources_layout.addWidget(select_all_btn)
         
         clear_btn = QPushButton("Clear selection")
         clear_btn.setFixedHeight(28)
         clear_btn.clicked.connect(self.clear_sources)
-        layout.addWidget(clear_btn)
+        self.sources_layout.addWidget(clear_btn)
         
         sources = ["Scoop", "Chocolatey", "Winget", "PowerShell", "Pip"]
         self.source_checkboxes = {}
@@ -467,7 +471,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             checkbox = QCheckBox(source)
             checkbox.setChecked(True)
             self.source_checkboxes[source] = checkbox
-            layout.addWidget(checkbox)
+            self.sources_layout.addWidget(checkbox)
+        
+        layout.addWidget(self.sources_section)
         
         layout.addSpacing(12)
         
@@ -476,11 +482,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         filters_label.setObjectName("sectionLabel")
         layout.addWidget(filters_label)
         
-        filter_options = ["Updates available", "Installed", "Not installed"]
+        filter_options = ["Updates available", "Installed"]
         self.filter_checkboxes = {}
         for option in filter_options:
             checkbox = QCheckBox(option)
             checkbox.setChecked(True)
+            checkbox.stateChanged.connect(self.apply_filters)
             self.filter_checkboxes[option] = checkbox
             layout.addWidget(checkbox)
         
@@ -578,6 +585,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.header_info.setText(info_text)
         
         self.update_table_columns(view_id)
+        self.update_filters_panel(view_id)
         
         # Load data for view
         if view_id == "updates":
@@ -590,6 +598,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         elif view_id == "bundles":
             self.package_table.setRowCount(0)
             self.log("Package bundles feature")
+    
+    def update_filters_panel(self, view_id):
+        if view_id == "installed":
+            self.sources_section.setVisible(False)
+        else:
+            self.sources_section.setVisible(True)
     
     def update_table_columns(self, view_id):
         if view_id == "installed":
@@ -859,6 +873,44 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def manage_ignored(self):
         QMessageBox.information(self, "Manage Ignored", "Manage ignored updates here")
+    
+    def apply_filters(self):
+        if self.current_view != "installed" or not self.all_packages:
+            return
+        
+        show_updates = self.filter_checkboxes.get("Updates available", True)
+        show_installed = self.filter_checkboxes.get("Installed", True)
+        
+        if isinstance(show_updates, QCheckBox):
+            show_updates = show_updates.isChecked()
+        if isinstance(show_installed, QCheckBox):
+            show_installed = show_installed.isChecked()
+        
+        filtered = []
+        for pkg in self.all_packages:
+            if pkg.get('has_update') and show_updates:
+                filtered.append(pkg)
+            elif not pkg.get('has_update') and show_installed:
+                filtered.append(pkg)
+        
+        self.package_table.setUpdatesEnabled(False)
+        self.package_table.setRowCount(0)
+        
+        for pkg in filtered[:10]:
+            if self.current_view == "installed":
+                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'), pkg)
+            else:
+                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'))
+        
+        self.package_table.setUpdatesEnabled(True)
+        
+        has_more = len(filtered) > 10
+        self.load_more_btn.setVisible(has_more)
+        if has_more:
+            remaining = len(filtered) - 10
+            self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
+        
+        self.log(f"Showing {len(filtered[:10])} of {len(filtered)} packages")
     
     def select_all_sources(self):
         for checkbox in self.source_checkboxes.values():

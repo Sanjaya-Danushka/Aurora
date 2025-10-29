@@ -600,11 +600,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             layout = QHBoxLayout()
             layout.setSpacing(12)
             
-            install_btn = QPushButton("⬇️  Install selected packages")
-            install_btn.setMinimumHeight(36)
-            install_btn.clicked.connect(self.install_selected)
-            layout.addWidget(install_btn)
-            
             uninstall_btn = QPushButton("🗑️  Uninstall selected packages")
             uninstall_btn.setMinimumHeight(36)
             uninstall_btn.clicked.connect(self.uninstall_selected)
@@ -617,7 +612,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             layout.addStretch()
             self.toolbar_layout.addLayout(layout)
-        # For discover and bundles, no toolbar
+        elif self.current_view == "discover":
+            layout = QHBoxLayout()
+            layout.setSpacing(12)
+            
+            install_btn = QPushButton("⬇️  Install selected packages")
+            install_btn.setMinimumHeight(36)
+            install_btn.clicked.connect(self.install_selected)
+            layout.addWidget(install_btn)
+            
+            layout.addStretch()
+            self.toolbar_layout.addLayout(layout)
+        # For bundles, no toolbar
     
     def switch_view(self, view_id):
         self.current_view = view_id

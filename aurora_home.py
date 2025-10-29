@@ -1089,8 +1089,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 worker = CommandWorker(cmd, sudo=True)
                 worker.output.connect(self.log)
                 worker.error.connect(self.log)
+                def on_finished():
+                    self.log("Update completed")
+                    QMessageBox.information(self, "Update Complete", f"Successfully updated {len(packages)} package(s).")
+                    # Refresh updates after update
+                    self.load_updates()
+                worker.finished.connect(on_finished)
                 worker.run()
-                self.log("Update completed")
             except Exception as e:
                 self.log(f"Error: {str(e)}")
         
@@ -1131,8 +1136,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 worker = CommandWorker(cmd, sudo=True)
                 worker.output.connect(self.log)
                 worker.error.connect(self.log)
+                def on_finished():
+                    self.log("Install completed")
+                    QMessageBox.information(self, "Installation Complete", f"Successfully installed {len(packages)} package(s).")
+                    # Refresh installed packages after install
+                    self.load_installed_packages()
+                worker.finished.connect(on_finished)
                 worker.run()
-                self.log("Install completed")
             except Exception as e:
                 self.log(f"Error: {str(e)}")
         
@@ -1162,8 +1172,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 worker = CommandWorker(cmd, sudo=True)
                 worker.output.connect(self.log)
                 worker.error.connect(self.log)
+                def on_finished():
+                    self.log("Uninstall completed")
+                    QMessageBox.information(self, "Uninstallation Complete", f"Successfully uninstalled {len(packages)} package(s).")
+                    # Refresh installed packages after uninstall
+                    self.load_installed_packages()
+                worker.finished.connect(on_finished)
                 worker.run()
-                self.log("Uninstall completed")
             except Exception as e:
                 self.log(f"Error: {str(e)}")
         
@@ -1226,6 +1241,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.console.append(message)
 
 def main():
+    if len(sys.argv) > 1:
+        if sys.argv[1] in ["--help", "-h"]:
+            print("Aurora - Modern Arch Package Manager")
+            print("Usage: python aurora_home.py")
+            print("A graphical package manager for Arch Linux with AUR support.")
+            sys.exit(0)
+        else:
+            print(f"Unknown option: {sys.argv[1]}")
+            print("Use --help for usage information.")
+            sys.exit(1)
+    
     if os.geteuid() == 0:
         print("Do not run this application as root.")
         sys.exit(1)

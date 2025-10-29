@@ -273,7 +273,7 @@ QCheckBox {
 QCheckBox::indicator {
     width: 14px;
     height: 14px;
-    border-radius: 0px;
+    border-radius: 7px;
     border: 2px solid rgba(0, 191, 174, 0.4);
     background-color: rgba(42, 45, 51, 0.8);
 }
@@ -281,6 +281,7 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked {
     background-color: #00BFAE;
     border: 2px solid #00BFAE;
+    image: none;
 }
 
 QCheckBox::indicator:unchecked {
@@ -312,18 +313,18 @@ QListWidget::item:selected {
 QTableWidget#discoverTable {
     background-color: #2A2D33;
     alternate-background-color: #2B2E34;
-    border: none;
-    border-radius: 8px;
+    border: 1px solid rgba(0, 191, 174, 0.1);
+    border-radius: 4px;
     box-shadow: none;
 }
 
 QTableWidget#discoverTable::item {
-    padding: 18px 14px;
-    border: none;
+    padding: 16px 14px;
+    border-bottom: 1px solid rgba(0, 191, 174, 0.05);
 }
 
 QTableWidget#discoverTable::item:hover {
-    background-color: rgba(0, 191, 174, 0.1);
+    background-color: rgba(0, 191, 174, 0.05);
 }
 
 QTableWidget#discoverTable::item:alternate {
@@ -331,21 +332,21 @@ QTableWidget#discoverTable::item:alternate {
 }
 
 QTableWidget#discoverTable::item:selected {
-    background-color: rgba(0, 191, 174, 0.2);
-    border-left: 3px solid #00BFAE;
+    background-color: rgba(0, 191, 174, 0.1);
+    border-left: 2px solid #00BFAE;
 }
 
 QHeaderView::section {
-    background-color: #33373E;
-    color: #00BFAE;
-    padding: 16px 12px;
+    background-color: transparent;
+    color: #C9C9C9;
+    padding: 8px 12px;
     border: none;
-    font-weight: 600;
-    font-size: 12px;
+    font-weight: 500;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 2px solid rgba(0, 191, 174, 0.2);
-    border-radius: 8px 8px 0 0;
+    border-bottom: 1px solid rgba(0, 191, 174, 0.1);
+    border-radius: 0px;
 }
 
 /* Progress bar styling */

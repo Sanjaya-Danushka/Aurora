@@ -579,13 +579,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Title - ensure it's visible with proper contrast
         title_label = QLabel("NeoArch")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: white; background: transparent;")
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: white; background: transparent;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         text_layout.addWidget(title_label)
         
         # Subtitle - line by line
         subtitle_label = QLabel("Elevate Your\nArch Experience")
-        subtitle_label.setStyleSheet("font-size: 8px; color: rgba(255, 255, 255, 0.9); background: transparent; line-height: 1.1;")
+        subtitle_label.setStyleSheet("font-size: 10px; color: rgba(255, 255, 255, 0.9); background: transparent; line-height: 1.1;")
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         subtitle_label.setWordWrap(True)  # Allow wrapping for multi-line text
         text_layout.addWidget(subtitle_label)

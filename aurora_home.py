@@ -251,6 +251,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     packages_ready = pyqtSignal(list)
     discover_results_ready = pyqtSignal(list)
     show_message = pyqtSignal(str, str)
+    log_signal = pyqtSignal(str)
     search_timer = QTimer()
     
     def __init__(self):
@@ -270,6 +271,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.packages_ready.connect(self.on_packages_loaded)
         self.discover_results_ready.connect(self.display_discover_results)
         self.show_message.connect(self._show_message)
+        self.log_signal.connect(self.log)
         self.setup_ui()
         self.center_window()
         self.update_toolbar()
@@ -1034,7 +1036,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Sort results by relevance to the query
         query = self.search_input.text().strip().lower()
-        filtered.sort(key=lambda pkg: query in pkg['name'].lower() or query in pkg.get('description', '').lower(), reverse=True)
+        filtered.sort(key=lambda pkg: (query in pkg['name'].lower(), query in (pkg.get('description') or '').lower()), reverse=True)
         
         self.package_table.setUpdatesEnabled(False)
         self.package_table.setRowCount(0)
@@ -1070,7 +1072,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def update_selected(self):
         selected_rows = self.package_table.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select packages to update")
+            self.log("No packages selected for update")
+            # QMessageBox.warning(self, "No Selection", "Please select packages to update")
             return
         
         packages = []
@@ -1078,35 +1081,40 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             pkg_name = self.package_table.item(row.row(), 1).text()
             packages.append(pkg_name)
         
-        reply = QMessageBox.question(self, "Confirm Update", 
-                                    f"Update {len(packages)} package(s)?")
-        if reply != QMessageBox.StandardButton.Yes:
-            return
+        self.log(f"Selected packages for update: {', '.join(packages)}")
         
-        self.log(f"Updating {len(packages)} packages...")
+        # reply = QMessageBox.question(self, "Confirm Update", 
+        #                             f"Update {len(packages)} package(s)?")
+        # if reply != QMessageBox.StandardButton.Yes:
+        #     return
+        
+        self.log(f"Proceeding with update of {len(packages)} packages...")
+        
+        self.log(f"Starting update of {len(packages)} packages...")
         
         def update():
+            self.log("Update thread started")
             try:
                 cmd = ["pacman", "-Syu", "--noconfirm"] + packages
+                self.log(f"Running command: {' '.join(cmd)}")
                 worker = CommandWorker(cmd, sudo=True)
                 worker.output.connect(self.log)
                 worker.error.connect(self.log)
                 def on_finished():
                     self.log("Update completed")
                     self.show_message.emit("Update Complete", f"Successfully updated {len(packages)} package(s).")
-                    # Refresh updates after update
-                    self.load_updates()
                 worker.finished.connect(on_finished)
                 worker.run()
             except Exception as e:
-                self.log(f"Error: {str(e)}")
+                self.log(f"Error in update thread: {str(e)}")
         
         Thread(target=update, daemon=True).start()
     
     def ignore_selected(self):
         selected_rows = self.package_table.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select packages to ignore")
+            self.log("No packages selected to ignore")
+            # QMessageBox.warning(self, "No Selection", "Please select packages to ignore")
             return
         
         self.log(f"Ignored {len(selected_rows)} package(s)")
@@ -1117,7 +1125,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def install_selected(self):
         selected_rows = self.package_table.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select packages to install")
+            self.log_signal.emit("No packages selected for installation")
+            # QMessageBox.warning(self, "No Selection", "Please select packages to install")
             return
         
         packages = []
@@ -1125,35 +1134,40 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             pkg_name = self.package_table.item(row.row(), 1).text()
             packages.append(pkg_name)
         
-        reply = QMessageBox.question(self, "Confirm Install", 
-                                    f"Install {len(packages)} package(s)?")
-        if reply != QMessageBox.StandardButton.Yes:
-            return
+        self.log_signal.emit(f"Selected packages for installation: {', '.join(packages)}")
         
-        self.log(f"Installing {len(packages)} packages...")
+        # reply = QMessageBox.question(self, "Confirm Install", 
+        #                             f"Install {len(packages)} package(s)?")
+        # if reply != QMessageBox.StandardButton.Yes:
+        #     self.log("Installation cancelled by user")
+        #     return
+        self.log_signal.emit(f"Proceeding with installation of {len(packages)} packages...")
+        
+        self.log_signal.emit(f"Starting installation of {len(packages)} packages...")
         
         def install():
+            self.log_signal.emit("Installation thread started")
             try:
                 cmd = ["pacman", "-S", "--noconfirm"] + packages
+                self.log_signal.emit(f"Running command: {' '.join(cmd)}")
                 worker = CommandWorker(cmd, sudo=True)
-                worker.output.connect(self.log)
-                worker.error.connect(self.log)
+                worker.output.connect(lambda msg: self.log_signal.emit(msg))
+                worker.error.connect(lambda msg: self.log_signal.emit(msg))
                 def on_finished():
-                    self.log("Install completed")
+                    self.log_signal.emit("Install completed")
                     self.show_message.emit("Installation Complete", f"Successfully installed {len(packages)} package(s).")
-                    # Refresh installed packages after install
-                    self.load_installed_packages()
                 worker.finished.connect(on_finished)
                 worker.run()
             except Exception as e:
-                self.log(f"Error: {str(e)}")
+                self.log_signal.emit(f"Error in installation thread: {str(e)}")
         
         Thread(target=install, daemon=True).start()
     
     def uninstall_selected(self):
         selected_rows = self.package_table.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select packages to uninstall")
+            self.log("No packages selected for uninstallation")
+            # QMessageBox.warning(self, "No Selection", "Please select packages to uninstall")
             return
         
         packages = []
@@ -1161,28 +1175,32 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             pkg_name = self.package_table.item(row.row(), 1).text()
             packages.append(pkg_name)
         
-        reply = QMessageBox.question(self, "Confirm Uninstall", 
-                                    f"Uninstall {len(packages)} package(s)?")
-        if reply != QMessageBox.StandardButton.Yes:
-            return
+        self.log(f"Selected packages for uninstallation: {', '.join(packages)}")
         
-        self.log(f"Uninstalling {len(packages)} packages...")
+        # reply = QMessageBox.question(self, "Confirm Uninstall", 
+        #                             f"Uninstall {len(packages)} package(s)?")
+        # if reply != QMessageBox.StandardButton.Yes:
+        #     self.log("Uninstallation cancelled by user")
+        #     return
+        self.log(f"Proceeding with uninstallation of {len(packages)} packages...")
+        
+        self.log(f"Starting uninstallation of {len(packages)} packages...")
         
         def uninstall():
+            self.log("Uninstallation thread started")
             try:
                 cmd = ["pacman", "-R", "--noconfirm"] + packages
+                self.log(f"Running command: {' '.join(cmd)}")
                 worker = CommandWorker(cmd, sudo=True)
                 worker.output.connect(self.log)
                 worker.error.connect(self.log)
                 def on_finished():
                     self.log("Uninstall completed")
                     self.show_message.emit("Uninstallation Complete", f"Successfully uninstalled {len(packages)} package(s).")
-                    # Refresh installed packages after uninstall
-                    self.load_installed_packages()
                 worker.finished.connect(on_finished)
                 worker.run()
             except Exception as e:
-                self.log(f"Error: {str(e)}")
+                self.log(f"Error in uninstallation thread: {str(e)}")
         
         Thread(target=uninstall, daemon=True).start()
     
@@ -1236,7 +1254,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         QMessageBox.information(self, "Settings", "Settings dialog coming soon")
     
     def _show_message(self, title, text):
-        QMessageBox.information(self, title, text)
+        self.log(f"{title}: {text}")
     
     def show_about(self):
         QMessageBox.information(self, "About Aurora", 

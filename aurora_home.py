@@ -1133,38 +1133,42 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         selected_rows = self.package_table.selectionModel().selectedRows()
         if not selected_rows:
             self.log_signal.emit("No packages selected for installation")
-            # QMessageBox.warning(self, "No Selection", "Please select packages to install")
             return
         
-        packages = []
+        packages_by_source = {}
         for row in selected_rows:
-            pkg_name = self.package_table.item(row.row(), 1).text()
-            packages.append(pkg_name.lower())
+            pkg_name = self.package_table.item(row.row(), 1).text().lower()
+            source = self.package_table.item(row.row(), 5).text()
+            if source not in packages_by_source:
+                packages_by_source[source] = []
+            packages_by_source[source].append(pkg_name)
         
-        self.log_signal.emit(f"Selected packages for installation: {', '.join(packages)}")
+        self.log_signal.emit(f"Selected packages: {', '.join([f'{pkg} ({source})' for source, pkgs in packages_by_source.items() for pkg in pkgs])}")
         
-        # reply = QMessageBox.question(self, "Confirm Install", 
-        #                             f"Install {len(packages)} package(s)?")
-        # if reply != QMessageBox.StandardButton.Yes:
-        #     self.log("Installation cancelled by user")
-        #     return
-        self.log_signal.emit(f"Proceeding with installation of {len(packages)} packages...")
-        
-        self.log_signal.emit(f"Starting installation of {len(packages)} packages...")
+        self.log_signal.emit(f"Proceeding with installation...")
         
         def install():
             self.log_signal.emit("Installation thread started")
             try:
-                cmd = ["pacman", "-S", "--noconfirm"] + packages
-                self.log_signal.emit(f"Running command: {' '.join(cmd)}")
-                worker = CommandWorker(cmd, sudo=True)
-                worker.output.connect(lambda msg: self.log_signal.emit(msg))
-                worker.error.connect(lambda msg: self.log_signal.emit(msg))
-                def on_finished():
-                    self.log_signal.emit("Install completed")
-                    self.show_message.emit("Installation Complete", f"Successfully installed {len(packages)} package(s).")
-                worker.finished.connect(on_finished)
-                worker.run()
+                for source, packages in packages_by_source.items():
+                    if source == 'pacman':
+                        cmd = ["pacman", "-S", "--noconfirm"] + packages
+                    elif source == 'AUR':
+                        cmd = ["yay", "-S", "--noconfirm"] + packages
+                    elif source == 'Flatpak':
+                        cmd = ["flatpak", "install", "--noninteractive", "--or-update"] + packages
+                    else:
+                        self.log_signal.emit(f"Unknown source {source} for packages {packages}")
+                        continue
+                    
+                    self.log_signal.emit(f"Running command for {source}: {' '.join(cmd)}")
+                    worker = CommandWorker(cmd, sudo=(source != 'Flatpak'))
+                    worker.output.connect(lambda msg: self.log_signal.emit(msg))
+                    worker.error.connect(lambda msg: self.log_signal.emit(msg))
+                    worker.run()
+                
+                self.log_signal.emit("Install completed")
+                self.show_message.emit("Installation Complete", f"Successfully installed packages.")
             except Exception as e:
                 self.log_signal.emit(f"Error in installation thread: {str(e)}")
         

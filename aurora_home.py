@@ -446,6 +446,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     discover_results_ready = pyqtSignal(list)
     show_message = pyqtSignal(str, str)
     log_signal = pyqtSignal(str)
+    load_error = pyqtSignal()
     search_timer = QTimer()
     
     def __init__(self):
@@ -468,6 +469,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.discover_results_ready.connect(self.display_discover_results)
         self.show_message.connect(self._show_message)
         self.log_signal.connect(self.log)
+        self.load_error.connect(self.on_load_error)
         self.setup_ui()
         # Set initial nav button state
         for btn_id, btn in self.nav_buttons.items():
@@ -1907,8 +1909,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         def load_in_thread():
             try:
-                result = subprocess.run(["pacman", "-Qu"], capture_output=True, text=True, timeout=60)
                 packages = []
+                
+                # Check for official repository updates
+                result = subprocess.run(["pacman", "-Qu"], capture_output=True, text=True, timeout=60)
                 if result.returncode == 0 and result.stdout:
                     for line in result.stdout.strip().split('\n'):
                         if line.strip():
@@ -1929,25 +1933,59 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                                             'source': 'pacman'  # Default to pacman
                                         })
                 
-                # Determine which packages are from AUR
-                if packages:
-                    result_aur = subprocess.run(["pacman", "-Qm"], capture_output=True, text=True, timeout=30)
-                    aur_packages = set()
+                # Check for AUR updates using yay (if available)
+                try:
+                    result_aur = subprocess.run(["yay", "-Qua"], capture_output=True, text=True, timeout=60)
                     if result_aur.returncode == 0 and result_aur.stdout:
                         for line in result_aur.stdout.strip().split('\n'):
                             if line.strip():
-                                parts = line.split()
-                                if len(parts) >= 1:
-                                    aur_packages.add(parts[0])
-                    
-                    # Update source for AUR packages
-                    for pkg in packages:
-                        if pkg['name'] in aur_packages:
-                            pkg['source'] = 'AUR'
+                                # Parse format: package_name current_version -> new_version
+                                if ' -> ' in line:
+                                    parts = line.split(' -> ')
+                                    if len(parts) == 2:
+                                        package_info = parts[0].strip().split()
+                                        new_version = parts[1].strip()
+                                        if len(package_info) >= 2:
+                                            package_name = package_info[0]
+                                            current_version = package_info[1]
+                                            packages.append({
+                                                'name': package_name,
+                                                'version': current_version,
+                                                'new_version': new_version,
+                                                'id': package_name,
+                                                'source': 'AUR'
+                                            })
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    # yay not available, try other AUR helpers
+                    for aur_helper in ['paru', 'trizen', 'pikaur']:
+                        try:
+                            result_aur = subprocess.run([aur_helper, "-Qua"], capture_output=True, text=True, timeout=60)
+                            if result_aur.returncode == 0 and result_aur.stdout:
+                                for line in result_aur.stdout.strip().split('\n'):
+                                    if line.strip():
+                                        if ' -> ' in line:
+                                            parts = line.split(' -> ')
+                                            if len(parts) == 2:
+                                                package_info = parts[0].strip().split()
+                                                new_version = parts[1].strip()
+                                                if len(package_info) >= 2:
+                                                    package_name = package_info[0]
+                                                    current_version = package_info[1]
+                                                    packages.append({
+                                                        'name': package_name,
+                                                        'version': current_version,
+                                                        'new_version': new_version,
+                                                        'id': package_name,
+                                                        'source': 'AUR'
+                                                    })
+                                break  # Found a working AUR helper, stop trying others
+                        except (subprocess.CalledProcessError, FileNotFoundError):
+                            continue
                 
                 self.packages_ready.emit(packages)
             except Exception as e:
                 self.log(f"Error: {str(e)}")
+                self.load_error.emit()
         
         Thread(target=load_in_thread, daemon=True).start()
     
@@ -2009,6 +2047,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.packages_ready.emit(packages)
             except Exception as e:
                 self.log(f"Error: {str(e)}")
+                self.load_error.emit()
         
         Thread(target=load_in_thread, daemon=True).start()
     
@@ -2024,6 +2063,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.loading_widget.setVisible(False)
         self.spinner_timer.stop()
         self.package_table.setVisible(True)
+    
+    def on_load_error(self):
+        # Hide loading spinner, stop animation, and show packages table (empty)
+        self.loading_widget.setVisible(False)
+        self.spinner_timer.stop()
+        self.package_table.setVisible(True)
+        self.log("Failed to load packages. Please check the logs for details.")
     
     def display_page(self):
         self.package_table.setUpdatesEnabled(False)
@@ -2540,14 +2586,20 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def animate_spinner(self):
         """Animate the spinner by rotating it"""
         self.spinner_angle = (self.spinner_angle + 30) % 360
-        transform = f"rotate({self.spinner_angle}deg)"
-        self.spinner_label.setStyleSheet(f"""
-            QLabel {{
-                font-size: 32px;
-                color: #00BFAE;
-                transform: {transform};
-            }}
-        """)
+        pixmap = QPixmap(48, 48)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.translate(24, 24)
+        painter.rotate(self.spinner_angle)
+        painter.translate(-24, -24)
+        font = QFont()
+        font.setPixelSize(32)
+        painter.setFont(font)
+        painter.setPen(QColor("#00BFAE"))
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "⟳")
+        painter.end()
+        self.spinner_label.setPixmap(pixmap)
     
     def show_about(self):
         QMessageBox.information(self, "About NeoArch", 

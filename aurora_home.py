@@ -989,6 +989,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             renderer = QSvgRenderer(path)
             if renderer.isValid():
+                
                 try:
                     renderer.render(painter, QRectF(pixmap.rect()))
                     painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)

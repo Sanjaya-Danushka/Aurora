@@ -358,6 +358,19 @@ QProgressBar::chunk {
     background-color: #00BFAE;
     border-radius: 2px;
 }
+
+/* Loading spinner styles */
+QWidget#loadingSpinner {
+    background-color: transparent;
+    border: none;
+}
+
+QWidget#loadingSpinner QLabel {
+    background-color: transparent;
+    color: #00BFAE;
+    font-size: 14px;
+    font-weight: 500;
+}
 """
 
 class PackageLoaderWorker(QObject):
@@ -912,6 +925,38 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.toolbar_layout = QVBoxLayout(self.toolbar_widget)
         self.toolbar_layout.setContentsMargins(0,0,0,0)
         layout.addWidget(self.toolbar_widget)
+        
+        # Loading spinner widget
+        self.loading_widget = QWidget()
+        self.loading_widget.setObjectName("loadingSpinner")
+        self.loading_widget.setVisible(False)  # Hidden by default
+        loading_layout = QVBoxLayout(self.loading_widget)
+        loading_layout.setContentsMargins(0, 20, 0, 20)
+        loading_layout.setSpacing(12)
+        loading_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Simple spinner using QLabel with programmatic animation
+        self.spinner_label = QLabel("⟳")
+        self.spinner_label.setFixedSize(48, 48)
+        self.spinner_label.setStyleSheet("""
+            QLabel {
+                font-size: 32px;
+                color: #00BFAE;
+            }
+        """)
+        loading_layout.addWidget(self.spinner_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        
+        # Set up timer for animation
+        self.spinner_timer = QTimer()
+        self.spinner_timer.timeout.connect(self.animate_spinner)
+        self.spinner_angle = 0
+        
+        # Loading text
+        loading_label = QLabel("Checking for updates...")
+        loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        loading_layout.addWidget(loading_label)
+        
+        layout.addWidget(self.loading_widget)
         
         # Packages Table
         self.package_table = QTableWidget()
@@ -1854,6 +1899,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.all_packages = []
         self.current_page = 0
         
+        # Show loading spinner and start animation
+        self.loading_widget.setVisible(True)
+        self.package_table.setVisible(False)
+        self.load_more_btn.setVisible(False)
+        self.spinner_timer.start(100)  # Update every 100ms for smooth animation
+        
         def load_in_thread():
             try:
                 result = subprocess.run(["pacman", "-Qu"], capture_output=True, text=True, timeout=60)
@@ -1968,6 +2019,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.package_table.setRowCount(0)
         self.display_page()
         self.log(f"Loaded {len(packages)} packages total. Showing first 10...")
+        
+        # Hide loading spinner, stop animation, and show packages table
+        self.loading_widget.setVisible(False)
+        self.spinner_timer.stop()
+        self.package_table.setVisible(True)
     
     def display_page(self):
         self.package_table.setUpdatesEnabled(False)
@@ -2480,6 +2536,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def _show_message(self, title, text):
         self.log(f"{title}: {text}")
+    
+    def animate_spinner(self):
+        """Animate the spinner by rotating it"""
+        self.spinner_angle = (self.spinner_angle + 30) % 360
+        transform = f"rotate({self.spinner_angle}deg)"
+        self.spinner_label.setStyleSheet(f"""
+            QLabel {{
+                font-size: 32px;
+                color: #00BFAE;
+                transform: {transform};
+            }}
+        """)
     
     def show_about(self):
         QMessageBox.information(self, "About NeoArch", 

@@ -151,7 +151,7 @@ QPushButton#bottomCardBtn {
 QPushButton#bottomCardBtn:hover {
     background-color: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
-    min-height: 50px;
+    min-height: 45px;
 }
 
 QPushButton#bottomCardBtn:pressed {
@@ -542,7 +542,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Bottom section with card-style buttons
         bottom_layout = QVBoxLayout()
-        bottom_layout.setContentsMargins(0, 0, 0, 10)
+        bottom_layout.setContentsMargins(0, 0, 0, 20)
         bottom_layout.setSpacing(12)  # Consistent spacing
         
         # Settings button - card style

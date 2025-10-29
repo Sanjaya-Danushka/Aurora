@@ -1053,6 +1053,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         elif view_id == "discover":
             self.package_table.setRowCount(0)
             self.log("Type a package name to search in AUR and official repositories")
+            # Refresh recent Git repos when switching to discover view
+            self.load_recent_git_repos()
         elif view_id == "bundles":
             self.package_table.setRowCount(0)
             self.log("Package bundles feature")
@@ -1121,43 +1123,33 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.source_checkboxes[source] = checkbox
             self.sources_layout.addWidget(container)
         
-        # Add Git source button (not a checkbox)
-        git_container = QWidget()
-        git_layout = QHBoxLayout(git_container)
+        # Add Git source section with multiple options
+        git_section = QWidget()
+        git_layout = QVBoxLayout(git_section)
         git_layout.setContentsMargins(0, 0, 0, 0)
         git_layout.setSpacing(8)
         
-        # Git Icon
-        git_icon_label = QLabel()
-        git_icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "git.svg")
-        try:
-            svg_renderer = QSvgRenderer(git_icon_path)
-            if svg_renderer.isValid():
-                pixmap = QPixmap(20, 20)
-                pixmap.fill(Qt.GlobalColor.transparent)
-                painter = QPainter(pixmap)
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                svg_renderer.render(painter, QRectF(pixmap.rect()))
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("white"))
-                painter.end()
-                git_icon_label.setPixmap(pixmap)
-            else:
-                git_icon_label.setText("📁")
-        except:
-            git_icon_label.setText("📁")
+        # Git section label
+        git_label = QLabel("Git Repositories")
+        git_label.setObjectName("sectionLabel")
+        git_label.setStyleSheet("font-size: 11px; margin-bottom: 4px;")
+        git_layout.addWidget(git_label)
         
-        git_layout.addWidget(git_icon_label)
+        # Git buttons container
+        git_buttons_widget = QWidget()
+        git_buttons_layout = QVBoxLayout(git_buttons_widget)
+        git_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        git_buttons_layout.setSpacing(6)
         
-        # Git Button
-        git_btn = QPushButton("Install from Git")
-        git_btn.setStyleSheet("""
+        # Install from Git button (main)
+        install_git_btn = QPushButton("📥 Install from Git")
+        install_git_btn.setStyleSheet("""
             QPushButton {
                 background-color: rgba(42, 45, 51, 0.6);
                 color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.2);
                 border-radius: 4px;
-                padding: 4px 8px;
+                padding: 6px 10px;
                 font-size: 12px;
                 text-align: left;
             }
@@ -1166,12 +1158,111 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 border-color: rgba(0, 191, 174, 0.4);
             }
         """)
-        git_btn.clicked.connect(self.install_from_git)
-        git_layout.addWidget(git_btn)
+        install_git_btn.clicked.connect(self.install_from_git)
+        git_buttons_layout.addWidget(install_git_btn)
         
-        git_layout.addStretch()
+        # Secondary buttons row
+        secondary_layout = QHBoxLayout()
+        secondary_layout.setSpacing(6)
         
-        self.sources_layout.addWidget(git_container)
+        # Open Git repos directory
+        open_repos_btn = QPushButton("📁 Open Repos")
+        open_repos_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(42, 45, 51, 0.4);
+                color: #F0F0F0;
+                border: 1px solid rgba(0, 191, 174, 0.1);
+                border-radius: 3px;
+                padding: 4px 8px;
+                font-size: 11px;
+                text-align: center;
+            }
+            QPushButton:hover {
+                background-color: rgba(42, 45, 51, 0.6);
+                border-color: rgba(0, 191, 174, 0.3);
+            }
+        """)
+        open_repos_btn.clicked.connect(self.open_git_repos_dir)
+        secondary_layout.addWidget(open_repos_btn)
+        
+        # Update all repos
+        update_repos_btn = QPushButton("🔄 Update All")
+        update_repos_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(42, 45, 51, 0.4);
+                color: #F0F0F0;
+                border: 1px solid rgba(0, 191, 174, 0.1);
+                border-radius: 3px;
+                padding: 4px 8px;
+                font-size: 11px;
+                text-align: center;
+            }
+            QPushButton:hover {
+                background-color: rgba(42, 45, 51, 0.6);
+                border-color: rgba(0, 191, 174, 0.3);
+            }
+        """)
+        update_repos_btn.clicked.connect(self.update_all_git_repos)
+        secondary_layout.addWidget(update_repos_btn)
+        
+        # Clean repos
+        clean_repos_btn = QPushButton("🗑️ Clean")
+        clean_repos_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(42, 45, 51, 0.4);
+                color: #F0F0F0;
+                border: 1px solid rgba(0, 191, 174, 0.1);
+                border-radius: 3px;
+                padding: 4px 8px;
+                font-size: 11px;
+                text-align: center;
+            }
+            QPushButton:hover {
+                background-color: rgba(42, 45, 51, 0.6);
+                border-color: rgba(0, 191, 174, 0.3);
+            }
+        """)
+        clean_repos_btn.clicked.connect(self.clean_git_repos)
+        secondary_layout.addWidget(clean_repos_btn)
+        
+        git_buttons_layout.addLayout(secondary_layout)
+        
+        # Recent repos list (compact)
+        self.recent_repos_label = QLabel("Recent:")
+        self.recent_repos_label.setStyleSheet("color: #C9C9C9; font-size: 10px; margin-top: 4px;")
+        git_buttons_layout.addWidget(self.recent_repos_label)
+        
+        self.recent_repos_list = QListWidget()
+        self.recent_repos_list.setStyleSheet("""
+            QListWidget {
+                background-color: rgba(42, 45, 51, 0.3);
+                border: 1px solid rgba(0, 191, 174, 0.1);
+                border-radius: 3px;
+                color: #F0F0F0;
+                font-size: 10px;
+                max-height: 80px;
+            }
+            QListWidget::item {
+                padding: 3px 6px;
+                border-bottom: 1px solid rgba(0, 191, 174, 0.05);
+            }
+            QListWidget::item:hover {
+                background-color: rgba(0, 191, 174, 0.1);
+            }
+            QListWidget::item:selected {
+                background-color: rgba(0, 191, 174, 0.2);
+            }
+        """)
+        self.recent_repos_list.itemDoubleClicked.connect(self.open_repo_directory)
+        self.recent_repos_list.setVisible(False)  # Initially hidden
+        git_buttons_layout.addWidget(self.recent_repos_list)
+        
+        git_layout.addWidget(git_buttons_widget)
+        
+        self.sources_layout.addWidget(git_section)
+        
+        # Load recent repos on startup
+        self.load_recent_git_repos()
     
     def install_from_git(self):
         # Create a dialog to ask for Git URL
@@ -1287,96 +1378,97 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 
                 # Check if directory already exists
                 if os.path.exists(clone_path):
-                    self.log(f"Directory {clone_path} already exists. Pulling latest changes...")
+                    self.log_signal.emit(f"Directory {clone_path} already exists. Pulling latest changes...")
                     pull_cmd = ["git", "-C", clone_path, "pull"]
                     pull_result = subprocess.run(pull_cmd, capture_output=True, text=True, timeout=60)
                     if pull_result.returncode != 0:
-                        self.log(f"Failed to pull latest changes: {pull_result.stderr}")
+                        self.log_signal.emit(f"Failed to pull latest changes: {pull_result.stderr}")
                         self.show_message.emit("Git Update Failed", f"Failed to update repository: {pull_result.stderr}")
                         return
-                    self.log("Repository updated successfully")
+                    self.log_signal.emit("Repository updated successfully")
                 else:
                     # Clone the repository
-                    self.log("Cloning repository...")
+                    self.log_signal.emit("Cloning repository...")
                     clone_cmd = ["git", "clone", git_url, clone_path]
                     clone_result = subprocess.run(clone_cmd, capture_output=True, text=True, timeout=300)
                     
                     if clone_result.returncode != 0:
-                        self.log(f"Failed to clone repository: {clone_result.stderr}")
+                        self.log_signal.emit(f"Failed to clone repository: {clone_result.stderr}")
                         self.show_message.emit("Git Installation Failed", f"Failed to clone repository: {clone_result.stderr}")
                         return
                     
-                    self.log("Repository cloned successfully")
+                    self.log_signal.emit("Repository cloned successfully")
                 
                 # Change to clone directory
                 os.chdir(clone_path)
                 
                 # Check if it's a Python project
                 if os.path.exists(os.path.join(clone_path, "setup.py")) or os.path.exists(os.path.join(clone_path, "pyproject.toml")):
-                    self.log("Detected Python project, installing with pip...")
+                    self.log_signal.emit("Detected Python project, installing with pip...")
                     install_cmd = ["pip", "install", "-e", clone_path]
                     install_result = subprocess.run(install_cmd, capture_output=True, text=True, timeout=300)
                     
                     if install_result.returncode == 0:
-                        self.log("Python package installed successfully")
+                        self.log_signal.emit("Python package installed successfully")
                         self.show_message.emit("Installation Complete", f"Successfully installed {repo_name} from Git")
                     else:
-                        self.log(f"Failed to install Python package: {install_result.stderr}")
+                        self.log_signal.emit(f"Failed to install Python package: {install_result.stderr}")
                         self.show_message.emit("Installation Failed", f"Failed to install Python package: {install_result.stderr}")
                 
                 # Check for Rust project
                 elif os.path.exists(os.path.join(clone_path, "Cargo.toml")):
-                    self.log("Detected Rust project, installing with cargo...")
+                    self.log_signal.emit("Detected Rust project, installing with cargo...")
                     install_cmd = ["cargo", "install", "--path", clone_path]
                     install_result = subprocess.run(install_cmd, capture_output=True, text=True, timeout=600)
                     
                     if install_result.returncode == 0:
-                        self.log("Rust package installed successfully")
+                        self.log_signal.emit("Rust package installed successfully")
                         self.show_message.emit("Installation Complete", f"Successfully installed {repo_name} from Git")
                     else:
-                        self.log(f"Failed to install Rust package: {install_result.stderr}")
+                        self.log_signal.emit(f"Failed to install Rust package: {install_result.stderr}")
                         self.show_message.emit("Installation Failed", f"Failed to install Rust package: {install_result.stderr}")
                 
                 # Check for other common build systems (like autotools)
                 elif os.path.exists(os.path.join(clone_path, "configure.ac")) or os.path.exists(os.path.join(clone_path, "configure.in")):
-                    self.log("Detected autotools project, building...")
+                    self.log_signal.emit("Detected autotools project, building...")
                     configure_cmds = []
                     
                     # Check for autogen.sh
                     if os.path.exists(os.path.join(clone_path, "autogen.sh")):
-                        self.log("Running autogen.sh...")
+                        self.log_signal.emit("Running autogen.sh...")
                         configure_cmds.append(["./autogen.sh"])
                     
                     # Run configure
                     if os.path.exists(os.path.join(clone_path, "configure")):
-                        self.log("Running configure...")
+                        self.log_signal.emit("Running configure...")
                         configure_cmds.append(["./configure", "--prefix=/usr/local"])
                     
                     # Run make
                     if os.path.exists(os.path.join(clone_path, "Makefile")):
-                        self.log("Running make...")
+                        self.log_signal.emit("Running make...")
                         configure_cmds.append(["make", "-j$(nproc)"])
-                        self.log("Running make install...")
+                        self.log_signal.emit("Running make install...")
                         configure_cmds.append(["sudo", "make", "install"])
                     
                     success = True
                     for cmd in configure_cmds:
                         result = subprocess.run(cmd, cwd=clone_path, capture_output=True, text=True, timeout=600)
                         if result.returncode != 0:
-                            self.log(f"Command failed: {' '.join(cmd)}")
-                            self.log(f"Error: {result.stderr}")
+                            self.log_signal.emit(f"Command failed: {' '.join(cmd)}")
+                            self.log_signal.emit(f"Error: {result.stderr}")
                             success = False
                             break
                     
                     if success:
-                        self.log("Autotools build completed successfully")
+                        self.log_signal.emit("Autotools build completed successfully")
                         self.show_message.emit("Installation Complete", f"Successfully built and installed {repo_name}")
+                    
                     else:
                         self.show_message.emit("Build Failed", "Check console output for build errors")
                 
                 # Check for Makefile (generic)
                 elif os.path.exists(os.path.join(clone_path, "Makefile")):
-                    self.log("Detected Makefile, building and installing...")
+                    self.log_signal.emit("Detected Makefile, building and installing...")
                     
                     # Try common build patterns
                     build_cmds = [
@@ -1386,43 +1478,213 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     
                     success = True
                     for cmd in build_cmds:
-                        self.log(f"Running: {' '.join(cmd)}")
+                        self.log_signal.emit(f"Running: {' '.join(cmd)}")
                         result = subprocess.run(cmd, cwd=clone_path, capture_output=True, text=True, timeout=600)
                         if result.returncode != 0:
-                            self.log(f"Command failed: {' '.join(cmd)}")
-                            self.log(f"Error: {result.stderr}")
+                            self.log_signal.emit(f"Command failed: {' '.join(cmd)}")
+                            self.log_signal.emit(f"Error: {result.stderr}")
                             success = False
                             break
                     
                     if success:
-                        self.log("Build and installation completed successfully")
+                        self.log_signal.emit("Build and installation completed successfully")
                         self.show_message.emit("Installation Complete", f"Successfully built and installed {repo_name}")
                     else:
                         self.show_message.emit("Build Failed", "Check console output for build errors")
                 
                 else:
                     # No automatic installation detected
-                    self.log(f"Repository cloned to: {clone_path}")
-                    self.log("No automatic installation method detected.")
-                    self.log("To manually build and install:")
-                    self.log(f"  cd {clone_path}")
-                    self.log("  ls -la  # Check for build files")
-                    self.log("  # Common build commands:")
-                    self.log("  # ./configure && make && sudo make install")
-                    self.log("  # OR")
-                    self.log("  # make && sudo make install")
-                    self.log("  # OR")
-                    self.log("  # pip install .")
-                    self.log("  # OR")
-                    self.log("  # cargo install --path .")
+                    self.log_signal.emit(f"Repository cloned to: {clone_path}")
+                    self.log_signal.emit("No automatic installation method detected.")
+                    self.log_signal.emit("To manually build and install:")
+                    self.log_signal.emit(f"  cd {clone_path}")
+                    self.log_signal.emit("  ls -la  # Check for build files")
+                    self.log_signal.emit("  # Common build commands:")
+                    self.log_signal.emit("  # ./configure && make && sudo make install")
+                    self.log_signal.emit("  # OR")
+                    self.log_signal.emit("  # make && sudo make install")
+                    self.log_signal.emit("  # OR")
+                    self.log_signal.emit("  # pip install .")
+                    self.log_signal.emit("  # OR")
+                    self.log_signal.emit("  # cargo install --path .")
                     
                     self.show_message.emit("Git Clone Complete", f"Repository cloned to {clone_path}. Check console for build instructions.")
+                
+                # Refresh recent repos list after successful clone
+                self.load_recent_git_repos()
                         
             except Exception as e:
-                self.log(f"Error during Git installation: {str(e)}")
+                self.log_signal.emit(f"Error during Git installation: {str(e)}")
                 self.show_message.emit("Installation Failed", f"Error during installation: {str(e)}")
         
         Thread(target=install_from_git_thread, daemon=True).start()
+    
+    def open_git_repos_dir(self):
+        """Open the git-repos directory in file manager"""
+        git_repos_dir = os.path.expanduser("~/git-repos")
+        try:
+            if os.path.exists(git_repos_dir):
+                subprocess.run(["xdg-open", git_repos_dir], check=True)
+                self.log("Opened git-repos directory")
+            else:
+                self.log("git-repos directory doesn't exist yet")
+                QMessageBox.information(self, "No Repos Yet", "You haven't cloned any Git repositories yet.\nUse 'Install from Git' to get started!")
+        except Exception as e:
+            self.log(f"Failed to open directory: {e}")
+    
+    def update_all_git_repos(self):
+        """Update all Git repositories in ~/git-repos"""
+        git_repos_dir = os.path.expanduser("~/git-repos")
+        if not os.path.exists(git_repos_dir):
+            self.log("No git-repos directory found")
+            return
+        
+        repos = [d for d in os.listdir(git_repos_dir) 
+                if os.path.isdir(os.path.join(git_repos_dir, d)) and 
+                os.path.exists(os.path.join(git_repos_dir, d, ".git"))]
+        
+        if not repos:
+            self.log("No Git repositories found")
+            return
+        
+        self.log_signal.emit(f"Updating {len(repos)} Git repositories...")
+        
+        def update_thread():
+            updated = 0
+            failed = 0
+            for repo in repos:
+                repo_path = os.path.join(git_repos_dir, repo)
+                try:
+                    self.log_signal.emit(f"Updating {repo}...")
+                    result = subprocess.run(["git", "-C", repo_path, "pull"], 
+                                          capture_output=True, text=True, timeout=60)
+                    if result.returncode == 0:
+                        updated += 1
+                        self.log_signal.emit(f"✓ Updated {repo}")
+                    else:
+                        failed += 1
+                        self.log_signal.emit(f"✗ Failed to update {repo}: {result.stderr.strip()}")
+                except Exception as e:
+                    failed += 1
+                    self.log_signal.emit(f"✗ Error updating {repo}: {e}")
+            
+            self.log_signal.emit(f"Update complete: {updated} updated, {failed} failed")
+            # Emit signal from main thread instead of worker thread
+            if updated > 0 or failed > 0:
+                # Use QTimer to emit from main thread
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(0, lambda: self.show_message.emit("Git Update Complete", f"Updated {updated} repos, {failed} failed"))
+        
+        Thread(target=update_thread, daemon=True).start()
+    
+    def clean_git_repos(self):
+        """Clean up Git repositories (remove build artifacts, etc.)"""
+        git_repos_dir = os.path.expanduser("~/git-repos")
+        if not os.path.exists(git_repos_dir):
+            self.log("No git-repos directory found")
+            return
+        
+        repos = [d for d in os.listdir(git_repos_dir) 
+                if os.path.isdir(os.path.join(git_repos_dir, d)) and 
+                os.path.exists(os.path.join(git_repos_dir, d, ".git"))]
+        
+        if not repos:
+            self.log("No Git repositories found")
+            return
+        
+        # Ask for confirmation
+        reply = QMessageBox.question(
+            self, "Clean Git Repositories",
+            f"This will clean build artifacts from {len(repos)} repositories.\n\n"
+            "This will run 'git clean -fd' and remove untracked files.\n"
+            "Are you sure you want to continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        self.log_signal.emit(f"Cleaning {len(repos)} Git repositories...")
+        
+        def clean_thread():
+            cleaned = 0
+            failed = 0
+            for repo in repos:
+                repo_path = os.path.join(git_repos_dir, repo)
+                try:
+                    self.log_signal.emit(f"Cleaning {repo}...")
+                    result = subprocess.run(["git", "-C", repo_path, "clean", "-fd"], 
+                                          capture_output=True, text=True, timeout=30)
+                    if result.returncode == 0:
+                        cleaned += 1
+                        self.log_signal.emit(f"✓ Cleaned {repo}")
+                    else:
+                        failed += 1
+                        self.log_signal.emit(f"✗ Failed to clean {repo}: {result.stderr.strip()}")
+                except Exception as e:
+                    failed += 1
+                    self.log_signal.emit(f"✗ Error cleaning {repo}: {e}")
+            
+            self.log_signal.emit(f"Clean complete: {cleaned} cleaned, {failed} failed")
+            if cleaned > 0 or failed > 0:
+                # Use QTimer to emit from main thread
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(0, lambda: self.show_message.emit("Git Clean Complete", f"Cleaned {cleaned} repos, {failed} failed"))
+        
+        Thread(target=clean_thread, daemon=True).start()
+    
+    def load_recent_git_repos(self):
+        """Load and display recently cloned Git repositories"""
+        git_repos_dir = os.path.expanduser("~/git-repos")
+        if not os.path.exists(git_repos_dir):
+            self.recent_repos_label.setVisible(False)
+            self.recent_repos_list.setVisible(False)
+            return
+        
+        repos = []
+        try:
+            for item in os.listdir(git_repos_dir):
+                repo_path = os.path.join(git_repos_dir, item)
+                if os.path.isdir(repo_path) and os.path.exists(os.path.join(repo_path, ".git")):
+                    # Get last modified time
+                    mtime = os.path.getmtime(repo_path)
+                    repos.append((item, mtime, repo_path))
+            
+            # Sort by modification time (most recent first)
+            repos.sort(key=lambda x: x[1], reverse=True)
+            
+            # Show only recent 5
+            recent_repos = repos[:5]
+            
+            if recent_repos:
+                self.recent_repos_list.clear()
+                for repo_name, _, repo_path in recent_repos:
+                    item = QListWidgetItem(f"📁 {repo_name}")
+                    item.setToolTip(f"Double-click to open: {repo_path}")
+                    item.setData(Qt.ItemDataRole.UserRole, repo_path)
+                    self.recent_repos_list.addItem(item)
+                
+                self.recent_repos_label.setVisible(True)
+                self.recent_repos_list.setVisible(True)
+            else:
+                self.recent_repos_label.setVisible(False)
+                self.recent_repos_list.setVisible(False)
+                
+        except Exception as e:
+            self.log(f"Error loading recent repos: {e}")
+            self.recent_repos_label.setVisible(False)
+            self.recent_repos_list.setVisible(False)
+    
+    def open_repo_directory(self, item):
+        """Open the selected repository directory"""
+        repo_path = item.data(Qt.ItemDataRole.UserRole)
+        if repo_path and os.path.exists(repo_path):
+            try:
+                subprocess.run(["xdg-open", repo_path], check=True)
+                self.log(f"Opened repository: {os.path.basename(repo_path)}")
+            except Exception as e:
+                self.log(f"Failed to open repository: {e}")
     
     def apply_source_filter(self):
         if self.current_view == "discover" and self.search_results:

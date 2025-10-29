@@ -417,7 +417,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         super().__init__()
         self.setWindowTitle("Aurora - Package Manager")
         self.setGeometry(100, 100, 1600, 900)  # Increased width to accommodate sidebar
-        self.setMinimumSize(1200, 700)  # Set minimum size
+        self.setMinimumSize(1200, 800)  # Set minimum size
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setStyleSheet(DARK_STYLESHEET)
         # self.set_minimal_icon()

@@ -271,9 +271,9 @@ QCheckBox {
 }
 
 QCheckBox::indicator {
-    width: 14px;
-    height: 14px;
-    border-radius: 7px;
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
     border: 2px solid rgba(0, 191, 174, 0.4);
     background-color: rgba(42, 45, 51, 0.8);
 }
@@ -281,11 +281,14 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked {
     background-color: #00BFAE;
     border: 2px solid #00BFAE;
-    image: none;
 }
 
 QCheckBox::indicator:unchecked {
     background-color: rgba(42, 45, 51, 0.8);
+}
+
+QCheckBox::indicator:hover {
+    border-color: rgba(0, 191, 174, 0.8);
 }
 
 QListWidget {
@@ -613,28 +616,24 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
                 
-                # Set composition mode and color for white rendering
-                svg_renderer.render(painter, QRectF(pixmap.rect()))
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("white"))  # Light gray color
-                painter.end()
+                try:
+                    # Set composition mode and color for white rendering
+                    svg_renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                except:
+                    pass  # If render fails, leave pixmap transparent
                 
+                painter.end()
                 icon_label.setPixmap(pixmap)
             else:
-                # Fallback to emoji if SVG is invalid
-                emoji = self.get_fallback_icon(icon_path)
-                icon_label.setText(emoji)
-        except ImportError:
-            # Fallback if SVG support not available
-            try:
-                pixmap = QPixmap(icon_path)
-                if not pixmap.isNull():
-                    scaled_pixmap = pixmap.scaled(40, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                    icon_label.setPixmap(scaled_pixmap)
-                else:
-                    emoji = self.get_fallback_icon(icon_path)
-                    icon_label.setText(emoji)
-            except:
+                raise
+        except:
+            # Fallback to black icon or emoji
+            icon = QIcon(icon_path)
+            if not icon.isNull():
+                icon_label.setPixmap(icon.pixmap(50, 50))
+            else:
                 emoji = self.get_fallback_icon(icon_path)
                 icon_label.setText(emoji)
         
@@ -679,29 +678,24 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
                 
-                # Set composition mode and color for white rendering
-                from PyQt6.QtCore import QRectF
-                svg_renderer.render(painter, QRectF(pixmap.rect()))
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("white"))  # Light gray color
-                painter.end()
+                try:
+                    from PyQt6.QtCore import QRectF
+                    svg_renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                except:
+                    pass
                 
+                painter.end()
                 icon_label.setPixmap(pixmap)
             else:
-                # Fallback to emoji
-                emoji = "⚙️" if "settings" in icon_path else "ℹ️"
-                icon_label.setText(emoji)
-        except ImportError:
-            # Fallback if SVG support not available
-            try:
-                pixmap = QPixmap(icon_path)
-                if not pixmap.isNull():
-                    scaled_pixmap = pixmap.scaled(20, 20, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)  # Smaller scaling
-                    icon_label.setPixmap(scaled_pixmap)
-                else:
-                    emoji = "⚙️" if "settings" in icon_path else "ℹ️"
-                    icon_label.setText(emoji)
-            except:
+                raise
+        except:
+            # Fallback to black icon or emoji
+            icon = QIcon(icon_path)
+            if not icon.isNull():
+                icon_label.setPixmap(icon.pixmap(28, 28))
+            else:
                 emoji = "⚙️" if "settings" in icon_path else "ℹ️"
                 icon_label.setText(emoji)
         
@@ -806,9 +800,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             renderer = QSvgRenderer(path)
             if renderer.isValid():
-                renderer.render(painter, QRectF(pixmap.rect()))
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("white"))
+                try:
+                    renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                except:
+                    pass
             painter.end()
             return pixmap
         
@@ -918,9 +915,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             renderer = QSvgRenderer(path)
             if renderer.isValid():
-                renderer.render(painter, QRectF(pixmap.rect()))
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("white"))
+                try:
+                    renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                except:
+                    pass
             painter.end()
             return pixmap
         
@@ -1550,16 +1550,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_installed_packages()
     
     def update_selected(self):
-        selected_rows = self.package_table.selectionModel().selectedRows()
-        if not selected_rows:
+        packages = []
+        for row in range(self.package_table.rowCount()):
+            checkbox = self.package_table.cellWidget(row, 0)
+            if checkbox and isinstance(checkbox, QCheckBox) and checkbox.isChecked():
+                pkg_name = self.package_table.item(row, 1).text()
+                packages.append(pkg_name.lower())
+        
+        if not packages:
             self.log("No packages selected for update")
             # QMessageBox.warning(self, "No Selection", "Please select packages to update")
             return
-        
-        packages = []
-        for row in selected_rows:
-            pkg_name = self.package_table.item(row.row(), 1).text()
-            packages.append(pkg_name.lower())
         
         self.log(f"Selected packages for update: {', '.join(packages)}")
         
@@ -1603,18 +1604,19 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         QMessageBox.information(self, "Manage Ignored", "Manage ignored updates here")
     
     def install_selected(self):
-        selected_rows = self.package_table.selectionModel().selectedRows()
-        if not selected_rows:
+        packages_by_source = {}
+        for row in range(self.package_table.rowCount()):
+            checkbox = self.package_table.cellWidget(row, 0)
+            if checkbox and isinstance(checkbox, QCheckBox) and checkbox.isChecked():
+                pkg_name = self.package_table.item(row, 1).text().lower()
+                source = self.package_table.item(row, 5).text()
+                if source not in packages_by_source:
+                    packages_by_source[source] = []
+                packages_by_source[source].append(pkg_name)
+        
+        if not packages_by_source:
             self.log_signal.emit("No packages selected for installation")
             return
-        
-        packages_by_source = {}
-        for row in selected_rows:
-            pkg_name = self.package_table.item(row.row(), 1).text().lower()
-            source = self.package_table.item(row.row(), 5).text()
-            if source not in packages_by_source:
-                packages_by_source[source] = []
-            packages_by_source[source].append(pkg_name)
         
         self.log_signal.emit(f"Selected packages: {', '.join([f'{pkg} ({source})' for source, pkgs in packages_by_source.items() for pkg in pkgs])}")
         

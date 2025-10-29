@@ -104,19 +104,19 @@ QPushButton#navBtn:pressed {
 }
 
 QLabel#navIcon {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: transparent;
     border-radius: 8px;
     font-size: 26px;
     color: #e1e5e9;  /* Light gray instead of pure white */
 }
 
 QPushButton#navBtn:hover QLabel#navIcon {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: transparent;
     color: #ffffff;  /* White on hover */
 }
 
 QPushButton#navBtn:checked QLabel#navIcon {
-    background-color: rgba(31, 111, 235, 0.25);
+    background-color: transparent;
     color: #ffffff;
 }
 

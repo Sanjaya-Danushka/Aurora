@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
                              QLabel, QFileDialog, QMessageBox, QHeaderView, QFrame, QSplitter,
                              QScrollArea, QCheckBox, QListWidget, QListWidgetItem, QSizePolicy)
-from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF
+from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF, QItemSelectionModel
 from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
 from PyQt6.QtSvg import QSvgRenderer
 
@@ -901,9 +901,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.package_table.setAlternatingRowColors(True)
         self.package_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.package_table.setSelectionMode(QTableWidget.SelectionMode.MultiSelection)
+        self.package_table.selectionModel().selectionChanged.connect(self.on_selection_changed)
         layout.addWidget(self.package_table, 1)
-        
-        # Load More Button
         self.load_more_btn = QPushButton("Load More Packages")
         self.load_more_btn.setMinimumHeight(36)
         icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
@@ -1345,6 +1344,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         checkbox = QCheckBox()
         checkbox.setChecked(False)  # Default to unchecked
         self.package_table.setCellWidget(row, 0, checkbox)
+        checkbox.stateChanged.connect(lambda state, r=row: self.on_checkbox_changed(r, state))
         
         name_item = QTableWidgetItem(pkg['name'])
         name_item.setToolTip(pkg['name'])
@@ -1367,6 +1367,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         checkbox = QCheckBox()
         checkbox.setChecked(True)
         self.package_table.setCellWidget(row, 0, checkbox)
+        checkbox.stateChanged.connect(lambda state, r=row: self.on_checkbox_changed(r, state))
         
         name_item = QTableWidgetItem(name)
         font = QFont()
@@ -1728,6 +1729,20 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         self.log(f"Showing {len(filtered[:10])} of {len(filtered)} packages")
 
+    def on_selection_changed(self):
+        selected_rows = set(index.row() for index in self.package_table.selectionModel().selectedRows())
+        for row in range(self.package_table.rowCount()):
+            checkbox = self.package_table.cellWidget(row, 0)
+            if checkbox:
+                checkbox.setChecked(row in selected_rows)
+    
+    def on_checkbox_changed(self, row, state):
+        model = self.package_table.selectionModel()
+        if state == Qt.CheckState.Checked.value:
+            model.select(self.package_table.model().index(row, 0), QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows)
+        else:
+            model.select(self.package_table.model().index(row, 0), QItemSelectionModel.SelectionFlag.Deselect | QItemSelectionModel.SelectionFlag.Rows)
+    
     def select_all_sources(self):
         for checkbox in self.source_checkboxes.values():
             checkbox.setChecked(True)

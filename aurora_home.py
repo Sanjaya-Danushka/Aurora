@@ -143,7 +143,7 @@ QPushButton#bottomCardBtn {
     font-weight: 500;
     padding: 0px;
     margin: 0px;
-    min-height: 70px;
+    min-height: 60px;
     max-width: 150px;
     text-align: center;
 }
@@ -151,6 +151,7 @@ QPushButton#bottomCardBtn {
 QPushButton#bottomCardBtn:hover {
     background-color: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
+    min-height: 50px;
 }
 
 QPushButton#bottomCardBtn:pressed {
@@ -507,10 +508,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def create_sidebar(self):
         sidebar = QWidget()
         sidebar.setFixedWidth(180)  # Further reduced from 200
+        sidebar.setMinimumHeight(650)
         sidebar.setObjectName("sidebar")
         
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(15, 30, 15, 30)
+        layout.setContentsMargins(15, 30, 15, 0)
         layout.setSpacing(20)  # Increased spacing between cards
         
         # Header
@@ -540,7 +542,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Bottom section with card-style buttons
         bottom_layout = QVBoxLayout()
-        bottom_layout.setContentsMargins(0, 0, 0, 20)
+        bottom_layout.setContentsMargins(0, 0, 0, 10)
         bottom_layout.setSpacing(12)  # Consistent spacing
         
         # Settings button - card style

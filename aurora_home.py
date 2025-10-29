@@ -1028,8 +1028,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
         elif view_id == "discover":
-            self.package_table.setColumnCount(7)
-            self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Description", "Source", "Tags"])
+            self.package_table.setColumnCount(6)
+            self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Description", "Source"])
             self.package_table.setObjectName("discoverTable")  # Apply special styling
             self.package_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
@@ -1037,7 +1037,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
             self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
-            self.package_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
         else:
             self.package_table.setColumnCount(6)
             self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "New Version", "Source"])

@@ -6,8 +6,8 @@ class PackageTable(QTableWidget):
 
     def __init__(self):
         super().__init__()
-        self.setColumnCount(7)
-        self.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Description", "Source", "Tags"])
+        self.setColumnCount(6)
+        self.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Description", "Source"])
 
     def perform_search(self, query):
         # Placeholder for search logic
@@ -28,4 +28,3 @@ class PackageTable(QTableWidget):
         self.setItem(row, 3, QTableWidgetItem(pkg['version']))
         self.setItem(row, 4, QTableWidgetItem(pkg.get('description', '')))
         self.setItem(row, 5, QTableWidgetItem(pkg['source']))
-        self.setItem(row, 6, QTableWidgetItem(pkg.get('tags', '')))

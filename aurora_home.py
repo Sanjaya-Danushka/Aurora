@@ -13,117 +13,195 @@ from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
 
 DARK_STYLESHEET = """
 QMainWindow {
-    background-color: #1a1a1a;
+    background-color: #0d1117;
+    color: #c9d1d9;
 }
 
 QWidget {
-    background-color: #1a1a1a;
-    color: #e8e8e8;
+    background-color: #0d1117;
+    color: #c9d1d9;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 13px;
 }
 
 QLineEdit {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: #e8e8e8;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 12px;
+    background-color: rgba(177, 186, 196, 0.1);
+    color: #c9d1d9;
+    border: 2px solid rgba(177, 186, 196, 0.2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    selection-background-color: #1f6feb;
 }
 
 QLineEdit:focus {
-    background-color: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(0, 212, 255, 0.5);
+    background-color: rgba(177, 186, 196, 0.15);
+    border: 2px solid #1f6feb;
+    outline: none;
 }
 
 QPushButton {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: #e8e8e8;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(177, 186, 196, 0.1);
+    color: #c9d1d9;
+    border: 1px solid rgba(177, 186, 196, 0.2);
     border-radius: 6px;
     padding: 8px 16px;
     font-weight: 500;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 QPushButton:hover {
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(177, 186, 196, 0.2);
+    border-color: rgba(177, 186, 196, 0.4);
 }
 
 QPushButton:pressed {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(177, 186, 196, 0.3);
 }
 
 QPushButton#sidebarBtn {
     background-color: transparent;
     border: none;
-    color: #a0a0a0;
+    color: #8b949e;
     padding: 12px 16px;
     text-align: left;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
+    border-radius: 6px;
 }
 
 QPushButton#sidebarBtn:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #e8e8e8;
+    background-color: rgba(177, 186, 196, 0.1);
+    color: #c9d1d9;
 }
 
-QPushButton#sidebarBtn:checked {
-    background-color: rgba(0, 212, 255, 0.2);
-    color: #00d4ff;
-    border-left: 3px solid #00d4ff;
+QPushButton#navBtn {
+    background-color: rgba(33, 37, 43, 0.8);
+    border: 2px solid rgba(177, 186, 196, 0.1);
+    border-radius: 12px;
+    color: #8b949e;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 0px;
+    margin: 4px 0px;
+    min-height: 60px;
+    text-align: left;
+}
+
+QPushButton#navBtn:hover {
+    background-color: rgba(177, 186, 196, 0.1);
+    border-color: rgba(31, 111, 235, 0.4);
+}
+
+QPushButton#navBtn:checked {
+    background-color: rgba(31, 111, 235, 0.15);
+    border-color: #1f6feb;
+    color: #1f6feb;
+}
+
+QPushButton#navBtn:pressed {
+}
+
+QLabel#navIcon {
+    background-color: rgba(177, 186, 196, 0.05);
+    border-radius: 8px;
+    font-size: 18px;
+    color: #8b949e;
+}
+
+QPushButton#navBtn:hover QLabel#navIcon {
+    background-color: rgba(31, 111, 235, 0.1);
+}
+
+QPushButton#navBtn:checked QLabel#navIcon {
+    background-color: rgba(31, 111, 235, 0.2);
+}
+
+QLabel#navText {
+    color: inherit;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+QPushButton#navBtn:checked QLabel#navText {
+    color: #1f6feb;
+    font-weight: 600;
+}
+
+QWidget#sidebar {
+    background-color: #161b22;
+    border-right: 1px solid rgba(177, 186, 196, 0.1);
+}
+
+QLabel#sidebarHeader {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-align: center;
+    padding: 10px 0;
+    margin-bottom: 10px;
 }
 
 QTableWidget {
-    background-color: rgba(255, 255, 255, 0.02);
-    alternate-background-color: rgba(255, 255, 255, 0.04);
-    gridline-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
+    background-color: rgba(177, 186, 196, 0.05);
+    alternate-background-color: rgba(177, 186, 196, 0.02);
+    gridline-color: rgba(177, 186, 196, 0.1);
+    border: 1px solid rgba(177, 186, 196, 0.1);
+    border-radius: 8px;
+    selection-background-color: rgba(31, 111, 235, 0.3);
+    selection-color: #c9d1d9;
 }
 
 QTableWidget::item {
-    padding: 8px;
+    padding: 12px 8px;
     border: none;
+    border-bottom: 1px solid rgba(177, 186, 196, 0.05);
 }
 
 QTableWidget::item:selected {
-    background-color: rgba(0, 212, 255, 0.3);
-    color: #00d4ff;
+    background-color: rgba(31, 111, 235, 0.2);
+    color: #c9d1d9;
 }
 
 QHeaderView::section {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #00d4ff;
-    padding: 10px;
+    background-color: rgba(177, 186, 196, 0.1);
+    color: #1f6feb;
+    padding: 12px 8px;
     border: none;
     font-weight: 600;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(177, 186, 196, 0.1);
 }
 
 QTextEdit {
-    background-color: rgba(255, 255, 255, 0.02);
-    color: #e8e8e8;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: rgba(177, 186, 196, 0.05);
+    color: #8b949e;
+    border: 1px solid rgba(177, 186, 196, 0.1);
     border-radius: 6px;
-    font-family: 'Courier New';
-    font-size: 11px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    padding: 8px;
 }
 
 QLabel {
-    color: #e8e8e8;
+    color: #c9d1d9;
 }
 
 QLabel#headerLabel {
     color: #ffffff;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
 }
 
 QLabel#sectionLabel {
-    color: #00d4ff;
-    font-size: 11px;
+    color: #1f6feb;
+    font-size: 12px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 QFrame {
@@ -132,39 +210,74 @@ QFrame {
 }
 
 QCheckBox {
-    color: #e8e8e8;
+    color: #c9d1d9;
     spacing: 8px;
 }
 
 QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background-color: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(177, 186, 196, 0.3);
+    background-color: rgba(177, 186, 196, 0.1);
 }
 
 QCheckBox::indicator:checked {
-    background-color: rgba(0, 212, 255, 0.5);
-    border: 1px solid rgba(0, 212, 255, 0.8);
+    background-color: #1f6feb;
+    border: 2px solid #1f6feb;
+}
+
+QCheckBox::indicator:hover {
+    border-color: rgba(177, 186, 196, 0.5);
 }
 
 QListWidget {
     background-color: transparent;
     border: none;
+    outline: none;
 }
 
 QListWidget::item {
-    padding: 8px;
+    padding: 8px 12px;
     border-radius: 4px;
+    margin: 2px 0;
 }
 
 QListWidget::item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(177, 186, 196, 0.1);
 }
 
 QListWidget::item:selected {
-    background-color: rgba(0, 212, 255, 0.2);
+    background-color: rgba(31, 111, 235, 0.2);
+    color: #1f6feb;
+}
+
+/* Discover section specific styling */
+QTableWidget#discoverTable {
+    background-color: rgba(13, 17, 23, 0.8);
+    border: 1px solid rgba(177, 186, 196, 0.2);
+}
+
+QTableWidget#discoverTable::item {
+    padding: 16px 12px;
+    border-bottom: 1px solid rgba(177, 186, 196, 0.08);
+}
+
+QTableWidget#discoverTable::item:hover {
+    background-color: rgba(177, 186, 196, 0.05);
+}
+
+/* Progress bar styling */
+QProgressBar {
+    border: 2px solid rgba(177, 186, 196, 0.2);
+    border-radius: 4px;
+    text-align: center;
+    background-color: rgba(177, 186, 196, 0.1);
+}
+
+QProgressBar::chunk {
+    background-color: #1f6feb;
+    border-radius: 2px;
 }
 """
 
@@ -258,7 +371,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         super().__init__()
         self.setWindowTitle("Aurora - Package Manager")
         self.setGeometry(100, 100, 1400, 900)
-        # self.setStyleSheet(DARK_STYLESHEET)
+        self.setStyleSheet(DARK_STYLESHEET)
         # self.set_minimal_icon()
         
         self.current_view = "updates"
@@ -340,42 +453,37 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         main_layout.addWidget(content, 1)
     
     def create_sidebar(self):
-        sidebar = QFrame()
-        sidebar.setStyleSheet("""
-            QFrame {
-                background-color: #0f0f0f;
-                border-right: 1px solid rgba(255, 255, 255, 0.1);
-            }
-        """)
-        sidebar.setFixedWidth(220)
+        sidebar = QWidget()
+        sidebar.setFixedWidth(280)
+        sidebar.setObjectName("sidebar")
         
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setContentsMargins(20, 30, 20, 30)
+        layout.setSpacing(15)
         
-        # Logo/Title
-        logo_label = QLabel("🌌 Aurora")
-        logo_label.setStyleSheet("color: #00d4ff; font-size: 16px; font-weight: bold; padding: 16px;")
-        layout.addWidget(logo_label)
+        # Header
+        header = QLabel("AURORA")
+        header.setObjectName("sidebarHeader")
+        layout.addWidget(header)
         
-        # Navigation Buttons
-        nav_buttons = [
-            ("🔄 Software Updates", "updates"),
-            ("📦 Installed Packages", "installed"),
-            ("🔍 Discover Packages", "discover"),
-            ("📋 Package Bundles", "bundles"),
+        # Spacer
+        layout.addSpacing(30)
+        
+        # Navigation buttons with icons
+        nav_items = [
+            (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover.svg"), "Discover", "discover"),
+            (os.path.join(os.path.dirname(__file__), "assets", "icons", "updates.svg"), "Updates", "updates"), 
+            (os.path.join(os.path.dirname(__file__), "assets", "icons", "installed.svg"), "Installed", "installed"),
+            (os.path.join(os.path.dirname(__file__), "assets", "icons", "local.svg"), "Bundles", "bundles"),
+            (os.path.join(os.path.dirname(__file__), "assets", "icons", "settings.svg"), "Settings", "settings")
         ]
         
         self.nav_buttons = {}
-        for label, view_id in nav_buttons:
-            btn = QPushButton(label)
-            btn.setObjectName("sidebarBtn")
-            btn.setCheckable(True)
-            btn.clicked.connect(lambda checked, v=view_id: self.switch_view(v))
+        
+        for icon_path, text, view_id in nav_items:
+            btn = self.create_nav_button(icon_path, text, view_id)
             self.nav_buttons[view_id] = btn
             layout.addWidget(btn)
-        
-        self.nav_buttons["updates"].setChecked(True)
         
         layout.addStretch()
         
@@ -391,6 +499,65 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.addWidget(about_btn)
         
         return sidebar
+    
+    def create_nav_button(self, icon_path, text, view_id):
+        btn = QPushButton()
+        btn.setObjectName("navBtn")
+        btn.setProperty("view_id", view_id)
+        
+        # Create layout for icon + text
+        layout = QHBoxLayout(btn)
+        layout.setContentsMargins(20, 15, 20, 15)
+        layout.setSpacing(12)
+        
+        # Icon label
+        icon_label = QLabel()
+        icon_label.setObjectName("navIcon")
+        icon_label.setFixedSize(32, 32)
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Try to load SVG as pixmap
+        try:
+            pixmap = QPixmap(icon_path)
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                icon_label.setPixmap(scaled_pixmap)
+            else:
+                # Fallback to emoji
+                emoji = self.get_fallback_icon(icon_path)
+                icon_label.setText(emoji)
+        except Exception as e:
+            # Fallback to emoji
+            emoji = self.get_fallback_icon(icon_path)
+            icon_label.setText(emoji)
+        
+        layout.addWidget(icon_label)
+        
+        # Text label
+        text_label = QLabel(text)
+        text_label.setObjectName("navText")
+        layout.addWidget(text_label)
+        
+        layout.addStretch()
+        
+        btn.clicked.connect(lambda checked, v=view_id: self.switch_view(v))
+        
+        return btn
+    
+    def get_fallback_icon(self, icon_path):
+        # Return emoji based on icon path
+        if "discover" in icon_path:
+            return "🔍"
+        elif "updates" in icon_path:
+            return "⬆️"
+        elif "installed" in icon_path:
+            return "📦"
+        elif "local" in icon_path or "bundles" in icon_path:
+            return "🎁"
+        elif "settings" in icon_path:
+            return "⚙️"
+        else:
+            return "📦"
     
     def create_content_area(self):
         content = QWidget()
@@ -700,6 +867,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if view_id == "installed":
             self.package_table.setColumnCount(6)
             self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Source", "Status"])
+            self.package_table.setObjectName("")  # Reset object name
             self.package_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
             self.package_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
@@ -709,6 +877,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         elif view_id == "discover":
             self.package_table.setColumnCount(7)
             self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Description", "Source", "Tags"])
+            self.package_table.setObjectName("discoverTable")  # Apply special styling
             self.package_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
             self.package_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
@@ -719,6 +888,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         else:
             self.package_table.setColumnCount(6)
             self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "New Version", "Source"])
+            self.package_table.setObjectName("")  # Reset object name
             self.package_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
             self.package_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)

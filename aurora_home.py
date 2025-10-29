@@ -557,8 +557,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         try:
             pixmap = QPixmap(logo_path)
             if not pixmap.isNull():
-                # Scale logo to fit nicely in sidebar (max 50px wide for better fit)
-                scaled_pixmap = pixmap.scaledToWidth(50, Qt.TransformationMode.SmoothTransformation)
+                # Scale logo to fit nicely in sidebar (45px wide for better fit)
+                scaled_pixmap = pixmap.scaledToWidth(45, Qt.TransformationMode.SmoothTransformation)
                 logo_label.setPixmap(scaled_pixmap)
             else:
                 logo_label.setText("🖥️")
@@ -568,7 +568,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             logo_label.setStyleSheet("font-size: 28px; color: white;")
         
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo_label.setFixedWidth(50)  # Fixed width for consistency
+        logo_label.setFixedWidth(45)  # Smaller for more text space
         header_layout.addWidget(logo_label)
         
         # Text container on the right - expanded to take remaining space
@@ -579,15 +579,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Title - ensure it's visible with proper contrast
         title_label = QLabel("NeoArch")
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: white; background: transparent;")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: white; background: transparent;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         text_layout.addWidget(title_label)
         
-        # Subtitle - shorter version to fit
-        subtitle_label = QLabel("Elevate Your Arch")
-        subtitle_label.setStyleSheet("font-size: 10px; color: rgba(255, 255, 255, 0.9); background: transparent;")
+        # Subtitle - line by line
+        subtitle_label = QLabel("Elevate Your\nArch Experience")
+        subtitle_label.setStyleSheet("font-size: 8px; color: rgba(255, 255, 255, 0.9); background: transparent; line-height: 1.1;")
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        subtitle_label.setWordWrap(False)  # Don't wrap to save space
+        subtitle_label.setWordWrap(True)  # Allow wrapping for multi-line text
         text_layout.addWidget(subtitle_label)
         
         header_layout.addWidget(text_widget, 1)  # Give it stretch factor of 1 to take remaining space
@@ -2416,7 +2416,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def show_about(self):
         QMessageBox.information(self, "About NeoArch", 
-                              "NeoArch - Elevate Your Arch Experience\nVersion 1.0\n\nBuilt with PyQt6")
+                              "NeoArch - Elevate Your \nArch Experience\nVersion 1.0\n\nBuilt with PyQt6")
     
     def log(self, message):
         self.console.append(message)

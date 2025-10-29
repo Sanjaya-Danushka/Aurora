@@ -76,25 +76,26 @@ QPushButton#sidebarBtn:hover {
 }
 
 QPushButton#navBtn {
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
     color: #ffffff;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 500;
     padding: 0px;
-    margin: 6px 0px;
-    min-height: 64px;
-    text-align: left;
+    margin: 8px 0px;  /* More margin between cards */
+    min-height: 90px;  /* More square proportion */
+    max-width: 160px;  /* Limit width for square shape */
+    text-align: center;
 }
 
 QPushButton#navBtn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 QPushButton#navBtn:checked {
-    background-color: rgba(31, 111, 235, 0.2);
+    background-color: rgba(31, 111, 235, 0.15);
     border-color: #1f6feb;
     color: #ffffff;
 }
@@ -103,30 +104,34 @@ QPushButton#navBtn:pressed {
 }
 
 QLabel#navIcon {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    font-size: 20px;
-    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    font-size: 26px;
+    color: #e1e5e9;  /* Light gray instead of pure white */
 }
 
 QPushButton#navBtn:hover QLabel#navIcon {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;  /* White on hover */
 }
 
 QPushButton#navBtn:checked QLabel#navIcon {
-    background-color: rgba(31, 111, 235, 0.3);
+    background-color: rgba(31, 111, 235, 0.25);
     color: #ffffff;
 }
 
 QLabel#navText {
-    color: #ffffff;
-    font-weight: 500;
-    letter-spacing: 0.3px;
+    color: #e1e5e9;  /* Light gray text */
+    font-weight: 400;
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    margin-top: 4px;
+    text-transform: uppercase;
 }
 
 QPushButton#navBtn:checked QLabel#navText {
     color: #ffffff;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 QWidget#sidebar {
@@ -455,12 +460,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def create_sidebar(self):
         sidebar = QWidget()
-        sidebar.setFixedWidth(280)
+        sidebar.setFixedWidth(200)  # Reduced from 280
         sidebar.setObjectName("sidebar")
         
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(20, 30, 20, 30)
-        layout.setSpacing(15)
+        layout.setContentsMargins(15, 30, 15, 30)
+        layout.setSpacing(20)  # Increased spacing between cards
         
         # Header
         header = QLabel("AURORA")
@@ -468,7 +473,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.addWidget(header)
         
         # Spacer
-        layout.addSpacing(30)
+        layout.addSpacing(20)  # Reduced spacing
         
         # Navigation buttons with icons
         nav_items = [
@@ -494,38 +499,65 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         btn.setObjectName("navBtn")
         btn.setProperty("view_id", view_id)
         
-        # Create layout for icon + text
-        layout = QHBoxLayout(btn)
-        layout.setContentsMargins(20, 15, 20, 15)
-        layout.setSpacing(12)
+        # Create vertical layout for icon + text
+        layout = QVBoxLayout(btn)
+        layout.setContentsMargins(12, 16, 12, 16)  # Balanced padding
+        layout.setSpacing(6)  # Space between icon and text
         
-        # Icon label
+        # Icon label - large and prominent
         icon_label = QLabel()
         icon_label.setObjectName("navIcon")
-        icon_label.setFixedSize(32, 32)
+        icon_label.setFixedSize(50, 50)  # Larger icon container
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # Try to load SVG as pixmap
+        # Try to load and render SVG in white
         try:
-            pixmap = QPixmap(icon_path)
-            if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                icon_label.setPixmap(scaled_pixmap)
+            from PyQt6.QtSvg import QSvgRenderer
+            from PyQt6.QtGui import QPainter
+            
+            svg_renderer = QSvgRenderer(icon_path)
+            if svg_renderer.isValid():
+                # Create pixmap and render SVG in white
+                pixmap = QPixmap(50, 50)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                
+                # Set composition mode and color for white rendering
+                from PyQt6.QtCore import QRectF
+                svg_renderer.render(painter, QRectF(pixmap.rect()))
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(pixmap.rect(), QColor("#e1e5e9"))  # Light gray color
+                painter.end()
+                
+                icon_label.setPixmap(pixmap)
             else:
-                # Fallback to emoji
+                # Fallback to emoji if SVG is invalid
                 emoji = self.get_fallback_icon(icon_path)
                 icon_label.setText(emoji)
-        except Exception as e:
-            # Fallback to emoji
-            emoji = self.get_fallback_icon(icon_path)
-            icon_label.setText(emoji)
+        except ImportError:
+            # Fallback if SVG support not available
+            try:
+                pixmap = QPixmap(icon_path)
+                if not pixmap.isNull():
+                    scaled_pixmap = pixmap.scaled(40, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    icon_label.setPixmap(scaled_pixmap)
+                else:
+                    emoji = self.get_fallback_icon(icon_path)
+                    icon_label.setText(emoji)
+            except:
+                emoji = self.get_fallback_icon(icon_path)
+                icon_label.setText(emoji)
         
-        layout.addWidget(icon_label)
+        layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignCenter)
         
-        # Text label
+        # Text label - below icon
         text_label = QLabel(text)
         text_label.setObjectName("navText")
-        layout.addWidget(text_label)
+        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center align text
+        layout.addWidget(text_label, alignment=Qt.AlignmentFlag.AlignCenter)
         
         layout.addStretch()
         

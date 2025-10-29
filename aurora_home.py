@@ -8,8 +8,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
                              QLabel, QFileDialog, QMessageBox, QHeaderView, QFrame, QSplitter,
                              QScrollArea, QCheckBox, QListWidget, QListWidgetItem, QSizePolicy)
-from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer
+from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF
 from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
+from PyQt6.QtSvg import QSvgRenderer
 
 DARK_STYLESHEET = """
 QMainWindow {
@@ -324,17 +325,16 @@ QTableWidget#discoverTable::item:hover {
     background-color: rgba(177, 186, 196, 0.05);
 }
 
-/* Progress bar styling */
-QProgressBar {
-    border: 2px solid rgba(177, 186, 196, 0.2);
-    border-radius: 4px;
-    text-align: center;
+QHeaderView::section {
     background-color: rgba(177, 186, 196, 0.1);
-}
-
-QProgressBar::chunk {
-    background-color: #1f6feb;
-    border-radius: 2px;
+    color: #1f6feb;
+    padding: 12px 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(177, 186, 196, 0.1);
 }
 """
 
@@ -574,9 +574,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Try to load and render SVG in white
         try:
-            from PyQt6.QtSvg import QSvgRenderer
-            from PyQt6.QtGui import QPainter
-            
             svg_renderer = QSvgRenderer(icon_path)
             if svg_renderer.isValid():
                 # Create pixmap and render SVG in white
@@ -588,10 +585,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
                 
                 # Set composition mode and color for white rendering
-                from PyQt6.QtCore import QRectF
                 svg_renderer.render(painter, QRectF(pixmap.rect()))
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("#e1e5e9"))  # Light gray color
+                painter.fillRect(pixmap.rect(), QColor("white"))  # Light gray color
                 painter.end()
                 
                 icon_label.setPixmap(pixmap)
@@ -644,9 +640,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Try to load and render SVG in white
         try:
-            from PyQt6.QtSvg import QSvgRenderer
-            from PyQt6.QtGui import QPainter
-            
             svg_renderer = QSvgRenderer(icon_path)
             if svg_renderer.isValid():
                 # Create pixmap and render SVG in white
@@ -661,7 +654,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 from PyQt6.QtCore import QRectF
                 svg_renderer.render(painter, QRectF(pixmap.rect()))
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("#e1e5e9"))  # Light gray color
+                painter.fillRect(pixmap.rect(), QColor("white"))  # Light gray color
                 painter.end()
                 
                 icon_label.setPixmap(pixmap)
@@ -773,8 +766,25 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.search_input = search_input
         layout.addWidget(search_input)
         
-        refresh_btn = QPushButton("🔄")
+        refresh_btn = QPushButton()
         refresh_btn.setFixedSize(36, 36)
+        icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+        
+        def get_white_icon_pixmap(path, size=20):
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            renderer = QSvgRenderer(path)
+            if renderer.isValid():
+                renderer.render(painter, QRectF(pixmap.rect()))
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(pixmap.rect(), QColor("white"))
+            painter.end()
+            return pixmap
+        
+        refresh_btn.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "refresh.svg"))))
+        refresh_btn.setToolTip("Refresh")
         refresh_btn.clicked.connect(self.refresh_packages)
         layout.addWidget(refresh_btn)
         
@@ -868,8 +878,24 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.addWidget(self.package_table, 1)
         
         # Load More Button
-        self.load_more_btn = QPushButton("📥 Load More Packages")
-        self.load_more_btn.setFixedHeight(36)
+        self.load_more_btn = QPushButton("Load More Packages")
+        self.load_more_btn.setMinimumHeight(36)
+        icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+        
+        def get_white_icon_pixmap(path, size=20):
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            renderer = QSvgRenderer(path)
+            if renderer.isValid():
+                renderer.render(painter, QRectF(pixmap.rect()))
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(pixmap.rect(), QColor("white"))
+            painter.end()
+            return pixmap
+        
+        self.load_more_btn.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "load-more.svg"))))
         self.load_more_btn.clicked.connect(self.load_more_packages)
         self.load_more_btn.setVisible(False)
         layout.addWidget(self.load_more_btn)
@@ -940,9 +966,26 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             layout = QHBoxLayout()
             layout.setSpacing(12)
             
-            install_btn = QPushButton("⬇️  Install selected packages")
+            install_btn = QPushButton("Install selected packages")
             install_btn.setMinimumHeight(36)
             install_btn.clicked.connect(self.install_selected)
+            icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+            
+            def get_white_icon_pixmap(path, size=20):
+                pixmap = QPixmap(size, size)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                renderer = QSvgRenderer(path)
+                if renderer.isValid():
+                    renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                painter.end()
+                return pixmap
+            
+            install_btn.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "install-selected packge.svg"))))
+            
             layout.addWidget(install_btn)
             
             layout.addStretch()
@@ -1003,14 +1046,51 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             if item.widget():
                 item.widget().deleteLater()
         
-        sources = ["pacman", "AUR", "Flatpak"]
+        sources = [
+            ("pacman", "pacman.svg"),
+            ("AUR", "aur.svg"),
+            ("Flatpak", "flatpack.svg")
+        ]
         self.source_checkboxes = {}
-        for source in sources:
+        for source, icon_file in sources:
+            # Create container widget
+            container = QWidget()
+            layout = QHBoxLayout(container)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(8)
+            
+            # Icon
+            icon_label = QLabel()
+            icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", icon_file)
+            try:
+                svg_renderer = QSvgRenderer(icon_path)
+                if svg_renderer.isValid():
+                    pixmap = QPixmap(20, 20)
+                    pixmap.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(pixmap)
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    svg_renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                    painter.end()
+                    icon_label.setPixmap(pixmap)
+                else:
+                    icon_label.setText("📦")
+            except:
+                icon_label.setText("📦")
+            
+            layout.addWidget(icon_label)
+            
+            # Checkbox
             checkbox = QCheckBox(source)
             checkbox.setChecked(True)
             checkbox.stateChanged.connect(self.apply_source_filter)
+            layout.addWidget(checkbox)
+            
+            layout.addStretch()
+            
             self.source_checkboxes[source] = checkbox
-            self.sources_layout.addWidget(checkbox)
+            self.sources_layout.addWidget(container)
     
     def apply_source_filter(self):
         if self.current_view == "discover" and self.search_results:
@@ -1037,6 +1117,37 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
             self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+            
+            # Add icons to headers
+            icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+            
+            def get_white_icon_pixmap(path, size=16):
+                pixmap = QPixmap(size, size)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                renderer = QSvgRenderer(path)
+                if renderer.isValid():
+                    renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                painter.end()
+                return pixmap
+            
+            header_item1 = QTableWidgetItem()
+            header_item1.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "packagename.svg"))))
+            header_item1.setText("Package Name")
+            self.package_table.setHorizontalHeaderItem(1, header_item1)
+            
+            header_item2 = QTableWidgetItem()
+            header_item2.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "pacakgeid.svg"))))
+            header_item2.setText("Package ID")
+            self.package_table.setHorizontalHeaderItem(2, header_item2)
+            
+            header_item3 = QTableWidgetItem()
+            header_item3.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "version.svg"))))
+            header_item3.setText("Version")
+            self.package_table.setHorizontalHeaderItem(3, header_item3)
         else:
             self.package_table.setColumnCount(6)
             self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "New Version", "Source"])
@@ -1161,7 +1272,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.load_more_btn.setVisible(has_more)
         if has_more:
             remaining = len(self.all_packages) - end
-            self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
+            self.load_more_btn.setText(f"Load More ({remaining} remaining)")
     
     def load_more_packages(self):
         self.current_page += 1
@@ -1187,7 +1298,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.load_more_btn.setVisible(has_more)
         if has_more:
             remaining = total - end
-            self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
+            self.load_more_btn.setText(f"Load More ({remaining} remaining)")
         else:
             self.log("All results loaded")
         
@@ -1211,7 +1322,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.package_table.setItem(row, 3, QTableWidgetItem(pkg['version']))
         self.package_table.setItem(row, 4, QTableWidgetItem(pkg.get('description', '')))
         self.package_table.setItem(row, 5, QTableWidgetItem(pkg['source']))
-        self.package_table.setItem(row, 6, QTableWidgetItem(pkg.get('tags', '')))
     
     def add_package_row(self, name, pkg_id, version, new_version, source, pkg_data=None):
         row = self.package_table.rowCount()
@@ -1384,7 +1494,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.load_more_btn.setVisible(has_more)
         if has_more:
             remaining = len(filtered) - end
-            self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
+            self.load_more_btn.setText(f"Load More ({remaining} remaining)")
         
         # Provide feedback if no results match
         if not filtered:
@@ -1571,7 +1681,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.load_more_btn.setVisible(has_more)
         if has_more:
             remaining = len(filtered) - 10
-            self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
+            self.load_more_btn.setText(f"Load More ({remaining} remaining)")
         
         self.log(f"Showing {len(filtered[:10])} of {len(filtered)} packages")
 

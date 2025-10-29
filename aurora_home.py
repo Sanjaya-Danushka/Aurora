@@ -892,21 +892,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Filters Section
         self.filters_section = QWidget()
-        filters_layout = QVBoxLayout(self.filters_section)
-        filters_layout.setContentsMargins(0, 0, 0, 0)
-        filters_layout.setSpacing(8)
-        
-        filters_label = QLabel("Filters")
-        filters_label.setObjectName("sectionLabel")
-        filters_layout.addWidget(filters_label)
-        
-        filter_options = ["Updates available", "Installed"]
-        self.filter_checkboxes = {}
-        for option in filter_options:
-            checkbox = QCheckBox(option)
-            checkbox.setChecked(True)
-            self.filter_checkboxes[option] = checkbox
-            filters_layout.addWidget(checkbox)
+        self.filters_layout = QVBoxLayout(self.filters_section)
+        self.filters_layout.setContentsMargins(0, 0, 0, 0)
+        self.filters_layout.setSpacing(8)
         
         layout.addWidget(self.filters_section)
         layout.addStretch()
@@ -1088,16 +1076,45 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.log("Package bundles feature")
     
     def update_filters_panel(self, view_id):
-        if view_id == "installed":
+        # Clear existing filters section
+        while self.filters_layout.count():
+            item = self.filters_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # Recreate filters based on view
+        filters_label = QLabel("Filters")
+        filters_label.setObjectName("sectionLabel")
+        self.filters_layout.addWidget(filters_label)
+        
+        if view_id == "updates":
+            # For updates view, filter by source
+            filter_options = ["pacman", "AUR"]
+        elif view_id == "installed":
+            # For installed view, filter by update status
+            filter_options = ["Updates available", "Installed"]
+        else:
+            filter_options = []
+        
+        self.filter_checkboxes = {}
+        for option in filter_options:
+            checkbox = QCheckBox(option)
+            checkbox.setChecked(True)
+            if view_id == "updates":
+                checkbox.stateChanged.connect(self.apply_update_filters)
+            elif view_id == "installed":
+                checkbox.stateChanged.connect(self.apply_filters)
+            self.filter_checkboxes[option] = checkbox
+            self.filters_layout.addWidget(checkbox)
+        
+        # Update visibility
+        if view_id in ["installed", "updates"]:
             self.sources_section.setVisible(False)
             self.filters_section.setVisible(True)
         elif view_id == "discover":
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(False)
             self.update_discover_sources()
-        elif view_id == "updates":
-            self.sources_section.setVisible(False)
-            self.filters_section.setVisible(True)
         else:
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(True)
@@ -1857,8 +1874,26 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                                             'name': package_name,
                                             'version': current_version,
                                             'new_version': new_version,
-                                            'id': package_name
+                                            'id': package_name,
+                                            'source': 'pacman'  # Default to pacman
                                         })
+                
+                # Determine which packages are from AUR
+                if packages:
+                    result_aur = subprocess.run(["pacman", "-Qm"], capture_output=True, text=True, timeout=30)
+                    aur_packages = set()
+                    if result_aur.returncode == 0 and result_aur.stdout:
+                        for line in result_aur.stdout.strip().split('\n'):
+                            if line.strip():
+                                parts = line.split()
+                                if len(parts) >= 1:
+                                    aur_packages.add(parts[0])
+                    
+                    # Update source for AUR packages
+                    for pkg in packages:
+                        if pkg['name'] in aur_packages:
+                            pkg['source'] = 'AUR'
+                
                 self.packages_ready.emit(packages)
             except Exception as e:
                 self.log(f"Error: {str(e)}")
@@ -2391,6 +2426,32 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_more_btn.setText(f"Load More ({remaining} remaining)")
         
         self.log(f"Showing {len(filtered[:10])} of {len(filtered)} packages")
+
+    def apply_update_filters(self):
+        if self.current_view != "updates" or not self.all_packages:
+            return
+        
+        show_pacman = self.filter_checkboxes.get("pacman", True)
+        show_aur = self.filter_checkboxes.get("AUR", True)
+        
+        if isinstance(show_pacman, QCheckBox):
+            show_pacman = show_pacman.isChecked()
+        if isinstance(show_aur, QCheckBox):
+            show_aur = show_aur.isChecked()
+        
+        filtered = []
+        for pkg in self.all_packages:
+            if pkg.get('source') == 'pacman' and show_pacman:
+                filtered.append(pkg)
+            elif pkg.get('source') == 'AUR' and show_aur:
+                filtered.append(pkg)
+        
+        # Update the all_packages to show filtered results
+        self.all_packages = filtered
+        self.current_page = 0
+        self.package_table.setRowCount(0)
+        self.display_page()
+        self.log(f"Filtered to {len(filtered)} packages (pacman: {show_pacman}, AUR: {show_aur})")
 
     def on_selection_changed(self):
         selected_rows = set(index.row() for index in self.package_table.selectionModel().selectedRows())

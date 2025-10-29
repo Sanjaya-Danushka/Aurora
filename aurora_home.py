@@ -868,6 +868,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
         else:
             self.log("All results loaded")
+        
+        # Uncheck the newly loaded items
+        old_count = self.package_table.rowCount() - len(page_packages)
+        for i in range(old_count, self.package_table.rowCount()):
+            checkbox = self.package_table.cellWidget(i, 0)
+            if checkbox:
+                checkbox.setChecked(False)
     
     def add_discover_row(self, pkg):
         row = self.package_table.rowCount()

@@ -976,18 +976,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             layout.addStretch()
             self.toolbar_layout.addLayout(layout)
         elif self.current_view == "installed":
-            layout = QHBoxLayout()
-            layout.setSpacing(12)
-            
-            uninstall_btn = QPushButton("🗑️  Uninstall selected packages")
-            uninstall_btn.setMinimumHeight(36)
-            uninstall_btn.clicked.connect(self.uninstall_selected)
-            layout.addWidget(uninstall_btn)
-            
-            update_btn = QPushButton("⬆️  Update selected packages")
-            update_btn.setMinimumHeight(36)
-            update_btn.clicked.connect(self.update_selected)
-            layout.addWidget(update_btn)
             
             layout.addStretch()
             self.toolbar_layout.addLayout(layout)
@@ -1176,6 +1164,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 background-color: rgba(0, 191, 174, 0.7);
             }
         """)
+        install_git_btn.clicked.connect(self.install_from_git)
         git_buttons_layout.addWidget(install_git_btn)
         
         # Secondary buttons - now vertical under main button
@@ -1613,7 +1602,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         reply = QMessageBox.question(
             self, "Clean Git Repositories",
             f"This will clean build artifacts from {len(repos)} repositories.\n\n"
-            "This will run 'git clean -fd' and remove untracked files.\n"
+            "This will run 'git clean -fdx' and remove untracked and ignored files.\n"
             "Are you sure you want to continue?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
@@ -1631,7 +1620,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 repo_path = os.path.join(git_repos_dir, repo)
                 try:
                     self.log_signal.emit(f"Cleaning {repo}...")
-                    result = subprocess.run(["git", "-C", repo_path, "clean", "-fd"], 
+                    result = subprocess.run(["git", "-C", repo_path, "clean", "-fdx"], 
                                           capture_output=True, text=True, timeout=30)
                     if result.returncode == 0:
                         cleaned += 1

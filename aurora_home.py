@@ -312,29 +312,32 @@ QListWidget::item:selected {
 
 /* Discover section specific styling */
 QTableWidget#discoverTable {
-    background-color: rgba(13, 17, 23, 0.8);
-    border: 1px solid rgba(177, 186, 196, 0.2);
+    background-color: rgba(13, 17, 23, 0.9);
+    border: 1px solid rgba(177, 186, 196, 0.3);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 QTableWidget#discoverTable::item {
-    padding: 16px 12px;
-    border-bottom: 1px solid rgba(177, 186, 196, 0.08);
+    padding: 18px 14px;
+    border-bottom: 1px solid rgba(177, 186, 196, 0.1);
 }
 
 QTableWidget#discoverTable::item:hover {
-    background-color: rgba(177, 186, 196, 0.05);
+    background-color: rgba(177, 186, 196, 0.1);
 }
 
 QHeaderView::section {
-    background-color: rgba(177, 186, 196, 0.1);
+    background-color: rgba(177, 186, 196, 0.15);
     color: #1f6feb;
-    padding: 12px 8px;
+    padding: 16px 12px;
     border: none;
     font-weight: 600;
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 2px solid rgba(177, 186, 196, 0.1);
+    border-bottom: 2px solid rgba(177, 186, 196, 0.2);
+    border-radius: 8px 8px 0 0;
 }
 """
 

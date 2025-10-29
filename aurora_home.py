@@ -1123,11 +1123,25 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.source_checkboxes[source] = checkbox
             self.sources_layout.addWidget(container)
         
+        # Add visual separator before Git section
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        separator.setStyleSheet("""
+            QFrame {
+                color: rgba(0, 191, 174, 0.2);
+                background-color: rgba(0, 191, 174, 0.1);
+                margin: 8px 0;
+                max-height: 1px;
+            }
+        """)
+        self.sources_layout.addWidget(separator)
+        
         # Add Git source section with multiple options
         git_section = QWidget()
         git_layout = QVBoxLayout(git_section)
-        git_layout.setContentsMargins(0, 0, 0, 0)
-        git_layout.setSpacing(8)
+        git_layout.setContentsMargins(0, 8, 0, 0)  # Add top margin for spacing
+        git_layout.setSpacing(10)  # Increase spacing between elements
         
         # Git section label
         git_label = QLabel("Git Repositories")
@@ -1145,41 +1159,47 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         install_git_btn = QPushButton("📥 Install from Git")
         install_git_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(42, 45, 51, 0.6);
-                color: #F0F0F0;
-                border: 1px solid rgba(0, 191, 174, 0.2);
-                border-radius: 4px;
-                padding: 6px 10px;
+                background-color: rgba(0, 191, 174, 0.8);
+                color: #1E1E1E;
+                border: 1px solid rgba(0, 191, 174, 0.3);
+                border-radius: 6px;
+                padding: 8px 12px;
                 font-size: 12px;
+                font-weight: 500;
                 text-align: left;
             }
             QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.8);
-                border-color: rgba(0, 191, 174, 0.4);
+                background-color: rgba(0, 191, 174, 0.9);
+                border-color: rgba(0, 191, 174, 0.5);
+            }
+            QPushButton:pressed {
+                background-color: rgba(0, 191, 174, 0.7);
             }
         """)
         install_git_btn.clicked.connect(self.install_from_git)
         git_buttons_layout.addWidget(install_git_btn)
         
-        # Secondary buttons row
+        # Secondary buttons row - improved styling
         secondary_layout = QHBoxLayout()
-        secondary_layout.setSpacing(6)
+        secondary_layout.setSpacing(8)  # Slightly more spacing
         
         # Open Git repos directory
         open_repos_btn = QPushButton("📁 Open Repos")
         open_repos_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(42, 45, 51, 0.4);
+                background-color: rgba(42, 45, 51, 0.5);
                 color: #F0F0F0;
-                border: 1px solid rgba(0, 191, 174, 0.1);
-                border-radius: 3px;
-                padding: 4px 8px;
+                border: 1px solid rgba(0, 191, 174, 0.15);
+                border-radius: 4px;
+                padding: 6px 10px;
                 font-size: 11px;
                 text-align: center;
+                min-width: 80px;
             }
             QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.6);
-                border-color: rgba(0, 191, 174, 0.3);
+                background-color: rgba(42, 45, 51, 0.7);
+                border-color: rgba(0, 191, 174, 0.35);
+                color: #00BFAE;
             }
         """)
         open_repos_btn.clicked.connect(self.open_git_repos_dir)
@@ -1189,17 +1209,19 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         update_repos_btn = QPushButton("🔄 Update All")
         update_repos_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(42, 45, 51, 0.4);
+                background-color: rgba(42, 45, 51, 0.5);
                 color: #F0F0F0;
-                border: 1px solid rgba(0, 191, 174, 0.1);
-                border-radius: 3px;
-                padding: 4px 8px;
+                border: 1px solid rgba(0, 191, 174, 0.15);
+                border-radius: 4px;
+                padding: 6px 10px;
                 font-size: 11px;
                 text-align: center;
+                min-width: 80px;
             }
             QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.6);
-                border-color: rgba(0, 191, 174, 0.3);
+                background-color: rgba(42, 45, 51, 0.7);
+                border-color: rgba(0, 191, 174, 0.35);
+                color: #00BFAE;
             }
         """)
         update_repos_btn.clicked.connect(self.update_all_git_repos)
@@ -1209,17 +1231,19 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         clean_repos_btn = QPushButton("🗑️ Clean")
         clean_repos_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(42, 45, 51, 0.4);
+                background-color: rgba(42, 45, 51, 0.5);
                 color: #F0F0F0;
-                border: 1px solid rgba(0, 191, 174, 0.1);
-                border-radius: 3px;
-                padding: 4px 8px;
+                border: 1px solid rgba(0, 191, 174, 0.15);
+                border-radius: 4px;
+                padding: 6px 10px;
                 font-size: 11px;
                 text-align: center;
+                min-width: 60px;
             }
             QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.6);
-                border-color: rgba(0, 191, 174, 0.3);
+                background-color: rgba(42, 45, 51, 0.7);
+                border-color: rgba(0, 191, 174, 0.35);
+                color: #FF6B6B;
             }
         """)
         clean_repos_btn.clicked.connect(self.clean_git_repos)
@@ -1235,22 +1259,22 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.recent_repos_list = QListWidget()
         self.recent_repos_list.setStyleSheet("""
             QListWidget {
-                background-color: rgba(42, 45, 51, 0.3);
-                border: 1px solid rgba(0, 191, 174, 0.1);
-                border-radius: 3px;
+                background-color: rgba(42, 45, 51, 0.4);
+                border: 1px solid rgba(0, 191, 174, 0.15);
+                border-radius: 4px;
                 color: #F0F0F0;
                 font-size: 10px;
-                max-height: 80px;
+                max-height: 85px;
             }
             QListWidget::item {
-                padding: 3px 6px;
-                border-bottom: 1px solid rgba(0, 191, 174, 0.05);
+                padding: 4px 8px;
+                border-bottom: 1px solid rgba(0, 191, 174, 0.08);
             }
             QListWidget::item:hover {
-                background-color: rgba(0, 191, 174, 0.1);
+                background-color: rgba(0, 191, 174, 0.15);
             }
             QListWidget::item:selected {
-                background-color: rgba(0, 191, 174, 0.2);
+                background-color: rgba(0, 191, 174, 0.25);
             }
         """)
         self.recent_repos_list.itemDoubleClicked.connect(self.open_repo_directory)

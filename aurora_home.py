@@ -7,7 +7,7 @@ from threading import Thread
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
                              QLabel, QFileDialog, QMessageBox, QHeaderView, QFrame, QSplitter,
-                             QScrollArea, QCheckBox, QListWidget, QListWidgetItem)
+                             QScrollArea, QCheckBox, QListWidget, QListWidgetItem, QSizePolicy)
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer
 from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
 
@@ -155,7 +155,7 @@ QPushButton#bottomBtn:pressed {
 }
 
 QWidget#sidebar {
-    background-color: rgba(13, 17, 23, 0.95);
+    background-color: #1a1a1a;
     border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -318,14 +318,9 @@ class PackageLoaderWorker(QObject):
     
     def run(self):
         try:
-            print(f"[DEBUG] Running command: {self.command}")
             result = subprocess.run(self.command, capture_output=True, text=True, timeout=60)
-            print(f"[DEBUG] Return code: {result.returncode}")
-            print(f"[DEBUG] Stdout length: {len(result.stdout)}")
-            print(f"[DEBUG] Stderr: {result.stderr}")
-            
+            packages = []
             if result.returncode == 0 and result.stdout:
-                packages = []
                 for line in result.stdout.strip().split('\n'):
                     if line.strip():
                         parts = line.split()
@@ -335,14 +330,8 @@ class PackageLoaderWorker(QObject):
                                 'version': parts[1],
                                 'id': parts[0]
                             })
-                print(f"[DEBUG] Parsed {len(packages)} packages")
-                self.packages_loaded.emit(packages)
-            else:
-                print(f"[DEBUG] No stdout or error")
-                self.error_occurred.emit(f"Command failed: {result.stderr}")
-                self.packages_loaded.emit([])
+            self.packages_ready.emit(packages)
         except Exception as e:
-            print(f"[DEBUG] Exception: {str(e)}")
             self.error_occurred.emit(f"Error: {str(e)}")
         finally:
             self.finished.emit()
@@ -396,7 +385,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Aurora - Package Manager")
-        self.setGeometry(100, 100, 1400, 900)
+        self.setGeometry(100, 100, 1600, 900)  # Increased width to accommodate sidebar
+        self.setMinimumSize(1200, 700)  # Set minimum size
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setStyleSheet(DARK_STYLESHEET)
         # self.set_minimal_icon()
         
@@ -465,6 +456,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def setup_ui(self):
         central_widget = QWidget()
+        central_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -473,23 +465,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Left Sidebar
         sidebar = self.create_sidebar()
         main_layout.addWidget(sidebar)
-        with open("debug.log", "a") as f:
-            f.write(f"DEBUG: Sidebar added to main layout, size: {sidebar.size()}\n")
         
         # Main Content Area
         content = self.create_content_area()
         main_layout.addWidget(content, 1)
-        with open("debug.log", "a") as f:
-            f.write("DEBUG: Content area added to main layout\n")
+        
+        # Ensure proper sizing
+        self.adjustSize()
     
     def create_sidebar(self):
-        with open("debug.log", "a") as f:
-            f.write("DEBUG: Creating sidebar...\n")
         sidebar = QWidget()
         sidebar.setFixedWidth(200)  # Reduced from 280
         sidebar.setObjectName("sidebar")
-        with open("debug.log", "a") as f:
-            f.write("DEBUG: Sidebar widget created\n")
         
         layout = QVBoxLayout(sidebar)
         layout.setContentsMargins(15, 30, 15, 30)
@@ -499,8 +486,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         header = QLabel("AURORA")
         header.setObjectName("sidebarHeader")
         layout.addWidget(header)
-        with open("debug.log", "a") as f:
-            f.write("DEBUG: Header added\n")
         
         # Spacer
         layout.addSpacing(20)  # Reduced spacing
@@ -514,15 +499,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         ]
         
         self.nav_buttons = {}
-        with open("debug.log", "a") as f:
-            f.write(f"DEBUG: Creating {len(nav_items)} navigation buttons\n")
         
         for icon_path, text, view_id in nav_items:
             btn = self.create_nav_button(icon_path, text, view_id)
             self.nav_buttons[view_id] = btn
             layout.addWidget(btn)
-            with open("debug.log", "a") as f:
-                f.write(f"DEBUG: Added button for {view_id}\n")
         
         layout.addStretch()
         
@@ -550,11 +531,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         bottom_layout.addWidget(about_btn)
         
         layout.addLayout(bottom_layout)
-        with open("debug.log", "a") as f:
-            f.write("DEBUG: Bottom buttons added\n")
         
-        with open("debug.log", "a") as f:
-            f.write("DEBUG: Sidebar creation complete\n")
         return sidebar
     
     def create_nav_button(self, icon_path, text, view_id):

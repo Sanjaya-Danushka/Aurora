@@ -916,11 +916,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                             if len(parts) >= 2:
                                 name = parts[0].split('/')[-1]
                                 version = parts[1]
+                                description = ' '.join(parts[2:]) if len(parts) > 2 else ''
                                 packages.append({
                                     'name': name,
                                     'version': version,
                                     'id': name,
                                     'source': 'pacman',
+                                    'description': description,
                                     'has_update': False
                                 })
                         i += 1
@@ -936,7 +938,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                                     'version': pkg.get('Version', ''),
                                     'id': pkg.get('Name', ''),
                                     'source': 'AUR',
-                                    'has_update': False,
                                     'description': pkg.get('Description', ''),
                                     'tags': ', '.join(pkg.get('Keywords', []))
                                 })
@@ -951,11 +952,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                         if len(parts) >= 2:
                             name = parts[0]
                             version = parts[1]
+                            description = ' '.join(parts[2:]) if len(parts) > 2 else ''
                             packages.append({
                                 'name': name,
                                 'version': version,
                                 'id': name,
                                 'source': 'Flatpak',
+                                'description': description,
                                 'has_update': False
                             })
                 
@@ -982,6 +985,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             elif pkg['source'] == 'Flatpak' and show_flatpak:
                 filtered.append(pkg)
         
+        # Sort results by relevance to the query
+        query = self.search_input.text().strip().lower()
+        filtered.sort(key=lambda pkg: query in pkg['name'].lower() or query in pkg.get('description', '').lower(), reverse=True)
+        
         self.package_table.setUpdatesEnabled(False)
         self.package_table.setRowCount(0)
         
@@ -1001,7 +1008,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             remaining = len(filtered) - end
             self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
         
-        self.log(f"Found {len(filtered)} packages")
+        # Provide feedback if no results match
+        if not filtered:
+            self.log(f"No packages found matching '{query}'.")
+        else:
+            self.log(f"Found {len(filtered)} packages matching '{query}'. Showing first 10...")
 
     def refresh_packages(self):
         if self.current_view == "updates":

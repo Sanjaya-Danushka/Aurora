@@ -630,10 +630,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         btn = QPushButton()
         btn.setObjectName("bottomCardBtn")
         
-        # Create vertical layout for icon + text
-        layout = QVBoxLayout(btn)
+        # Create horizontal layout for icon + text
+        layout = QHBoxLayout(btn)
         layout.setContentsMargins(12, 16, 12, 16)  # Balanced padding
-        layout.setSpacing(6)  # Space between icon and text
+        layout.setSpacing(8)  # Space between icon and text
         
         # Icon label - smaller for bottom cards
         icon_label = QLabel()
@@ -684,11 +684,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignCenter)
         
-        # Text label - below icon
+        # Text label - right of icon
         text_label = QLabel(text)
         text_label.setObjectName("bottomCardText")
-        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center align text
-        layout.addWidget(text_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        text_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)  # Left align text, vertically centered
+        layout.addWidget(text_label, alignment=Qt.AlignmentFlag.AlignLeft)
         
         layout.addStretch()
         

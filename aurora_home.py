@@ -477,7 +477,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         sources_label.setObjectName("sectionLabel")
         self.sources_layout.addWidget(sources_label)
         
-        sources = ["Scoop", "Chocolatey", "Winget", "PowerShell", "Pip"]
+        sources = ["pacman", "AUR", "Flatpak"]
         self.source_checkboxes = {}
         for source in sources:
             checkbox = QCheckBox(source)
@@ -634,7 +634,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             if item.widget():
                 item.widget().deleteLater()
         
-        sources = ["pacman", "AUR"]
+        sources = ["pacman", "AUR", "Flatpak"]
         self.source_checkboxes = {}
         for source in sources:
             checkbox = QCheckBox(source)
@@ -898,7 +898,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.log(f"Found {len(self.search_results)} packages matching '{query}'. Showing first 10...")
     
     def search_discover_packages(self, query):
-        self.log(f"Searching for '{query}' in AUR and official repositories...")
+        self.log(f"Searching for '{query}' in AUR, official repositories, and Flatpak...")
         self.package_table.setRowCount(0)
         self.search_results = []
         
@@ -943,6 +943,22 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     except:
                         pass
                 
+                result_flatpak = subprocess.run(["flatpak", "search", query], capture_output=True, text=True, timeout=30)
+                if result_flatpak.returncode == 0 and result_flatpak.stdout:
+                    lines = result_flatpak.stdout.strip().split('\n')
+                    for line in lines:
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            name = parts[0]
+                            version = parts[1]
+                            packages.append({
+                                'name': name,
+                                'version': version,
+                                'id': name,
+                                'source': 'Flatpak',
+                                'has_update': False
+                            })
+                
                 self.discover_results_ready.emit(packages)
             except Exception as e:
                 self.log(f"Search error: {str(e)}")
@@ -955,12 +971,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         show_pacman = self.source_checkboxes.get("pacman", QCheckBox()).isChecked() if isinstance(self.source_checkboxes.get("pacman"), QCheckBox) else True
         show_aur = self.source_checkboxes.get("AUR", QCheckBox()).isChecked() if isinstance(self.source_checkboxes.get("AUR"), QCheckBox) else True
+        show_flatpak = self.source_checkboxes.get("Flatpak", QCheckBox()).isChecked() if isinstance(self.source_checkboxes.get("Flatpak"), QCheckBox) else True
         
         filtered = []
         for pkg in self.search_results:
             if pkg['source'] == 'pacman' and show_pacman:
                 filtered.append(pkg)
             elif pkg['source'] == 'AUR' and show_aur:
+                filtered.append(pkg)
+            elif pkg['source'] == 'Flatpak' and show_flatpak:
                 filtered.append(pkg)
         
         self.package_table.setUpdatesEnabled(False)

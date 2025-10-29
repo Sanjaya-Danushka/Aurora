@@ -1842,13 +1842,21 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 if result.returncode == 0 and result.stdout:
                     for line in result.stdout.strip().split('\n'):
                         if line.strip():
-                            parts = line.split()
-                            if len(parts) >= 2:
-                                packages.append({
-                                    'name': parts[0],
-                                    'version': parts[1],
-                                    'id': parts[0]
-                                })
+                            # Parse format: package_name current_version -> new_version
+                            if ' -> ' in line:
+                                parts = line.split(' -> ')
+                                if len(parts) == 2:
+                                    package_info = parts[0].strip().split()
+                                    new_version = parts[1].strip()
+                                    if len(package_info) >= 2:
+                                        package_name = package_info[0]
+                                        current_version = package_info[1]
+                                        packages.append({
+                                            'name': package_name,
+                                            'version': current_version,
+                                            'new_version': new_version,
+                                            'id': package_name
+                                        })
                 self.packages_ready.emit(packages)
             except Exception as e:
                 self.log(f"Error: {str(e)}")
@@ -2029,7 +2037,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 status_item.setForeground(QColor(16, 185, 129))
             self.package_table.setItem(row, 5, status_item)
         elif self.package_table.columnCount() > 4:
-            self.package_table.setItem(row, 4, QTableWidgetItem(new_version))
+            new_version_item = QTableWidgetItem(new_version)
+            if self.current_view == "updates":
+                # Make new version green to indicate available update
+                new_version_item.setForeground(QColor(16, 185, 129))  # Green color
+            self.package_table.setItem(row, 4, new_version_item)
             self.package_table.setItem(row, 5, QTableWidgetItem(source))
     
     def filter_packages(self):

@@ -1137,24 +1137,51 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         git_label.setStyleSheet("font-size: 11px; margin-bottom: 4px;")
         git_layout.addWidget(git_label)
         
-        # Git buttons container
+        # Git buttons container - now horizontal layout like other sources
         git_buttons_widget = QWidget()
-        git_buttons_layout = QVBoxLayout(git_buttons_widget)
+        git_buttons_layout = QHBoxLayout(git_buttons_widget)
         git_buttons_layout.setContentsMargins(0, 0, 0, 0)
-        git_buttons_layout.setSpacing(6)
+        git_buttons_layout.setSpacing(8)
         
-        # Install from Git button (main)
-        install_git_btn = QPushButton("📥 Install from Git")
+        # Install from Git button (with icon)
+        install_git_container = QWidget()
+        install_git_layout = QHBoxLayout(install_git_container)
+        install_git_layout.setContentsMargins(0, 0, 0, 0)
+        install_git_layout.setSpacing(8)
+        
+        # Git icon
+        git_icon_label = QLabel()
+        git_icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "git.svg")
+        try:
+            svg_renderer = QSvgRenderer(git_icon_path)
+            if svg_renderer.isValid():
+                pixmap = QPixmap(20, 20)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                svg_renderer.render(painter, QRectF(pixmap.rect()))
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(pixmap.rect(), QColor("white"))
+                painter.end()
+                git_icon_label.setPixmap(pixmap)
+            else:
+                git_icon_label.setText("📦")
+        except:
+            git_icon_label.setText("📦")
+        
+        install_git_layout.addWidget(git_icon_label)
+        
+        # Install button
+        install_git_btn = QPushButton("Install from Git")
         install_git_btn.setStyleSheet("""
             QPushButton {
                 background-color: rgba(0, 191, 174, 0.8);
                 color: #1E1E1E;
                 border: 1px solid rgba(0, 191, 174, 0.3);
                 border-radius: 6px;
-                padding: 8px 12px;
-                font-size: 12px;
+                padding: 6px 10px;
+                font-size: 11px;
                 font-weight: 500;
-                text-align: left;
             }
             QPushButton:hover {
                 background-color: rgba(0, 191, 174, 0.9);
@@ -1165,9 +1192,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             }
         """)
         install_git_btn.clicked.connect(self.install_from_git)
-        git_buttons_layout.addWidget(install_git_btn)
+        install_git_layout.addWidget(install_git_btn)
         
-        # Secondary buttons - now vertical under main button
+        git_buttons_layout.addWidget(install_git_container)
+        
+        # Secondary buttons - vertical layout on the right
+        secondary_buttons_widget = QWidget()
+        secondary_layout = QVBoxLayout(secondary_buttons_widget)
+        secondary_layout.setContentsMargins(0, 0, 0, 0)
+        secondary_layout.setSpacing(4)
+        
+        # Open Repos button
         open_repos_btn = QPushButton("📁 Open Repos")
         open_repos_btn.setStyleSheet("""
             QPushButton {
@@ -1175,10 +1210,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.15);
                 border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 11px;
+                padding: 6px 10px;
+                font-size: 10px;
                 text-align: center;
-                width: 100%;
             }
             QPushButton:hover {
                 background-color: rgba(42, 45, 51, 0.7);
@@ -1187,9 +1221,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             }
         """)
         open_repos_btn.clicked.connect(self.open_git_repos_dir)
-        git_buttons_layout.addWidget(open_repos_btn)
+        secondary_layout.addWidget(open_repos_btn)
         
-        # Update all repos
+        # Update All button
         update_repos_btn = QPushButton("🔄 Update All")
         update_repos_btn.setStyleSheet("""
             QPushButton {
@@ -1197,10 +1231,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.15);
                 border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 11px;
+                padding: 6px 10px;
+                font-size: 10px;
                 text-align: center;
-                width: 100%;
             }
             QPushButton:hover {
                 background-color: rgba(42, 45, 51, 0.7);
@@ -1209,9 +1242,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             }
         """)
         update_repos_btn.clicked.connect(self.update_all_git_repos)
-        git_buttons_layout.addWidget(update_repos_btn)
+        secondary_layout.addWidget(update_repos_btn)
         
-        # Clean repos
+        # Clean button
         clean_repos_btn = QPushButton("🗑️ Clean")
         clean_repos_btn.setStyleSheet("""
             QPushButton {
@@ -1219,10 +1252,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.15);
                 border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 11px;
+                padding: 6px 10px;
+                font-size: 10px;
                 text-align: center;
-                width: 100%;
             }
             QPushButton:hover {
                 background-color: rgba(42, 45, 51, 0.7);
@@ -1231,12 +1263,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             }
         """)
         clean_repos_btn.clicked.connect(self.clean_git_repos)
-        git_buttons_layout.addWidget(clean_repos_btn)
+        secondary_layout.addWidget(clean_repos_btn)
+        
+        git_buttons_layout.addWidget(secondary_buttons_widget)
+        
+        git_layout.addWidget(git_buttons_widget)
         
         # Recent repos list (compact)
         self.recent_repos_label = QLabel("Recent:")
         self.recent_repos_label.setStyleSheet("color: #C9C9C9; font-size: 10px; margin-top: 4px;")
-        git_buttons_layout.addWidget(self.recent_repos_label)
+        git_layout.addWidget(self.recent_repos_label)
         
         self.recent_repos_list = QListWidget()
         self.recent_repos_list.setStyleSheet("""
@@ -1261,9 +1297,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         """)
         self.recent_repos_list.itemDoubleClicked.connect(self.open_repo_directory)
         self.recent_repos_list.setVisible(False)  # Initially hidden
-        git_buttons_layout.addWidget(self.recent_repos_list)
-        
-        git_layout.addWidget(git_buttons_widget)
+        git_layout.addWidget(self.recent_repos_list)
         
         self.sources_layout.addWidget(git_section)
         

@@ -270,6 +270,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.discover_results_ready.connect(self.display_discover_results)
         self.setup_ui()
         self.center_window()
+        self.update_toolbar()
         
         # Debounce search input
         self.search_timer.setInterval(300)
@@ -519,8 +520,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.setSpacing(12)
         
         # Toolbar
-        toolbar = self.create_toolbar()
-        layout.addLayout(toolbar)
+        self.toolbar_widget = QWidget()
+        self.toolbar_layout = QVBoxLayout(self.toolbar_widget)
+        self.toolbar_layout.setContentsMargins(0,0,0,0)
+        layout.addWidget(self.toolbar_widget)
         
         # Packages Table
         self.package_table = QTableWidget()
@@ -559,28 +562,62 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         return panel
     
-    def create_toolbar(self):
-        layout = QHBoxLayout()
-        layout.setSpacing(12)
+    def update_toolbar(self):
+        # Clear existing toolbar
+        while self.toolbar_layout.count():
+            item = self.toolbar_layout.takeAt(0)
+            if item.layout():
+                # Remove the layout
+                layout = item.layout()
+                while layout.count():
+                    child = layout.takeAt(0)
+                    if child.widget():
+                        child.widget().deleteLater()
+                item.layout().deleteLater()
         
-        update_btn = QPushButton("⬇️  Update selected packages")
-        update_btn.setMinimumHeight(36)
-        update_btn.clicked.connect(self.update_selected)
-        layout.addWidget(update_btn)
-        
-        ignore_btn = QPushButton("🚫  Ignore selected packages")
-        ignore_btn.setMinimumHeight(36)
-        ignore_btn.clicked.connect(self.ignore_selected)
-        layout.addWidget(ignore_btn)
-        
-        manage_btn = QPushButton("📋  Manage ignored updates")
-        manage_btn.setMinimumHeight(36)
-        manage_btn.clicked.connect(self.manage_ignored)
-        layout.addWidget(manage_btn)
-        
-        layout.addStretch()
-        
-        return layout
+        if self.current_view == "updates":
+            layout = QHBoxLayout()
+            layout.setSpacing(12)
+            
+            update_btn = QPushButton("⬇️  Update selected packages")
+            update_btn.setMinimumHeight(36)
+            update_btn.clicked.connect(self.update_selected)
+            layout.addWidget(update_btn)
+            
+            ignore_btn = QPushButton("🚫  Ignore selected packages")
+            ignore_btn.setMinimumHeight(36)
+            ignore_btn.clicked.connect(self.ignore_selected)
+            layout.addWidget(ignore_btn)
+            
+            manage_btn = QPushButton("📋  Manage ignored updates")
+            manage_btn.setMinimumHeight(36)
+            manage_btn.clicked.connect(self.manage_ignored)
+            layout.addWidget(manage_btn)
+            
+            layout.addStretch()
+            self.toolbar_layout.addLayout(layout)
+        elif self.current_view == "installed":
+            layout = QHBoxLayout()
+            layout.setSpacing(12)
+            
+            install_btn = QPushButton("⬇️  Install selected packages")
+            install_btn.setMinimumHeight(36)
+            install_btn.clicked.connect(self.install_selected)
+            layout.addWidget(install_btn)
+            
+            uninstall_btn = QPushButton("🗑️  Uninstall selected packages")
+            uninstall_btn.setMinimumHeight(36)
+            uninstall_btn.clicked.connect(self.uninstall_selected)
+            layout.addWidget(uninstall_btn)
+            
+            update_btn = QPushButton("⬆️  Update selected packages")
+            update_btn.setMinimumHeight(36)
+            update_btn.clicked.connect(self.update_selected)
+            layout.addWidget(update_btn)
+            
+            layout.addStretch()
+            self.toolbar_layout.addLayout(layout)
+        # For discover and bundles, no toolbar
     
     def switch_view(self, view_id):
         self.current_view = view_id
@@ -603,6 +640,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         self.update_table_columns(view_id)
         self.update_filters_panel(view_id)
+        self.update_toolbar()
+        self.search_input.clear()
         
         # Load data for view
         if view_id == "updates":
@@ -1061,6 +1100,68 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def manage_ignored(self):
         QMessageBox.information(self, "Manage Ignored", "Manage ignored updates here")
+    
+    def install_selected(self):
+        selected_rows = self.package_table.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select packages to install")
+            return
+        
+        packages = []
+        for row in selected_rows:
+            pkg_name = self.package_table.item(row.row(), 1).text()
+            packages.append(pkg_name)
+        
+        reply = QMessageBox.question(self, "Confirm Install", 
+                                    f"Install {len(packages)} package(s)?")
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        self.log(f"Installing {len(packages)} packages...")
+        
+        def install():
+            try:
+                cmd = ["pacman", "-S", "--noconfirm"] + packages
+                worker = CommandWorker(cmd, sudo=True)
+                worker.output.connect(self.log)
+                worker.error.connect(self.log)
+                worker.run()
+                self.log("Install completed")
+            except Exception as e:
+                self.log(f"Error: {str(e)}")
+        
+        Thread(target=install, daemon=True).start()
+    
+    def uninstall_selected(self):
+        selected_rows = self.package_table.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select packages to uninstall")
+            return
+        
+        packages = []
+        for row in selected_rows:
+            pkg_name = self.package_table.item(row.row(), 1).text()
+            packages.append(pkg_name)
+        
+        reply = QMessageBox.question(self, "Confirm Uninstall", 
+                                    f"Uninstall {len(packages)} package(s)?")
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        self.log(f"Uninstalling {len(packages)} packages...")
+        
+        def uninstall():
+            try:
+                cmd = ["pacman", "-R", "--noconfirm"] + packages
+                worker = CommandWorker(cmd, sudo=True)
+                worker.output.connect(self.log)
+                worker.error.connect(self.log)
+                worker.run()
+                self.log("Uninstall completed")
+            except Exception as e:
+                self.log(f"Error: {str(e)}")
+        
+        Thread(target=uninstall, daemon=True).start()
     
     def apply_filters(self):
         if self.current_view != "installed" or not self.all_packages:

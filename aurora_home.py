@@ -2155,6 +2155,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_updates()
         elif self.current_view == "installed":
             self.load_installed_packages()
+        elif self.current_view == "discover":
+            query = self.search_input.text().strip()
+            if query:
+                self.search_discover_packages(query)
+            else:
+                self.package_table.setRowCount(0)
+                self.log("Type a package name to search in AUR and official repositories")
     
     def update_selected(self):
         packages = []

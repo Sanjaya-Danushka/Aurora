@@ -131,7 +131,27 @@ QLabel#navText {
 
 QPushButton#navBtn:checked QLabel#navText {
     color: #ffffff;
-    font-weight: 500;
+    font-weight: 600;
+}
+
+QPushButton#bottomBtn {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #c9d1d9;
+    font-size: 13px;
+    font-weight: 400;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+QPushButton#bottomBtn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+QPushButton#bottomBtn:pressed {
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
 QWidget#sidebar {
@@ -453,15 +473,23 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Left Sidebar
         sidebar = self.create_sidebar()
         main_layout.addWidget(sidebar)
+        with open("debug.log", "a") as f:
+            f.write(f"DEBUG: Sidebar added to main layout, size: {sidebar.size()}\n")
         
         # Main Content Area
         content = self.create_content_area()
         main_layout.addWidget(content, 1)
+        with open("debug.log", "a") as f:
+            f.write("DEBUG: Content area added to main layout\n")
     
     def create_sidebar(self):
+        with open("debug.log", "a") as f:
+            f.write("DEBUG: Creating sidebar...\n")
         sidebar = QWidget()
         sidebar.setFixedWidth(200)  # Reduced from 280
         sidebar.setObjectName("sidebar")
+        with open("debug.log", "a") as f:
+            f.write("DEBUG: Sidebar widget created\n")
         
         layout = QVBoxLayout(sidebar)
         layout.setContentsMargins(15, 30, 15, 30)
@@ -471,6 +499,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         header = QLabel("AURORA")
         header.setObjectName("sidebarHeader")
         layout.addWidget(header)
+        with open("debug.log", "a") as f:
+            f.write("DEBUG: Header added\n")
         
         # Spacer
         layout.addSpacing(20)  # Reduced spacing
@@ -484,14 +514,47 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         ]
         
         self.nav_buttons = {}
+        with open("debug.log", "a") as f:
+            f.write(f"DEBUG: Creating {len(nav_items)} navigation buttons\n")
         
         for icon_path, text, view_id in nav_items:
             btn = self.create_nav_button(icon_path, text, view_id)
             self.nav_buttons[view_id] = btn
             layout.addWidget(btn)
+            with open("debug.log", "a") as f:
+                f.write(f"DEBUG: Added button for {view_id}\n")
         
         layout.addStretch()
         
+        # Bottom section with normal-style buttons
+        bottom_layout = QVBoxLayout()
+        bottom_layout.setContentsMargins(0, 0, 0, 20)
+        bottom_layout.setSpacing(8)
+        
+        # Settings button
+        settings_btn = QPushButton()
+        settings_btn.setObjectName("bottomBtn")
+        settings_btn.setFixedHeight(36)
+        settings_btn.setIcon(QIcon("/home/alexa/StudioProjects/orca/assets/icons/settings.svg"))
+        settings_btn.setText("Settings")
+        settings_btn.clicked.connect(self.show_settings)
+        bottom_layout.addWidget(settings_btn)
+        
+        # About button  
+        about_btn = QPushButton()
+        about_btn.setObjectName("bottomBtn")
+        about_btn.setFixedHeight(36)
+        about_btn.setIcon(QIcon("/home/alexa/StudioProjects/orca/assets/icons/about.svg"))
+        about_btn.setText("About")
+        about_btn.clicked.connect(self.show_about)
+        bottom_layout.addWidget(about_btn)
+        
+        layout.addLayout(bottom_layout)
+        with open("debug.log", "a") as f:
+            f.write("DEBUG: Bottom buttons added\n")
+        
+        with open("debug.log", "a") as f:
+            f.write("DEBUG: Sidebar creation complete\n")
         return sidebar
     
     def create_nav_button(self, icon_path, text, view_id):

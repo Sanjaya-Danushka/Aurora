@@ -135,15 +135,15 @@ QPushButton#navBtn:checked QLabel#navText {
 }
 
 QPushButton#bottomCardBtn {
-    background-color: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: transparent;
+    border: none;
     border-radius: 8px;
     color: #ffffff;
     font-size: 11px;
     font-weight: 500;
     padding: 0px;
     margin: 0px;
-    min-height: 80px;
+    min-height: 70px;
     max-width: 150px;
     text-align: center;
 }
@@ -162,14 +162,14 @@ QPushButton#bottomCardBtn QLabel {
 }
 
 QLabel#bottomCardIcon {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: transparent;
     border-radius: 6px;
     font-size: 18px;
     color: #ffffff;
 }
 
 QPushButton#bottomCardBtn:hover QLabel#bottomCardIcon {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: transparent;
 }
 
 QLabel#bottomCardText {
@@ -635,10 +635,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.setContentsMargins(12, 16, 12, 16)  # Balanced padding
         layout.setSpacing(6)  # Space between icon and text
         
-        # Icon label - same as nav buttons but smaller
+        # Icon label - smaller for bottom cards
         icon_label = QLabel()
         icon_label.setObjectName("bottomCardIcon")
-        icon_label.setFixedSize(32, 32)  # Smaller than main nav
+        icon_label.setFixedSize(28, 28)  # Smaller than main nav
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Try to load and render SVG in white
@@ -649,7 +649,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             svg_renderer = QSvgRenderer(icon_path)
             if svg_renderer.isValid():
                 # Create pixmap and render SVG in white
-                pixmap = QPixmap(32, 32)
+                pixmap = QPixmap(28, 28)  # Match icon size
                 pixmap.fill(Qt.GlobalColor.transparent)
                 
                 painter = QPainter(pixmap)
@@ -673,7 +673,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             try:
                 pixmap = QPixmap(icon_path)
                 if not pixmap.isNull():
-                    scaled_pixmap = pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    scaled_pixmap = pixmap.scaled(20, 20, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)  # Smaller scaling
                     icon_label.setPixmap(scaled_pixmap)
                 else:
                     emoji = "⚙️" if "settings" in icon_path else "ℹ️"

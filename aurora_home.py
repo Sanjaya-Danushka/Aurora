@@ -76,61 +76,62 @@ QPushButton#sidebarBtn:hover {
 }
 
 QPushButton#navBtn {
-    background-color: rgba(33, 37, 43, 0.8);
-    border: 2px solid rgba(177, 186, 196, 0.1);
-    border-radius: 12px;
-    color: #8b949e;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    color: #ffffff;
     font-size: 14px;
     font-weight: 600;
     padding: 0px;
-    margin: 4px 0px;
-    min-height: 60px;
+    margin: 6px 0px;
+    min-height: 64px;
     text-align: left;
 }
 
 QPushButton#navBtn:hover {
-    background-color: rgba(177, 186, 196, 0.1);
-    border-color: rgba(31, 111, 235, 0.4);
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 QPushButton#navBtn:checked {
-    background-color: rgba(31, 111, 235, 0.15);
+    background-color: rgba(31, 111, 235, 0.2);
     border-color: #1f6feb;
-    color: #1f6feb;
+    color: #ffffff;
 }
 
 QPushButton#navBtn:pressed {
 }
 
 QLabel#navIcon {
-    background-color: rgba(177, 186, 196, 0.05);
-    border-radius: 8px;
-    font-size: 18px;
-    color: #8b949e;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    font-size: 20px;
+    color: #ffffff;
 }
 
 QPushButton#navBtn:hover QLabel#navIcon {
-    background-color: rgba(31, 111, 235, 0.1);
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
 QPushButton#navBtn:checked QLabel#navIcon {
-    background-color: rgba(31, 111, 235, 0.2);
+    background-color: rgba(31, 111, 235, 0.3);
+    color: #ffffff;
 }
 
 QLabel#navText {
-    color: inherit;
+    color: #ffffff;
     font-weight: 500;
     letter-spacing: 0.3px;
 }
 
 QPushButton#navBtn:checked QLabel#navText {
-    color: #1f6feb;
+    color: #ffffff;
     font-weight: 600;
 }
 
 QWidget#sidebar {
-    background-color: #161b22;
-    border-right: 1px solid rgba(177, 186, 196, 0.1);
+    background-color: rgba(13, 17, 23, 0.95);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 QLabel#sidebarHeader {
@@ -474,8 +475,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover.svg"), "Discover", "discover"),
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "updates.svg"), "Updates", "updates"), 
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "installed.svg"), "Installed", "installed"),
-            (os.path.join(os.path.dirname(__file__), "assets", "icons", "local.svg"), "Bundles", "bundles"),
-            (os.path.join(os.path.dirname(__file__), "assets", "icons", "settings.svg"), "Settings", "settings")
+            (os.path.join(os.path.dirname(__file__), "assets", "icons", "local.svg"), "Bundles", "bundles")
         ]
         
         self.nav_buttons = {}
@@ -486,17 +486,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             layout.addWidget(btn)
         
         layout.addStretch()
-        
-        # Settings & About
-        settings_btn = QPushButton("⚙️  Settings")
-        settings_btn.setObjectName("sidebarBtn")
-        settings_btn.clicked.connect(self.show_settings)
-        layout.addWidget(settings_btn)
-        
-        about_btn = QPushButton("ℹ️  About")
-        about_btn.setObjectName("sidebarBtn")
-        about_btn.clicked.connect(self.show_about)
-        layout.addWidget(about_btn)
         
         return sidebar
     

@@ -151,7 +151,6 @@ QPushButton#bottomCardBtn {
 QPushButton#bottomCardBtn:hover {
     background-color: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
-    min-height: 45px;
 }
 
 QPushButton#bottomCardBtn:pressed {

@@ -78,14 +78,14 @@ QPushButton#sidebarBtn:hover {
 QPushButton#navBtn {
     background-color: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
+    border-radius: 8px;
     color: #ffffff;
     font-size: 11px;
     font-weight: 500;
     padding: 0px;
     margin: 8px 0px;  /* More margin between cards */
-    min-height: 90px;  /* More square proportion */
-    max-width: 160px;  /* Limit width for square shape */
+    min-height: 100px;  /* More square proportion */
+    max-width: 150px;  /* Square shape */
     text-align: center;
 }
 
@@ -134,24 +134,55 @@ QPushButton#navBtn:checked QLabel#navText {
     font-weight: 600;
 }
 
-QPushButton#bottomBtn {
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    color: #c9d1d9;
-    font-size: 13px;
-    font-weight: 400;
-    padding: 8px 12px;
-    text-align: left;
+QPushButton#bottomCardBtn {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 0px;
+    margin: 0px;
+    min-height: 80px;
+    max-width: 150px;
+    text-align: center;
 }
 
-QPushButton#bottomBtn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+QPushButton#bottomCardBtn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
 }
 
-QPushButton#bottomBtn:pressed {
+QPushButton#bottomCardBtn:pressed {
     background-color: rgba(255, 255, 255, 0.15);
+}
+
+QPushButton#bottomCardBtn QLabel {
+    color: #ffffff;
+}
+
+QLabel#bottomCardIcon {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+    font-size: 18px;
+    color: #ffffff;
+}
+
+QPushButton#bottomCardBtn:hover QLabel#bottomCardIcon {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+QLabel#bottomCardText {
+    color: #e1e5e9;
+    font-weight: 400;
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    margin-top: 4px;
+    text-transform: uppercase;
+}
+
+QPushButton#bottomCardBtn:hover QLabel#bottomCardText {
+    color: #ffffff;
 }
 
 QWidget#sidebar {
@@ -475,7 +506,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def create_sidebar(self):
         sidebar = QWidget()
-        sidebar.setFixedWidth(200)  # Reduced from 280
+        sidebar.setFixedWidth(180)  # Further reduced from 200
         sidebar.setObjectName("sidebar")
         
         layout = QVBoxLayout(sidebar)
@@ -507,27 +538,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         layout.addStretch()
         
-        # Bottom section with normal-style buttons
+        # Bottom section with card-style buttons
         bottom_layout = QVBoxLayout()
         bottom_layout.setContentsMargins(0, 0, 0, 20)
-        bottom_layout.setSpacing(8)
+        bottom_layout.setSpacing(12)  # Consistent spacing
         
-        # Settings button
-        settings_btn = QPushButton()
-        settings_btn.setObjectName("bottomBtn")
-        settings_btn.setFixedHeight(36)
-        settings_btn.setIcon(QIcon("/home/alexa/StudioProjects/orca/assets/icons/settings.svg"))
-        settings_btn.setText("Settings")
-        settings_btn.clicked.connect(self.show_settings)
+        # Settings button - card style
+        settings_btn = self.create_bottom_card_button("/home/alexa/StudioProjects/orca/assets/icons/settings.svg", "Settings", self.show_settings)
         bottom_layout.addWidget(settings_btn)
         
-        # About button  
-        about_btn = QPushButton()
-        about_btn.setObjectName("bottomBtn")
-        about_btn.setFixedHeight(36)
-        about_btn.setIcon(QIcon("/home/alexa/StudioProjects/orca/assets/icons/about.svg"))
-        about_btn.setText("About")
-        about_btn.clicked.connect(self.show_about)
+        # About button - card style
+        about_btn = self.create_bottom_card_button("/home/alexa/StudioProjects/orca/assets/icons/about.svg", "About", self.show_about)
         bottom_layout.addWidget(about_btn)
         
         layout.addLayout(bottom_layout)
@@ -602,6 +623,76 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.addStretch()
         
         btn.clicked.connect(lambda checked, v=view_id: self.switch_view(v))
+        
+        return btn
+    
+    def create_bottom_card_button(self, icon_path, text, callback):
+        btn = QPushButton()
+        btn.setObjectName("bottomCardBtn")
+        
+        # Create vertical layout for icon + text
+        layout = QVBoxLayout(btn)
+        layout.setContentsMargins(12, 16, 12, 16)  # Balanced padding
+        layout.setSpacing(6)  # Space between icon and text
+        
+        # Icon label - same as nav buttons but smaller
+        icon_label = QLabel()
+        icon_label.setObjectName("bottomCardIcon")
+        icon_label.setFixedSize(32, 32)  # Smaller than main nav
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Try to load and render SVG in white
+        try:
+            from PyQt6.QtSvg import QSvgRenderer
+            from PyQt6.QtGui import QPainter
+            
+            svg_renderer = QSvgRenderer(icon_path)
+            if svg_renderer.isValid():
+                # Create pixmap and render SVG in white
+                pixmap = QPixmap(32, 32)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                
+                # Set composition mode and color for white rendering
+                from PyQt6.QtCore import QRectF
+                svg_renderer.render(painter, QRectF(pixmap.rect()))
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(pixmap.rect(), QColor("#e1e5e9"))  # Light gray color
+                painter.end()
+                
+                icon_label.setPixmap(pixmap)
+            else:
+                # Fallback to emoji
+                emoji = "⚙️" if "settings" in icon_path else "ℹ️"
+                icon_label.setText(emoji)
+        except ImportError:
+            # Fallback if SVG support not available
+            try:
+                pixmap = QPixmap(icon_path)
+                if not pixmap.isNull():
+                    scaled_pixmap = pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    icon_label.setPixmap(scaled_pixmap)
+                else:
+                    emoji = "⚙️" if "settings" in icon_path else "ℹ️"
+                    icon_label.setText(emoji)
+            except:
+                emoji = "⚙️" if "settings" in icon_path else "ℹ️"
+                icon_label.setText(emoji)
+        
+        layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        
+        # Text label - below icon
+        text_label = QLabel(text)
+        text_label.setObjectName("bottomCardText")
+        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center align text
+        layout.addWidget(text_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        
+        layout.addStretch()
+        
+        btn.clicked.connect(callback)
         
         return btn
     

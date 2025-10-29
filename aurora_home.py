@@ -444,7 +444,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.setStyleSheet(DARK_STYLESHEET)
         # self.set_minimal_icon()
         
-        self.current_view = "updates"
+        self.current_view = "discover"
         self.updating = False
         self.all_packages = []
         self.search_results = []
@@ -460,7 +460,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         for btn_id, btn in self.nav_buttons.items():
             btn.setChecked(btn_id == self.current_view)
         self.center_window()
-        self.update_toolbar()
+        
+        # Initialize the default view
+        self.switch_view(self.current_view)
         
         # Debounce search input
         self.search_timer.setInterval(300)

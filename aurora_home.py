@@ -527,7 +527,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover.svg"), "Discover", "discover"),
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "updates.svg"), "Updates", "updates"), 
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "installed.svg"), "Installed", "installed"),
-            (os.path.join(os.path.dirname(__file__), "assets", "icons", "local.svg"), "Bundles", "bundles")
+            (os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"), "Bundles", "bundles")
         ]
         
         self.nav_buttons = {}
@@ -545,11 +545,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         bottom_layout.setSpacing(12)  # Consistent spacing
         
         # Settings button - card style
-        settings_btn = self.create_bottom_card_button("/home/alexa/StudioProjects/orca/assets/icons/settings.svg", "Settings", self.show_settings)
+        settings_btn = self.create_bottom_card_button(os.path.join(os.path.dirname(__file__), "assets", "icons", "settings.svg"), "Settings", self.show_settings)
         bottom_layout.addWidget(settings_btn)
         
         # About button - card style
-        about_btn = self.create_bottom_card_button("/home/alexa/StudioProjects/orca/assets/icons/about.svg", "About", self.show_about)
+        about_btn = self.create_bottom_card_button(os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"), "About", self.show_about)
         bottom_layout.addWidget(about_btn)
         
         layout.addLayout(bottom_layout)

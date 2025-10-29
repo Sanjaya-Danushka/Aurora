@@ -36,8 +36,3 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Project specific
-assets/
-*.png
-*.jpg
-*.jpeg

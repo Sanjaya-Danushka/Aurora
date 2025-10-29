@@ -14,37 +14,37 @@ from PyQt6.QtSvg import QSvgRenderer
 
 DARK_STYLESHEET = """
 QMainWindow {
-    background-color: #0d1117;
-    color: #c9d1d9;
+    background-color: #1E1E1E;
+    color: #F0F0F0;
 }
 
 QWidget {
-    background-color: #0d1117;
-    color: #c9d1d9;
+    background-color: #1E1E1E;
+    color: #F0F0F0;
     font-family: 'Segoe UI', sans-serif;
     font-size: 13px;
 }
 
 QLineEdit {
-    background-color: rgba(177, 186, 196, 0.1);
-    color: #c9d1d9;
-    border: 2px solid rgba(177, 186, 196, 0.2);
+    background-color: rgba(42, 45, 51, 0.8);
+    color: #F0F0F0;
+    border: 2px solid rgba(0, 191, 174, 0.2);
     border-radius: 8px;
     padding: 10px 12px;
     font-size: 14px;
-    selection-background-color: #1f6feb;
+    selection-background-color: #00BFAE;
 }
 
 QLineEdit:focus {
-    background-color: rgba(177, 186, 196, 0.15);
-    border: 2px solid #1f6feb;
+    background-color: rgba(42, 45, 51, 0.9);
+    border: 2px solid #00BFAE;
     outline: none;
 }
 
 QPushButton {
-    background-color: rgba(177, 186, 196, 0.1);
-    color: #c9d1d9;
-    border: 1px solid rgba(177, 186, 196, 0.2);
+    background-color: rgba(42, 45, 51, 0.6);
+    color: #F0F0F0;
+    border: 1px solid rgba(0, 191, 174, 0.2);
     border-radius: 6px;
     padding: 8px 16px;
     font-weight: 500;
@@ -52,18 +52,18 @@ QPushButton {
 }
 
 QPushButton:hover {
-    background-color: rgba(177, 186, 196, 0.2);
-    border-color: rgba(177, 186, 196, 0.4);
+    background-color: rgba(42, 45, 51, 0.8);
+    border-color: rgba(0, 191, 174, 0.4);
 }
 
 QPushButton:pressed {
-    background-color: rgba(177, 186, 196, 0.3);
+    background-color: rgba(42, 45, 51, 0.9);
 }
 
 QPushButton#sidebarBtn {
     background-color: transparent;
     border: none;
-    color: #8b949e;
+    color: #C9C9C9;
     padding: 12px 16px;
     text-align: left;
     font-size: 14px;
@@ -72,33 +72,32 @@ QPushButton#sidebarBtn {
 }
 
 QPushButton#sidebarBtn:hover {
-    background-color: rgba(177, 186, 196, 0.1);
-    color: #c9d1d9;
+    background-color: rgba(42, 45, 51, 0.5);
+    color: #F0F0F0;
 }
 
 QPushButton#navBtn {
-    background-color: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: transparent;
+    border: none;
     border-radius: 8px;
     color: #ffffff;
     font-size: 11px;
     font-weight: 500;
     padding: 0px;
-    margin: 8px 0px;  /* More margin between cards */
-    min-height: 100px;  /* More square proportion */
-    max-width: 150px;  /* Square shape */
+    margin: 8px 0px;
+    min-height: 100px;
+    max-width: 150px;
     text-align: center;
 }
 
 QPushButton#navBtn:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(0, 191, 174, 0.1);
+    border: none;
 }
 
 QPushButton#navBtn:checked {
-    background-color: rgba(31, 111, 235, 0.15);
-    border-color: #1f6feb;
-    color: #ffffff;
+    background-color: rgba(0, 191, 174, 0.15);
+    border: none;
 }
 
 QPushButton#navBtn:pressed {
@@ -108,12 +107,12 @@ QLabel#navIcon {
     background-color: transparent;
     border-radius: 8px;
     font-size: 26px;
-    color: #e1e5e9;  /* Light gray instead of pure white */
+    color: #e1e5e9;
 }
 
 QPushButton#navBtn:hover QLabel#navIcon {
     background-color: transparent;
-    color: #ffffff;  /* White on hover */
+    color: #ffffff;
 }
 
 QPushButton#navBtn:checked QLabel#navIcon {
@@ -122,17 +121,12 @@ QPushButton#navBtn:checked QLabel#navIcon {
 }
 
 QLabel#navText {
-    color: #e1e5e9;  /* Light gray text */
+    color: #e1e5e9;
     font-weight: 400;
     font-size: 10px;
     letter-spacing: 0.8px;
     margin-top: 4px;
     text-transform: uppercase;
-}
-
-QPushButton#navBtn:checked QLabel#navText {
-    color: #ffffff;
-    font-weight: 600;
 }
 
 QPushButton#bottomCardBtn {
@@ -187,8 +181,8 @@ QPushButton#bottomCardBtn:hover QLabel#bottomCardText {
 }
 
 QWidget#sidebar {
-    background-color: #1a1a1a;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: #20232A;
+    border-right: 1px solid rgba(0, 191, 174, 0.1);
 }
 
 QLabel#sidebarHeader {
@@ -202,42 +196,46 @@ QLabel#sidebarHeader {
 }
 
 QTableWidget {
-    background-color: rgba(177, 186, 196, 0.05);
-    alternate-background-color: rgba(177, 186, 196, 0.02);
-    gridline-color: rgba(177, 186, 196, 0.1);
-    border: 1px solid rgba(177, 186, 196, 0.1);
+    background-color: rgba(42, 45, 51, 0.8);
+    alternate-background-color: #2B2E34;
+    gridline-color: rgba(0, 191, 174, 0.1);
+    border: 1px solid rgba(0, 191, 174, 0.1);
     border-radius: 8px;
-    selection-background-color: rgba(31, 111, 235, 0.3);
-    selection-color: #c9d1d9;
+    selection-background-color: rgba(0, 191, 174, 0.3);
+    selection-color: #F0F0F0;
 }
 
 QTableWidget::item {
     padding: 12px 8px;
     border: none;
-    border-bottom: 1px solid rgba(177, 186, 196, 0.05);
+    border-bottom: 1px solid rgba(0, 191, 174, 0.05);
 }
 
 QTableWidget::item:selected {
-    background-color: rgba(31, 111, 235, 0.2);
-    color: #c9d1d9;
+    background-color: rgba(0, 191, 174, 0.2);
+    color: #F0F0F0;
+}
+
+QTableWidget::item:alternate {
+    background-color: #25282E;
 }
 
 QHeaderView::section {
-    background-color: rgba(177, 186, 196, 0.1);
-    color: #1f6feb;
+    background-color: #33373E;
+    color: #00BFAE;
     padding: 12px 8px;
     border: none;
     font-weight: 600;
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 2px solid rgba(177, 186, 196, 0.1);
+    border-bottom: 2px solid rgba(0, 191, 174, 0.2);
 }
 
 QTextEdit {
-    background-color: rgba(177, 186, 196, 0.05);
-    color: #8b949e;
-    border: 1px solid rgba(177, 186, 196, 0.1);
+    background-color: rgba(42, 45, 51, 0.8);
+    color: #C9C9C9;
+    border: 1px solid rgba(0, 191, 174, 0.1);
     border-radius: 6px;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 12px;
@@ -245,7 +243,7 @@ QTextEdit {
 }
 
 QLabel {
-    color: #c9d1d9;
+    color: #F0F0F0;
 }
 
 QLabel#headerLabel {
@@ -255,7 +253,7 @@ QLabel#headerLabel {
 }
 
 QLabel#sectionLabel {
-    color: #1f6feb;
+    color: #00BFAE;
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
@@ -268,25 +266,25 @@ QFrame {
 }
 
 QCheckBox {
-    color: #c9d1d9;
+    color: #F0F0F0;
     spacing: 8px;
 }
 
 QCheckBox::indicator {
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
-    border: 2px solid rgba(177, 186, 196, 0.3);
-    background-color: rgba(177, 186, 196, 0.1);
+    width: 14px;
+    height: 14px;
+    border-radius: 0px;
+    border: 2px solid rgba(0, 191, 174, 0.4);
+    background-color: rgba(42, 45, 51, 0.8);
 }
 
 QCheckBox::indicator:checked {
-    background-color: #1f6feb;
-    border: 2px solid #1f6feb;
+    background-color: #00BFAE;
+    border: 2px solid #00BFAE;
 }
 
-QCheckBox::indicator:hover {
-    border-color: rgba(177, 186, 196, 0.5);
+QCheckBox::indicator:unchecked {
+    background-color: rgba(42, 45, 51, 0.8);
 }
 
 QListWidget {
@@ -302,42 +300,65 @@ QListWidget::item {
 }
 
 QListWidget::item:hover {
-    background-color: rgba(177, 186, 196, 0.1);
+    background-color: rgba(0, 191, 174, 0.1);
 }
 
 QListWidget::item:selected {
-    background-color: rgba(31, 111, 235, 0.2);
-    color: #1f6feb;
+    background-color: rgba(0, 191, 174, 0.2);
+    color: #00BFAE;
 }
 
 /* Discover section specific styling */
 QTableWidget#discoverTable {
-    background-color: rgba(13, 17, 23, 0.9);
-    border: 1px solid rgba(177, 186, 196, 0.3);
+    background-color: #2A2D33;
+    alternate-background-color: #2B2E34;
+    border: none;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
 }
 
 QTableWidget#discoverTable::item {
     padding: 18px 14px;
-    border-bottom: 1px solid rgba(177, 186, 196, 0.1);
+    border: none;
 }
 
 QTableWidget#discoverTable::item:hover {
-    background-color: rgba(177, 186, 196, 0.1);
+    background-color: rgba(0, 191, 174, 0.1);
+}
+
+QTableWidget#discoverTable::item:alternate {
+    background-color: #25282E;
+}
+
+QTableWidget#discoverTable::item:selected {
+    background-color: rgba(0, 191, 174, 0.2);
+    border-left: 3px solid #00BFAE;
 }
 
 QHeaderView::section {
-    background-color: rgba(177, 186, 196, 0.15);
-    color: #1f6feb;
+    background-color: #33373E;
+    color: #00BFAE;
     padding: 16px 12px;
     border: none;
     font-weight: 600;
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 2px solid rgba(177, 186, 196, 0.2);
+    border-bottom: 2px solid rgba(0, 191, 174, 0.2);
     border-radius: 8px 8px 0 0;
+}
+
+/* Progress bar styling */
+QProgressBar {
+    border: 2px solid rgba(0, 191, 174, 0.2);
+    border-radius: 4px;
+    text-align: center;
+    background-color: rgba(42, 45, 51, 0.6);
+}
+
+QProgressBar::chunk {
+    background-color: #00BFAE;
+    border-radius: 2px;
 }
 """
 
@@ -742,9 +763,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         header = QFrame()
         header.setStyleSheet("""
             QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
-                    stop:0 #1a1a1a, stop:1 #1a1a1a);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #20232A, stop:1 #1E1E1E);
+                border-bottom: 1px solid rgba(0, 191, 174, 0.1);
             }
         """)
         header.setFixedHeight(70)
@@ -874,7 +895,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.package_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
-        self.package_table.verticalHeader().setDefaultSectionSize(36)
+        self.package_table.verticalHeader().setVisible(False)
         self.package_table.setAlternatingRowColors(True)
         self.package_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.package_table.setSelectionMode(QTableWidget.SelectionMode.MultiSelection)
@@ -1320,10 +1341,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         checkbox.setChecked(False)  # Default to unchecked
         self.package_table.setCellWidget(row, 0, checkbox)
         
-        self.package_table.setItem(row, 1, QTableWidgetItem(pkg['name']))
+        name_item = QTableWidgetItem(pkg['name'])
+        name_item.setToolTip(pkg['name'])
+        font = QFont()
+        font.setBold(True)
+        name_item.setFont(font)
+        self.package_table.setItem(row, 1, name_item)
         self.package_table.setItem(row, 2, QTableWidgetItem(pkg['id']))
         self.package_table.setItem(row, 3, QTableWidgetItem(pkg['version']))
-        self.package_table.setItem(row, 4, QTableWidgetItem(pkg.get('description', '')))
+        desc_item = QTableWidgetItem(pkg.get('description', ''))
+        desc_item.setForeground(QColor("#C9C9C9"))
+        desc_item.setToolTip(pkg.get('description', ''))
+        self.package_table.setItem(row, 4, desc_item)
         self.package_table.setItem(row, 5, QTableWidgetItem(pkg['source']))
     
     def add_package_row(self, name, pkg_id, version, new_version, source, pkg_data=None):
@@ -1334,7 +1363,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         checkbox.setChecked(True)
         self.package_table.setCellWidget(row, 0, checkbox)
         
-        self.package_table.setItem(row, 1, QTableWidgetItem(name))
+        name_item = QTableWidgetItem(name)
+        font = QFont()
+        font.setBold(True)
+        name_item.setFont(font)
+        self.package_table.setItem(row, 1, name_item)
         self.package_table.setItem(row, 2, QTableWidgetItem(pkg_id))
         self.package_table.setItem(row, 3, QTableWidgetItem(version))
         

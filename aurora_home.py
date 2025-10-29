@@ -182,7 +182,6 @@ QPushButton#bottomCardBtn:hover QLabel#bottomCardText {
 }
 
 QWidget#sidebar {
-    background-color: #20232A;
     border-right: 1px solid rgba(0, 191, 174, 0.1);
 }
 
@@ -444,7 +443,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Aurora - Package Manager")
+        self.setWindowTitle("NeoArch - Package Manager")
         self.setGeometry(100, 100, 1600, 900)  # Increased width to accommodate sidebar
         self.setMinimumSize(1200, 800)  # Set minimum size
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -543,16 +542,60 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         sidebar.setObjectName("sidebar")
         
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(15, 30, 15, 0)
+        layout.setContentsMargins(15, 20, 15, 0)
         layout.setSpacing(20)  # Increased spacing between cards
         
         # Header
-        header = QLabel("AURORA")
-        header.setObjectName("sidebarHeader")
-        layout.addWidget(header)
+        header_widget = QWidget()
+        header_layout = QHBoxLayout(header_widget)
+        header_layout.setContentsMargins(5, 5, 5, 5)  # Add some padding
+        header_layout.setSpacing(10)  # Increase spacing
+        
+        # Logo on the left - smaller to fit better
+        logo_label = QLabel()
+        logo_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "logo1.png")
+        try:
+            pixmap = QPixmap(logo_path)
+            if not pixmap.isNull():
+                # Scale logo to fit nicely in sidebar (max 50px wide for better fit)
+                scaled_pixmap = pixmap.scaledToWidth(50, Qt.TransformationMode.SmoothTransformation)
+                logo_label.setPixmap(scaled_pixmap)
+            else:
+                logo_label.setText("🖥️")
+                logo_label.setStyleSheet("font-size: 28px; color: white;")
+        except:
+            logo_label.setText("🖥️")
+            logo_label.setStyleSheet("font-size: 28px; color: white;")
+        
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logo_label.setFixedWidth(50)  # Fixed width for consistency
+        header_layout.addWidget(logo_label)
+        
+        # Text container on the right - expanded to take remaining space
+        text_widget = QWidget()
+        text_layout = QVBoxLayout(text_widget)
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.setSpacing(0)  # Tight spacing
+        
+        # Title - ensure it's visible with proper contrast
+        title_label = QLabel("NeoArch")
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: white; background: transparent;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        text_layout.addWidget(title_label)
+        
+        # Subtitle - shorter version to fit
+        subtitle_label = QLabel("Elevate Your Arch")
+        subtitle_label.setStyleSheet("font-size: 10px; color: rgba(255, 255, 255, 0.9); background: transparent;")
+        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        subtitle_label.setWordWrap(False)  # Don't wrap to save space
+        text_layout.addWidget(subtitle_label)
+        
+        header_layout.addWidget(text_widget, 1)  # Give it stretch factor of 1 to take remaining space
+        
+        layout.addWidget(header_widget)
         
         # Spacer
-        layout.addSpacing(20)  # Reduced spacing
+        layout.addSpacing(15)  # Adjusted spacing for horizontal header
         
         # Navigation buttons with icons
         nav_items = [
@@ -1025,7 +1068,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             "bundles": ("📋 Package Bundles", "Manage package bundles"),
         }
         
-        header_text, info_text = headers.get(view_id, ("Aurora", ""))
+        header_text, info_text = headers.get(view_id, ("NeoArch", ""))
         self.header_label.setText(header_text)
         self.header_info.setText(info_text)
         
@@ -2372,8 +2415,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.log(f"{title}: {text}")
     
     def show_about(self):
-        QMessageBox.information(self, "About Aurora", 
-                              "Aurora - Modern Arch Package Manager\nVersion 1.0\n\nBuilt with PyQt6")
+        QMessageBox.information(self, "About NeoArch", 
+                              "NeoArch - Elevate Your Arch Experience\nVersion 1.0\n\nBuilt with PyQt6")
     
     def log(self, message):
         self.console.append(message)
@@ -2381,7 +2424,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
 def main():
     if len(sys.argv) > 1:
         if sys.argv[1] in ["--help", "-h"]:
-            print("Aurora - Modern Arch Package Manager")
+            print("NeoArch - Elevate Your Arch Experience")
             print("Usage: python aurora_home.py")
             print("A graphical package manager for Arch Linux with AUR support.")
             sys.exit(0)

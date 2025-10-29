@@ -1011,6 +1011,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def switch_view(self, view_id):
         self.current_view = view_id
+        self.console.clear()
         
         # Update button states
         for btn_id, btn in self.nav_buttons.items():

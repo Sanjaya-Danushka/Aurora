@@ -459,6 +459,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.show_message.connect(self._show_message)
         self.log_signal.connect(self.log)
         self.setup_ui()
+        # Set initial nav button state
+        for btn_id, btn in self.nav_buttons.items():
+            btn.setChecked(btn_id == self.current_view)
         self.center_window()
         self.update_toolbar()
         
@@ -585,6 +588,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         btn = QPushButton()
         btn.setObjectName("navBtn")
         btn.setProperty("view_id", view_id)
+        btn.setCheckable(True)
         
         # Create vertical layout for icon + text
         layout = QVBoxLayout(btn)

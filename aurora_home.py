@@ -250,14 +250,15 @@ class CommandWorker(QObject):
 class ArchPkgManagerUniGetUI(QMainWindow):
     packages_ready = pyqtSignal(list)
     discover_results_ready = pyqtSignal(list)
+    show_message = pyqtSignal(str, str)
     search_timer = QTimer()
     
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Aurora - Package Manager")
         self.setGeometry(100, 100, 1400, 900)
-        self.setStyleSheet(DARK_STYLESHEET)
-        self.set_minimal_icon()
+        # self.setStyleSheet(DARK_STYLESHEET)
+        # self.set_minimal_icon()
         
         self.current_view = "updates"
         self.updating = False
@@ -268,6 +269,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.loader_thread = None
         self.packages_ready.connect(self.on_packages_loaded)
         self.discover_results_ready.connect(self.display_discover_results)
+        self.show_message.connect(self._show_message)
         self.setup_ui()
         self.center_window()
         self.update_toolbar()
@@ -1091,7 +1093,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 worker.error.connect(self.log)
                 def on_finished():
                     self.log("Update completed")
-                    QMessageBox.information(self, "Update Complete", f"Successfully updated {len(packages)} package(s).")
+                    self.show_message.emit("Update Complete", f"Successfully updated {len(packages)} package(s).")
                     # Refresh updates after update
                     self.load_updates()
                 worker.finished.connect(on_finished)
@@ -1138,7 +1140,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 worker.error.connect(self.log)
                 def on_finished():
                     self.log("Install completed")
-                    QMessageBox.information(self, "Installation Complete", f"Successfully installed {len(packages)} package(s).")
+                    self.show_message.emit("Installation Complete", f"Successfully installed {len(packages)} package(s).")
                     # Refresh installed packages after install
                     self.load_installed_packages()
                 worker.finished.connect(on_finished)
@@ -1174,7 +1176,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 worker.error.connect(self.log)
                 def on_finished():
                     self.log("Uninstall completed")
-                    QMessageBox.information(self, "Uninstallation Complete", f"Successfully uninstalled {len(packages)} package(s).")
+                    self.show_message.emit("Uninstallation Complete", f"Successfully uninstalled {len(packages)} package(s).")
                     # Refresh installed packages after uninstall
                     self.load_installed_packages()
                 worker.finished.connect(on_finished)
@@ -1232,6 +1234,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def show_settings(self):
         QMessageBox.information(self, "Settings", "Settings dialog coming soon")
+    
+    def _show_message(self, title, text):
+        QMessageBox.information(self, title, text)
     
     def show_about(self):
         QMessageBox.information(self, "About Aurora", 

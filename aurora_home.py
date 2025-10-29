@@ -297,12 +297,6 @@ QListWidget {
     outline: none;
 }
 
-QListWidget::item {
-    padding: 8px 12px;
-    border-radius: 4px;
-    margin: 2px 0;
-}
-
 QListWidget::item:hover {
     background-color: rgba(0, 191, 174, 0.1);
 }
@@ -1099,6 +1093,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(False)
             self.update_discover_sources()
+        elif view_id == "updates":
+            self.sources_section.setVisible(False)
+            self.filters_section.setVisible(True)
         else:
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(True)
@@ -1323,14 +1320,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             QListWidget {
                 background-color: rgba(42, 45, 51, 0.4);
                 border: 1px solid rgba(0, 191, 174, 0.15);
-                border-radius: 4px;
                 color: #F0F0F0;
                 font-size: 10px;
                 max-height: 85px;
-            }
-            QListWidget::item {
-                padding: 4px 8px;
-                border-bottom: 1px solid rgba(0, 191, 174, 0.08);
             }
             QListWidget::item:hover {
                 background-color: rgba(0, 191, 174, 0.15);

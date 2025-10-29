@@ -7,7 +7,8 @@ from threading import Thread
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
                              QLabel, QFileDialog, QMessageBox, QHeaderView, QFrame, QSplitter,
-                             QScrollArea, QCheckBox, QListWidget, QListWidgetItem, QSizePolicy)
+                             QScrollArea, QCheckBox, QListWidget, QListWidgetItem, QSizePolicy,
+                             QDialog)
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF, QItemSelectionModel
 from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
 from PyQt6.QtSvg import QSvgRenderer
@@ -1119,6 +1120,309 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             self.source_checkboxes[source] = checkbox
             self.sources_layout.addWidget(container)
+        
+        # Add Git source button (not a checkbox)
+        git_container = QWidget()
+        git_layout = QHBoxLayout(git_container)
+        git_layout.setContentsMargins(0, 0, 0, 0)
+        git_layout.setSpacing(8)
+        
+        # Git Icon
+        git_icon_label = QLabel()
+        git_icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "git.svg")
+        try:
+            svg_renderer = QSvgRenderer(git_icon_path)
+            if svg_renderer.isValid():
+                pixmap = QPixmap(20, 20)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                svg_renderer.render(painter, QRectF(pixmap.rect()))
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(pixmap.rect(), QColor("white"))
+                painter.end()
+                git_icon_label.setPixmap(pixmap)
+            else:
+                git_icon_label.setText("📁")
+        except:
+            git_icon_label.setText("📁")
+        
+        git_layout.addWidget(git_icon_label)
+        
+        # Git Button
+        git_btn = QPushButton("Install from Git")
+        git_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(42, 45, 51, 0.6);
+                color: #F0F0F0;
+                border: 1px solid rgba(0, 191, 174, 0.2);
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 12px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: rgba(42, 45, 51, 0.8);
+                border-color: rgba(0, 191, 174, 0.4);
+            }
+        """)
+        git_btn.clicked.connect(self.install_from_git)
+        git_layout.addWidget(git_btn)
+        
+        git_layout.addStretch()
+        
+        self.sources_layout.addWidget(git_container)
+    
+    def install_from_git(self):
+        # Create a dialog to ask for Git URL
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Install from Git Repository")
+        dialog.setModal(True)
+        dialog.setStyleSheet("""
+            QDialog {
+                background-color: #1E1E1E;
+                color: #F0F0F0;
+                border: 1px solid rgba(0, 191, 174, 0.2);
+            }
+        """)
+        
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+        
+        # Title
+        title = QLabel("Install Application from Git Repository")
+        title.setStyleSheet("font-size: 16px; font-weight: bold; color: #00BFAE;")
+        layout.addWidget(title)
+        
+        # Description
+        desc = QLabel("Enter the Git repository URL to clone and install the application:")
+        desc.setWordWrap(True)
+        layout.addWidget(desc)
+        
+        # URL input
+        url_input = QLineEdit()
+        url_input.setPlaceholderText("https://github.com/user/repo.git")
+        url_input.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(42, 45, 51, 0.8);
+                color: #F0F0F0;
+                border: 2px solid rgba(0, 191, 174, 0.2);
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+            QLineEdit:focus {
+                border-color: #00BFAE;
+            }
+        """)
+        layout.addWidget(url_input)
+        
+        # Buttons
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
+        
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        cancel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(42, 45, 51, 0.6);
+                color: #F0F0F0;
+                border: 1px solid rgba(0, 191, 174, 0.2);
+                border-radius: 4px;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background-color: rgba(42, 45, 51, 0.8);
+            }
+        """)
+        buttons_layout.addWidget(cancel_btn)
+        
+        install_btn = QPushButton("Clone & Install")
+        install_btn.setDefault(True)
+        install_btn.clicked.connect(lambda: self.proceed_git_install(url_input.text().strip(), dialog))
+        install_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #00BFAE;
+                color: #1E1E1E;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #00C4B0;
+            }
+        """)
+        buttons_layout.addWidget(install_btn)
+        
+        layout.addLayout(buttons_layout)
+        
+        dialog.exec()
+    
+    def proceed_git_install(self, git_url, dialog):
+        if not git_url:
+            QMessageBox.warning(self, "Invalid URL", "Please enter a valid Git repository URL.")
+            return
+        
+        # Validate URL format
+        if not (git_url.startswith("http://") or git_url.startswith("https://") or git_url.startswith("git@")):
+            QMessageBox.warning(self, "Invalid URL", "Please enter a valid Git repository URL (starting with http://, https://, or git@).")
+            return
+        
+        dialog.accept()
+        
+        # Extract repo name from URL
+        repo_name = git_url.split('/')[-1].replace('.git', '')
+        
+        self.log(f"Starting installation from Git repository: {git_url}")
+        
+        def install_from_git_thread():
+            try:
+                # Clone to user's home directory instead of temp
+                home_dir = os.path.expanduser("~")
+                git_repos_dir = os.path.join(home_dir, "git-repos")
+                os.makedirs(git_repos_dir, exist_ok=True)
+                clone_path = os.path.join(git_repos_dir, repo_name)
+                
+                # Check if directory already exists
+                if os.path.exists(clone_path):
+                    self.log(f"Directory {clone_path} already exists. Pulling latest changes...")
+                    pull_cmd = ["git", "-C", clone_path, "pull"]
+                    pull_result = subprocess.run(pull_cmd, capture_output=True, text=True, timeout=60)
+                    if pull_result.returncode != 0:
+                        self.log(f"Failed to pull latest changes: {pull_result.stderr}")
+                        self.show_message.emit("Git Update Failed", f"Failed to update repository: {pull_result.stderr}")
+                        return
+                    self.log("Repository updated successfully")
+                else:
+                    # Clone the repository
+                    self.log("Cloning repository...")
+                    clone_cmd = ["git", "clone", git_url, clone_path]
+                    clone_result = subprocess.run(clone_cmd, capture_output=True, text=True, timeout=300)
+                    
+                    if clone_result.returncode != 0:
+                        self.log(f"Failed to clone repository: {clone_result.stderr}")
+                        self.show_message.emit("Git Installation Failed", f"Failed to clone repository: {clone_result.stderr}")
+                        return
+                    
+                    self.log("Repository cloned successfully")
+                
+                # Change to clone directory
+                os.chdir(clone_path)
+                
+                # Check if it's a Python project
+                if os.path.exists(os.path.join(clone_path, "setup.py")) or os.path.exists(os.path.join(clone_path, "pyproject.toml")):
+                    self.log("Detected Python project, installing with pip...")
+                    install_cmd = ["pip", "install", "-e", clone_path]
+                    install_result = subprocess.run(install_cmd, capture_output=True, text=True, timeout=300)
+                    
+                    if install_result.returncode == 0:
+                        self.log("Python package installed successfully")
+                        self.show_message.emit("Installation Complete", f"Successfully installed {repo_name} from Git")
+                    else:
+                        self.log(f"Failed to install Python package: {install_result.stderr}")
+                        self.show_message.emit("Installation Failed", f"Failed to install Python package: {install_result.stderr}")
+                
+                # Check for Rust project
+                elif os.path.exists(os.path.join(clone_path, "Cargo.toml")):
+                    self.log("Detected Rust project, installing with cargo...")
+                    install_cmd = ["cargo", "install", "--path", clone_path]
+                    install_result = subprocess.run(install_cmd, capture_output=True, text=True, timeout=600)
+                    
+                    if install_result.returncode == 0:
+                        self.log("Rust package installed successfully")
+                        self.show_message.emit("Installation Complete", f"Successfully installed {repo_name} from Git")
+                    else:
+                        self.log(f"Failed to install Rust package: {install_result.stderr}")
+                        self.show_message.emit("Installation Failed", f"Failed to install Rust package: {install_result.stderr}")
+                
+                # Check for other common build systems (like autotools)
+                elif os.path.exists(os.path.join(clone_path, "configure.ac")) or os.path.exists(os.path.join(clone_path, "configure.in")):
+                    self.log("Detected autotools project, building...")
+                    configure_cmds = []
+                    
+                    # Check for autogen.sh
+                    if os.path.exists(os.path.join(clone_path, "autogen.sh")):
+                        self.log("Running autogen.sh...")
+                        configure_cmds.append(["./autogen.sh"])
+                    
+                    # Run configure
+                    if os.path.exists(os.path.join(clone_path, "configure")):
+                        self.log("Running configure...")
+                        configure_cmds.append(["./configure", "--prefix=/usr/local"])
+                    
+                    # Run make
+                    if os.path.exists(os.path.join(clone_path, "Makefile")):
+                        self.log("Running make...")
+                        configure_cmds.append(["make", "-j$(nproc)"])
+                        self.log("Running make install...")
+                        configure_cmds.append(["sudo", "make", "install"])
+                    
+                    success = True
+                    for cmd in configure_cmds:
+                        result = subprocess.run(cmd, cwd=clone_path, capture_output=True, text=True, timeout=600)
+                        if result.returncode != 0:
+                            self.log(f"Command failed: {' '.join(cmd)}")
+                            self.log(f"Error: {result.stderr}")
+                            success = False
+                            break
+                    
+                    if success:
+                        self.log("Autotools build completed successfully")
+                        self.show_message.emit("Installation Complete", f"Successfully built and installed {repo_name}")
+                    else:
+                        self.show_message.emit("Build Failed", "Check console output for build errors")
+                
+                # Check for Makefile (generic)
+                elif os.path.exists(os.path.join(clone_path, "Makefile")):
+                    self.log("Detected Makefile, building and installing...")
+                    
+                    # Try common build patterns
+                    build_cmds = [
+                        ["make", "-j$(nproc)"],  # Build
+                        ["sudo", "make", "install"]  # Install
+                    ]
+                    
+                    success = True
+                    for cmd in build_cmds:
+                        self.log(f"Running: {' '.join(cmd)}")
+                        result = subprocess.run(cmd, cwd=clone_path, capture_output=True, text=True, timeout=600)
+                        if result.returncode != 0:
+                            self.log(f"Command failed: {' '.join(cmd)}")
+                            self.log(f"Error: {result.stderr}")
+                            success = False
+                            break
+                    
+                    if success:
+                        self.log("Build and installation completed successfully")
+                        self.show_message.emit("Installation Complete", f"Successfully built and installed {repo_name}")
+                    else:
+                        self.show_message.emit("Build Failed", "Check console output for build errors")
+                
+                else:
+                    # No automatic installation detected
+                    self.log(f"Repository cloned to: {clone_path}")
+                    self.log("No automatic installation method detected.")
+                    self.log("To manually build and install:")
+                    self.log(f"  cd {clone_path}")
+                    self.log("  ls -la  # Check for build files")
+                    self.log("  # Common build commands:")
+                    self.log("  # ./configure && make && sudo make install")
+                    self.log("  # OR")
+                    self.log("  # make && sudo make install")
+                    self.log("  # OR")
+                    self.log("  # pip install .")
+                    self.log("  # OR")
+                    self.log("  # cargo install --path .")
+                    
+                    self.show_message.emit("Git Clone Complete", f"Repository cloned to {clone_path}. Check console for build instructions.")
+                        
+            except Exception as e:
+                self.log(f"Error during Git installation: {str(e)}")
+                self.show_message.emit("Installation Failed", f"Error during installation: {str(e)}")
+        
+        Thread(target=install_from_git_thread, daemon=True).start()
     
     def apply_source_filter(self):
         if self.current_view == "discover" and self.search_results:

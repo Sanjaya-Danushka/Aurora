@@ -872,7 +872,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.package_table.insertRow(row)
         
         checkbox = QCheckBox()
-        checkbox.setChecked(True)
+        checkbox.setChecked(False)  # Default to unchecked
         self.package_table.setCellWidget(row, 0, checkbox)
         
         self.package_table.setItem(row, 1, QTableWidgetItem(pkg['name']))
@@ -1060,6 +1060,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.log(f"No packages found matching '{query}'.")
         else:
             self.log(f"Found {len(filtered)} packages matching '{query}'. Showing first 10...")
+        
+        # Check the first (most relevant) package by default
+        if filtered and start == 0:
+            first_checkbox = self.package_table.cellWidget(0, 0)
+            if first_checkbox:
+                first_checkbox.setChecked(True)
 
     def refresh_packages(self):
         if self.current_view == "updates":

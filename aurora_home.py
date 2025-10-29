@@ -1086,7 +1086,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         packages = []
         for row in selected_rows:
             pkg_name = self.package_table.item(row.row(), 1).text()
-            packages.append(pkg_name)
+            packages.append(pkg_name.lower())
         
         self.log(f"Selected packages for update: {', '.join(packages)}")
         
@@ -1139,7 +1139,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         packages = []
         for row in selected_rows:
             pkg_name = self.package_table.item(row.row(), 1).text()
-            packages.append(pkg_name)
+            packages.append(pkg_name.lower())
         
         self.log_signal.emit(f"Selected packages for installation: {', '.join(packages)}")
         
@@ -1180,7 +1180,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         packages = []
         for row in selected_rows:
             pkg_name = self.package_table.item(row.row(), 1).text()
-            packages.append(pkg_name)
+            packages.append(pkg_name.lower())
         
         self.log(f"Selected packages for uninstallation: {', '.join(packages)}")
         

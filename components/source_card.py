@@ -2,7 +2,7 @@
 SourceCard Component - Card-style container for source selection
 """
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QButtonGroup
 from PyQt6.QtCore import pyqtSignal
 from .source_item import SourceItem
 
@@ -11,10 +11,13 @@ class SourceCard(QWidget):
     """Card component for source selection with select/deselect functionality"""
 
     source_changed = pyqtSignal(dict)  # Emits dict of source_name -> is_checked
+    search_mode_changed = pyqtSignal(str)  # Emits search mode: 'name', 'id', or 'both'
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.sources = {}
+        self.search_mode = 'both'  # Default search mode
+        self.radio_group = None
         self.init_ui()
 
     def init_ui(self):
@@ -48,6 +51,52 @@ class SourceCard(QWidget):
         self.sources_layout.setSpacing(4)
 
         layout.addWidget(self.sources_container)
+
+        # Search Mode Section
+        search_mode_widget = QWidget()
+        search_layout = QVBoxLayout(search_mode_widget)
+        search_layout.setContentsMargins(12, 8, 12, 8)
+        search_layout.setSpacing(6)
+
+        search_title = QLabel("Search Mode")
+        search_title.setObjectName("searchModeTitle")
+        search_layout.addWidget(search_title)
+
+        # Radio button container
+        radio_container = QWidget()
+        radio_layout = QHBoxLayout(radio_container)
+        radio_layout.setContentsMargins(0, 0, 0, 0)
+        radio_layout.setSpacing(12)
+
+        # Create button group for radio buttons
+        self.radio_group = QButtonGroup(self)
+
+        # Name radio button
+        self.name_radio = QRadioButton("Name")
+        self.name_radio.setObjectName("searchModeRadio")
+        self.radio_group.addButton(self.name_radio, 0)
+        radio_layout.addWidget(self.name_radio)
+
+        # Package ID radio button
+        self.id_radio = QRadioButton("Package ID")
+        self.id_radio.setObjectName("searchModeRadio")
+        self.radio_group.addButton(self.id_radio, 1)
+        radio_layout.addWidget(self.id_radio)
+
+        # Both radio button (default)
+        self.both_radio = QRadioButton("Both")
+        self.both_radio.setObjectName("searchModeRadio")
+        self.both_radio.setChecked(True)  # Default selection
+        self.radio_group.addButton(self.both_radio, 2)
+        radio_layout.addWidget(self.both_radio)
+
+        radio_layout.addStretch()
+        search_layout.addWidget(radio_container)
+
+        layout.addWidget(search_mode_widget)
+
+        # Connect radio button signals
+        self.radio_group.buttonClicked.connect(self.on_search_mode_changed)
 
         # Apply styling
         self.setStyleSheet(self.get_stylesheet())
@@ -98,11 +147,30 @@ class SourceCard(QWidget):
         """Return dict of selected sources"""
         return {name: item.is_checked() for name, item in self.sources.items()}
 
-    def set_selected_sources(self, selected_dict):
-        """Set which sources are selected"""
-        for name, checked in selected_dict.items():
-            if name in self.sources:
-                self.sources[name].set_checked(checked)
+    def on_search_mode_changed(self, button):
+        """Handle search mode radio button changes"""
+        if button == self.name_radio:
+            self.search_mode = 'name'
+        elif button == self.id_radio:
+            self.search_mode = 'id'
+        elif button == self.both_radio:
+            self.search_mode = 'both'
+
+        self.search_mode_changed.emit(self.search_mode)
+
+    def get_search_mode(self):
+        """Return the current search mode"""
+        return self.search_mode
+
+    def set_search_mode(self, mode):
+        """Set the search mode"""
+        self.search_mode = mode
+        if mode == 'name':
+            self.name_radio.setChecked(True)
+        elif mode == 'id':
+            self.id_radio.setChecked(True)
+        elif mode == 'both':
+            self.both_radio.setChecked(True)
 
     def get_stylesheet(self):
         """Get stylesheet for this component"""
@@ -120,6 +188,15 @@ class SourceCard(QWidget):
                 font-weight: 600;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
+            }
+
+            QLabel#searchModeTitle {
+                color: #00BFAE;
+                font-size: 13px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 4px;
             }
 
             QPushButton#selectAllBtn {
@@ -141,5 +218,33 @@ class SourceCard(QWidget):
 
             QPushButton#selectAllBtn:pressed {
                 background-color: rgba(0, 191, 174, 0.2);
+            }
+
+            QRadioButton#searchModeRadio {
+                color: #F0F0F0;
+                font-size: 12px;
+                font-weight: 500;
+                spacing: 6px;
+            }
+
+            QRadioButton#searchModeRadio::indicator {
+                width: 16px;
+                height: 16px;
+                border-radius: 8px;
+                border: 2px solid rgba(0, 191, 174, 0.4);
+                background-color: rgba(42, 45, 51, 0.8);
+            }
+
+            QRadioButton#searchModeRadio::indicator:checked {
+                background-color: #00BFAE;
+                border: 2px solid #00BFAE;
+            }
+
+            QRadioButton#searchModeRadio::indicator:unchecked {
+                background-color: rgba(42, 45, 51, 0.8);
+            }
+
+            QRadioButton#searchModeRadio::indicator:hover {
+                border-color: rgba(0, 191, 174, 0.8);
             }
         """

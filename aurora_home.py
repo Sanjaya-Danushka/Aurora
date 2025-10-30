@@ -112,6 +112,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.loader_thread = None
         self.git_manager = None  # Will be initialized when sources layout is ready
         self.docker_manager = None  # Docker manager instance
+        self.current_search_mode = 'both'  # Default search mode
         self.packages_ready.connect(self.on_packages_loaded)
         self.discover_results_ready.connect(self.display_discover_results)
         self.show_message.connect(self._show_message)
@@ -996,6 +997,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Always create a new SourceCard component
         self.source_card = SourceCard(self)
         self.source_card.source_changed.connect(self.on_source_selection_changed)
+        self.source_card.search_mode_changed.connect(self.on_search_mode_changed)
         
         # Add the three main sources
         sources = [
@@ -1020,6 +1022,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Apply source filtering if we have search results
         if self.current_view == "discover" and hasattr(self, 'search_results') and self.search_results:
             self.display_discover_results()
+    
+    def on_search_mode_changed(self, search_mode):
+        """Handle changes in search mode"""
+        self.log(f"Search mode changed to: {search_mode}")
+        # Store the current search mode for future searches
+        self.current_search_mode = search_mode
+        # Re-run search if we have a current query
+        current_query = self.search_input.text().strip()
+        if current_query and self.current_view == "discover":
+            self.search_discover_packages(current_query)
     
     def update_table_columns(self, view_id):
         if view_id == "installed":
@@ -1505,9 +1517,23 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             elif pkg['source'] == 'Flatpak' and show_flatpak:
                 filtered.append(pkg)
         
-        # Sort results by relevance to the query
+        # Sort results by relevance to the query based on search mode
         query = self.search_input.text().strip().lower()
-        filtered.sort(key=lambda pkg: (query in pkg['name'].lower(), query in (pkg.get('description') or '').lower()), reverse=True)
+        search_mode = self.current_search_mode
+        
+        def get_sort_key(pkg):
+            name_match = query in pkg['name'].lower()
+            id_match = query in pkg['id'].lower()
+            desc_match = query in (pkg.get('description') or '').lower()
+            
+            if search_mode == 'name':
+                return (name_match, False, False)
+            elif search_mode == 'id':
+                return (id_match, False, False)
+            else:  # 'both'
+                return (name_match or id_match, desc_match, False)
+        
+        filtered.sort(key=get_sort_key, reverse=True)
         
         self.package_table.setUpdatesEnabled(False)
         self.package_table.setRowCount(0)

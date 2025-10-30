@@ -17,441 +17,6 @@ from git_manager import GitManager
 
 from styles import Styles
 
-
-class GitDialog(QDialog):
-    """Dialog for Git repository management with clear button structure"""
-    
-    def __init__(self, log_signal, show_message_signal, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Git Repository Manager")
-        self.setModal(True)
-        self.setMinimumSize(600, 500)
-        self.setMaximumSize(800, 650)
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #1E1E1E;
-                color: #F0F0F0;
-                border: 1px solid rgba(0, 191, 174, 0.2);
-            }
-        """)
-        
-        # Create main layout
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        # Title
-        title = QLabel("Git Repository Manager")
-        title.setStyleSheet("""
-            QLabel {
-                font-size: 18px;
-                font-weight: bold;
-                color: #00BFAE;
-                margin-bottom: 10px;
-            }
-        """)
-        layout.addWidget(title)
-        
-        # Create tab widget for different sections
-        tab_widget = QTabWidget()
-        tab_widget.setStyleSheet("""
-            QTabWidget::pane {
-                border: 1px solid rgba(0, 191, 174, 0.2);
-                background-color: rgba(42, 45, 51, 0.3);
-            }
-            QTabBar::tab {
-                background-color: rgba(42, 45, 51, 0.5);
-                color: #F0F0F0;
-                padding: 8px 16px;
-                margin-right: 2px;
-                border-radius: 4px 4px 0 0;
-            }
-            QTabBar::tab:selected {
-                background-color: rgba(0, 191, 174, 0.2);
-                color: #00BFAE;
-            }
-            QTabBar::tab:hover {
-                background-color: rgba(42, 45, 51, 0.7);
-            }
-        """)
-        
-        # Tab 1: Repository Actions
-        actions_tab = QWidget()
-        actions_layout = QVBoxLayout(actions_tab)
-        actions_layout.setContentsMargins(15, 15, 15, 15)
-        actions_layout.setSpacing(15)
-        
-        # Main Action Section
-        main_action_group = self.create_group_box("Repository Installation")
-        main_action_layout = QVBoxLayout(main_action_group)
-        main_action_layout.setSpacing(10)
-        
-        install_git_btn = self.create_primary_button("📥 Install from Git Repository", "Clone and install a Git repository")
-        install_git_btn.clicked.connect(lambda: self.show_git_install_dialog(log_signal, show_message_signal))
-        main_action_layout.addWidget(install_git_btn)
-        
-        main_action_group.setLayout(main_action_layout)
-        actions_layout.addWidget(main_action_group)
-        
-        # Repository Management Section
-        manage_group = self.create_group_box("Repository Management")
-        manage_layout = QVBoxLayout(manage_group)
-        manage_layout.setSpacing(10)
-        
-        # Create button grid
-        button_grid = QWidget()
-        grid_layout = QGridLayout(button_grid)
-        grid_layout.setSpacing(8)
-        
-        open_repos_btn = self.create_secondary_button("📁 Open Repos", "Open git-repos directory")
-        open_repos_btn.clicked.connect(lambda: self.open_git_repos_dir(log_signal))
-        grid_layout.addWidget(open_repos_btn, 0, 0)
-        
-        update_all_btn = self.create_secondary_button("🔄 Update All", "Update all Git repositories")
-        update_all_btn.clicked.connect(lambda: self.update_all_git_repos(log_signal, show_message_signal))
-        grid_layout.addWidget(update_all_btn, 0, 1)
-        
-        clean_repos_btn = self.create_danger_button("🗑️ Clean", "Clean build artifacts")
-        clean_repos_btn.clicked.connect(lambda: self.clean_git_repos(log_signal, show_message_signal))
-        grid_layout.addWidget(clean_repos_btn, 1, 0)
-        
-        manage_layout.addWidget(button_grid)
-        manage_group.setLayout(manage_layout)
-        actions_layout.addWidget(manage_group)
-        
-        actions_layout.addStretch()
-        tab_widget.addTab(actions_tab, "Actions")
-        
-        # Tab 2: Recent Repositories
-        repos_tab = QWidget()
-        repos_layout = QVBoxLayout(repos_tab)
-        repos_layout.setContentsMargins(15, 15, 15, 15)
-        repos_layout.setSpacing(15)
-        
-        recent_group = self.create_group_box("Recent Repositories")
-        recent_layout = QVBoxLayout(recent_group)
-        recent_layout.setSpacing(10)
-        
-        # Recent repos list
-        self.recent_repos_list = QListWidget()
-        self.recent_repos_list.setStyleSheet("""
-            QListWidget {
-                background-color: rgba(42, 45, 51, 0.4);
-                border: 1px solid rgba(0, 191, 174, 0.15);
-                color: #F0F0F0;
-                font-size: 11px;
-                min-height: 200px;
-            }
-            QListWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid rgba(0, 191, 174, 0.1);
-            }
-            QListWidget::item:hover {
-                background-color: rgba(0, 191, 174, 0.15);
-            }
-            QListWidget::item:selected {
-                background-color: rgba(0, 191, 174, 0.25);
-                color: #00BFAE;
-            }
-        """)
-        self.recent_repos_list.itemDoubleClicked.connect(lambda item: self.open_repo_directory(item, log_signal))
-        
-        refresh_btn = self.create_secondary_button("🔄 Refresh List", "Refresh the recent repositories list")
-        refresh_btn.clicked.connect(lambda: self.load_recent_git_repos())
-        
-        recent_layout.addWidget(QLabel("Double-click to open repository:"))
-        recent_layout.addWidget(self.recent_repos_list)
-        recent_layout.addWidget(refresh_btn)
-        
-        recent_group.setLayout(recent_layout)
-        repos_layout.addWidget(recent_group)
-        
-        repos_layout.addStretch()
-        tab_widget.addTab(repos_tab, "Repositories")
-        
-        layout.addWidget(tab_widget)
-        
-        # Bottom button bar
-        button_bar = QWidget()
-        button_layout = QHBoxLayout(button_bar)
-        button_layout.setContentsMargins(0, 0, 0, 0)
-        button_layout.setSpacing(10)
-        
-        button_layout.addStretch()
-        
-        close_btn = QPushButton("Close")
-        close_btn.setFixedSize(100, 35)
-        close_btn.clicked.connect(self.accept)
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(42, 45, 51, 0.6);
-                color: #F0F0F0;
-                border: 1px solid rgba(0, 191, 174, 0.2);
-                border-radius: 4px;
-                padding: 8px 16px;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.8);
-                border-color: rgba(0, 191, 174, 0.4);
-            }
-        """)
-        button_layout.addWidget(close_btn)
-        
-        layout.addWidget(button_bar)
-        
-        # Load recent repos
-        self.load_recent_git_repos()
-    
-    def create_group_box(self, title):
-        """Create a styled group box"""
-        group = QGroupBox(title)
-        group.setStyleSheet("""
-            QGroupBox {
-                font-weight: bold;
-                color: #00BFAE;
-                border: 2px solid rgba(0, 191, 174, 0.3);
-                border-radius: 6px;
-                margin-top: 1ex;
-                padding-top: 8px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-                color: #00BFAE;
-                font-size: 13px;
-            }
-        """)
-        return group
-    
-    def create_primary_button(self, text, tooltip):
-        """Create a primary action button"""
-        btn = QPushButton(text)
-        btn.setToolTip(tooltip)
-        btn.setMinimumHeight(40)
-        btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(0, 191, 174, 0.8);
-                color: #1E1E1E;
-                border: 1px solid rgba(0, 191, 174, 0.3);
-                border-radius: 6px;
-                padding: 10px 16px;
-                font-size: 12px;
-                font-weight: 500;
-                text-align: left;
-            }
-            QPushButton:hover {
-                background-color: rgba(0, 191, 174, 0.9);
-                border-color: rgba(0, 191, 174, 0.5);
-            }
-            QPushButton:pressed {
-                background-color: rgba(0, 191, 174, 0.7);
-            }
-        """)
-        return btn
-    
-    def create_secondary_button(self, text, tooltip):
-        """Create a secondary action button"""
-        btn = QPushButton(text)
-        btn.setToolTip(tooltip)
-        btn.setMinimumHeight(35)
-        btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(42, 45, 51, 0.5);
-                color: #F0F0F0;
-                border: 1px solid rgba(0, 191, 174, 0.15);
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 11px;
-            }
-            QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.7);
-                border-color: rgba(0, 191, 174, 0.35);
-                color: #00BFAE;
-            }
-        """)
-        return btn
-    
-    def create_danger_button(self, text, tooltip):
-        """Create a danger/action button"""
-        btn = QPushButton(text)
-        btn.setToolTip(tooltip)
-        btn.setMinimumHeight(35)
-        btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(220, 53, 69, 0.2);
-                color: #FF6B6B;
-                border: 1px solid rgba(220, 53, 69, 0.3);
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 11px;
-            }
-            QPushButton:hover {
-                background-color: rgba(220, 53, 69, 0.3);
-                border-color: rgba(220, 53, 69, 0.5);
-                color: #FF9999;
-            }
-        """)
-        return btn
-    
-    def show_git_install_dialog(self, log_signal, show_message_signal):
-        """Show the Git installation dialog"""
-        from git_manager import GitManager
-        git_manager = GitManager(log_signal, show_message_signal, None)
-        git_manager.install_from_git()
-    
-    def open_git_repos_dir(self, log_signal):
-        """Open the git-repos directory"""
-        git_repos_dir = os.path.expanduser("~/git-repos")
-        try:
-            if os.path.exists(git_repos_dir):
-                subprocess.run(["xdg-open", git_repos_dir], check=True)
-                log_signal.emit("Opened git-repos directory")
-            else:
-                log_signal.emit("git-repos directory doesn't exist yet")
-                QMessageBox.information(self, "No Repos Yet", "You haven't cloned any Git repositories yet.\nUse 'Install from Git' to get started!")
-        except Exception as e:
-            log_signal.emit(f"Failed to open directory: {e}")
-    
-    def update_all_git_repos(self, log_signal, show_message_signal):
-        """Update all Git repositories"""
-        git_repos_dir = os.path.expanduser("~/git-repos")
-        if not os.path.exists(git_repos_dir):
-            log_signal.emit("No git-repos directory found")
-            return
-        
-        repos = [d for d in os.listdir(git_repos_dir)
-                if os.path.isdir(os.path.join(git_repos_dir, d)) and
-                os.path.exists(os.path.join(git_repos_dir, d, ".git"))]
-        
-        if not repos:
-            log_signal.emit("No Git repositories found")
-            return
-        
-        log_signal.emit(f"Updating {len(repos)} Git repositories...")
-        
-        def update_thread():
-            updated = 0
-            failed = 0
-            for repo in repos:
-                repo_path = os.path.join(git_repos_dir, repo)
-                try:
-                    log_signal.emit(f"Updating {repo}...")
-                    result = subprocess.run(["git", "-C", repo_path, "pull"],
-                                          capture_output=True, text=True, timeout=60)
-                    if result.returncode == 0:
-                        updated += 1
-                        log_signal.emit(f"✓ Updated {repo}")
-                    else:
-                        failed += 1
-                        log_signal.emit(f"✗ Failed to update {repo}: {result.stderr.strip()}")
-                except Exception as e:
-                    failed += 1
-                    log_signal.emit(f"✗ Error updating {repo}: {e}")
-            
-            log_signal.emit(f"Update complete: {updated} updated, {failed} failed")
-            if updated > 0 or failed > 0:
-                from PyQt6.QtCore import QTimer
-                QTimer.singleShot(0, lambda: show_message_signal.emit("Git Update Complete", f"Updated {updated} repos, {failed} failed"))
-        
-        import threading
-        threading.Thread(target=update_thread, daemon=True).start()
-    
-    def clean_git_repos(self, log_signal, show_message_signal):
-        """Clean Git repositories"""
-        git_repos_dir = os.path.expanduser("~/git-repos")
-        if not os.path.exists(git_repos_dir):
-            log_signal.emit("No git-repos directory found")
-            return
-        
-        repos = [d for d in os.listdir(git_repos_dir)
-                if os.path.isdir(os.path.join(git_repos_dir, d)) and
-                os.path.exists(os.path.join(git_repos_dir, d, ".git"))]
-        
-        if not repos:
-            log_signal.emit("No Git repositories found")
-            return
-        
-        reply = QMessageBox.question(
-            self, "Clean Git Repositories",
-            f"This will clean build artifacts from {len(repos)} repositories.\n\n"
-            "This will run 'git clean -fdx' and remove untracked and ignored files.\n"
-            "Are you sure you want to continue?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-        
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-        
-        log_signal.emit(f"Cleaning {len(repos)} Git repositories...")
-        
-        def clean_thread():
-            cleaned = 0
-            failed = 0
-            for repo in repos:
-                repo_path = os.path.join(git_repos_dir, repo)
-                try:
-                    log_signal.emit(f"Cleaning {repo}...")
-                    result = subprocess.run(["git", "-C", repo_path, "clean", "-fdx"],
-                                          capture_output=True, text=True, timeout=30)
-                    if result.returncode == 0:
-                        cleaned += 1
-                        log_signal.emit(f"✓ Cleaned {repo}")
-                    else:
-                        failed += 1
-                        log_signal.emit(f"✗ Failed to clean {repo}: {result.stderr.strip()}")
-                except Exception as e:
-                    failed += 1
-                    log_signal.emit(f"✗ Error cleaning {repo}: {e}")
-            
-            log_signal.emit(f"Clean complete: {cleaned} cleaned, {failed} failed")
-            if cleaned > 0 or failed > 0:
-                from PyQt6.QtCore import QTimer
-                QTimer.singleShot(0, lambda: show_message_signal.emit("Git Clean Complete", f"Cleaned {cleaned} repos, {failed} failed"))
-        
-        import threading
-        threading.Thread(target=clean_thread, daemon=True).start()
-    
-    def load_recent_git_repos(self):
-        """Load recent Git repositories"""
-        git_repos_dir = os.path.expanduser("~/git-repos")
-        if not os.path.exists(git_repos_dir):
-            self.recent_repos_list.clear()
-            return
-        
-        repos = []
-        try:
-            for item in os.listdir(git_repos_dir):
-                repo_path = os.path.join(git_repos_dir, item)
-                if os.path.isdir(repo_path) and os.path.exists(os.path.join(repo_path, ".git")):
-                    mtime = os.path.getmtime(repo_path)
-                    repos.append((item, mtime, repo_path))
-            
-            repos.sort(key=lambda x: x[1], reverse=True)
-            recent_repos = repos[:5]
-            
-            self.recent_repos_list.clear()
-            for repo_name, _, repo_path in recent_repos:
-                item = QListWidgetItem(f"📁 {repo_name}")
-                item.setToolTip(f"Double-click to open: {repo_path}")
-                item.setData(Qt.ItemDataRole.UserRole, repo_path)
-                self.recent_repos_list.addItem(item)
-                
-        except Exception as e:
-            print(f"Error loading recent repos: {e}")
-    
-    def open_repo_directory(self, item, log_signal):
-        """Open repository directory"""
-        repo_path = item.data(Qt.ItemDataRole.UserRole)
-        if repo_path and os.path.exists(repo_path):
-            try:
-                subprocess.run(["xdg-open", repo_path], check=True)
-                log_signal.emit(f"Opened repository: {os.path.basename(repo_path)}")
-            except Exception as e:
-                log_signal.emit(f"Failed to open repository: {e}")
-
 class PackageLoaderWorker(QObject):
     packages_loaded = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
@@ -1002,11 +567,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         return header
     
-    def show_git_dialog(self):
-        """Show Git repository management dialog"""
-        dialog = GitDialog(self.log_signal, self.show_message, self)
-        dialog.exec()
-    
     def show_docker_install_dialog(self):
         """Show Docker container management dialog"""
         if not self.docker_manager:
@@ -1014,6 +574,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.docker_manager = DockerManager(self.log_signal, self.show_message, self.sources_layout, self)
         
         self.docker_manager.install_from_docker()
+    
+    def show_git_install_dialog(self):
+        """Show Git repository installation dialog"""
+        if not self.git_manager:
+            from git_manager import GitManager
+            self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
+        
+        self.git_manager.install_from_git()
     
     def show_help(self):
         """Show help dialog"""
@@ -1264,7 +832,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             git_btn = self.create_toolbar_button(
                 os.path.join(icon_dir, "git.svg"),
                 "Install via GitHub",
-                self.show_git_dialog
+                self.show_git_install_dialog
             )
             layout.addWidget(git_btn)
             
@@ -1459,6 +1027,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             self.source_checkboxes[source] = checkbox
             self.sources_layout.addWidget(container)
+        
+        # Initialize Git Manager for sources panel
+        if not hasattr(self, 'git_manager') or self.git_manager is None:
+            from git_manager import GitManager
+            self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
     
     def apply_source_filter(self):
         if self.current_view == "discover" and self.search_results:

@@ -13,13 +13,15 @@ from PyQt6.QtSvg import QSvgRenderer
 class GitManager(QObject):
     """Git repository management component for Aurora"""
 
-    def __init__(self, log_signal, show_message_signal, sources_layout):
+    def __init__(self, log_signal, show_message_signal, sources_layout, parent=None):
         super().__init__()
         self.log_signal = log_signal
         self.show_message = show_message_signal
         self.sources_layout = sources_layout
+        self.parent = parent  # Reference to main window
 
         # UI elements that will be created
+        self.git_section = None  # Reference to the git section widget
         self.recent_repos_label = None
         self.recent_repos_list = None
 
@@ -28,8 +30,8 @@ class GitManager(QObject):
 
     def create_git_section(self):
         """Create and add the Git section to the sources layout"""
-        git_section = QWidget()
-        git_layout = QVBoxLayout(git_section)
+        self.git_section = QWidget()
+        git_layout = QVBoxLayout(self.git_section)
         git_layout.setContentsMargins(0, 8, 0, 0)  # Add top margin for spacing
         git_layout.setSpacing(10)  # Increase spacing between elements
 
@@ -39,13 +41,7 @@ class GitManager(QObject):
         git_label.setStyleSheet("font-size: 11px; margin-bottom: 4px;")
         git_layout.addWidget(git_label)
 
-        # Git buttons container - now horizontal layout like other sources
-        git_buttons_widget = QWidget()
-        git_buttons_layout = QHBoxLayout(git_buttons_widget)
-        git_buttons_layout.setContentsMargins(0, 0, 0, 0)
-        git_buttons_layout.setSpacing(8)
-
-        # Install from Git button (with icon)
+        # Main Install from Git button (separate at top)
         install_git_container = QWidget()
         install_git_layout = QHBoxLayout(install_git_container)
         install_git_layout.setContentsMargins(0, 0, 0, 0)
@@ -78,8 +74,8 @@ class GitManager(QObject):
         install_git_btn = QPushButton("Install from Git")
         install_git_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(0, 191, 174, 0.8);
-                color: #1E1E1E;
+                background-color: transparent;
+                color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.3);
                 border-radius: 6px;
                 padding: 6px 10px;
@@ -87,29 +83,29 @@ class GitManager(QObject):
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: rgba(0, 191, 174, 0.9);
+                background-color: rgba(0, 191, 174, 0.15);
                 border-color: rgba(0, 191, 174, 0.5);
             }
             QPushButton:pressed {
-                background-color: rgba(0, 191, 174, 0.7);
+                background-color: rgba(0, 191, 174, 0.25);
             }
         """)
         install_git_btn.clicked.connect(self.install_from_git)
         install_git_layout.addWidget(install_git_btn)
 
-        git_buttons_layout.addWidget(install_git_container)
+        git_layout.addWidget(install_git_container)
 
-        # Secondary buttons - vertical layout on the right
+        # Secondary buttons widget (at bottom)
         secondary_buttons_widget = QWidget()
-        secondary_layout = QVBoxLayout(secondary_buttons_widget)
+        secondary_layout = QHBoxLayout(secondary_buttons_widget)
         secondary_layout.setContentsMargins(0, 0, 0, 0)
         secondary_layout.setSpacing(4)
 
         # Open Repos button
-        open_repos_btn = QPushButton("📁 Open Repos")
+        open_repos_btn = QPushButton("📁 Open")
         open_repos_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(42, 45, 51, 0.5);
+                background-color: transparent;
                 color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.15);
                 border-radius: 4px;
@@ -118,7 +114,7 @@ class GitManager(QObject):
                 text-align: center;
             }
             QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.7);
+                background-color: rgba(0, 191, 174, 0.15);
                 border-color: rgba(0, 191, 174, 0.35);
                 color: #00BFAE;
             }
@@ -127,10 +123,10 @@ class GitManager(QObject):
         secondary_layout.addWidget(open_repos_btn)
 
         # Update All button
-        update_repos_btn = QPushButton("🔄 Update All")
+        update_repos_btn = QPushButton("🔄 Update")
         update_repos_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(42, 45, 51, 0.5);
+                background-color: transparent;
                 color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.15);
                 border-radius: 4px;
@@ -139,7 +135,7 @@ class GitManager(QObject):
                 text-align: center;
             }
             QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.7);
+                background-color: rgba(0, 191, 174, 0.15);
                 border-color: rgba(0, 191, 174, 0.35);
                 color: #00BFAE;
             }
@@ -151,7 +147,7 @@ class GitManager(QObject):
         clean_repos_btn = QPushButton("🗑️ Clean")
         clean_repos_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(42, 45, 51, 0.5);
+                background-color: transparent;
                 color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.15);
                 border-radius: 4px;
@@ -160,7 +156,7 @@ class GitManager(QObject):
                 text-align: center;
             }
             QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.7);
+                background-color: rgba(0, 191, 174, 0.15);
                 border-color: rgba(0, 191, 174, 0.35);
                 color: #FF6B6B;
             }
@@ -168,9 +164,7 @@ class GitManager(QObject):
         clean_repos_btn.clicked.connect(self.clean_git_repos)
         secondary_layout.addWidget(clean_repos_btn)
 
-        git_buttons_layout.addWidget(secondary_buttons_widget)
-
-        git_layout.addWidget(git_buttons_widget)
+        git_layout.addWidget(secondary_buttons_widget)
 
         # Recent repos list (compact)
         self.recent_repos_label = QLabel("Recent:")
@@ -197,7 +191,7 @@ class GitManager(QObject):
         self.recent_repos_list.setVisible(False)  # Initially hidden
         git_layout.addWidget(self.recent_repos_list)
 
-        self.sources_layout.addWidget(git_section)
+        self.sources_layout.addWidget(self.git_section)
 
         # Load recent repos on startup
         self.load_recent_git_repos()

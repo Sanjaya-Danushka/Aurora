@@ -67,13 +67,13 @@ class SourceItem(QWidget):
 
                 svg_renderer.render(painter, QRectF(pixmap.rect()))
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("#00BFAE"))
+                painter.fillRect(pixmap.rect(), QColor("white"))
                 painter.end()
 
                 self.icon_label.setPixmap(pixmap)
             else:
                 self.icon_label.setText("📦")
-                self.icon_label.setStyleSheet("font-size: 16px; color: #00BFAE;")
+                self.icon_label.setStyleSheet("font-size: 16px; color: white;")
         except:
             emoji_map = {
                 "pacman": "📦",
@@ -83,7 +83,7 @@ class SourceItem(QWidget):
                 "pip": "🐍"
             }
             self.icon_label.setText(emoji_map.get(self.source_name.lower(), "📦"))
-            self.icon_label.setStyleSheet("font-size: 16px; color: #00BFAE;")
+            self.icon_label.setStyleSheet("font-size: 16px; color: white;")
 
     def on_state_changed(self, state):
         """Handle checkbox state changes"""

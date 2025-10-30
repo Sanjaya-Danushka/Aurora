@@ -224,27 +224,28 @@ class SourceCard(QWidget):
                 color: #F0F0F0;
                 font-size: 12px;
                 font-weight: 500;
-                spacing: 6px;
+                spacing: 8px;
+                padding: 6px 12px;
+                border-radius: 6px;
+                background-color: rgba(42, 45, 51, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            QRadioButton#searchModeRadio:hover {
+                background-color: rgba(0, 191, 174, 0.1);
+                border-color: rgba(0, 191, 174, 0.3);
+            }
+
+            QRadioButton#searchModeRadio:checked {
+                background-color: rgba(0, 191, 174, 0.2);
+                border-color: rgba(0, 191, 174, 0.5);
+                color: #00BFAE;
+                font-weight: 600;
             }
 
             QRadioButton#searchModeRadio::indicator {
-                width: 16px;
-                height: 16px;
-                border-radius: 8px;
-                border: 2px solid rgba(0, 191, 174, 0.4);
-                background-color: rgba(42, 45, 51, 0.8);
-            }
-
-            QRadioButton#searchModeRadio::indicator:checked {
-                background-color: #00BFAE;
-                border: 2px solid #00BFAE;
-            }
-
-            QRadioButton#searchModeRadio::indicator:unchecked {
-                background-color: rgba(42, 45, 51, 0.8);
-            }
-
-            QRadioButton#searchModeRadio::indicator:hover {
-                border-color: rgba(0, 191, 174, 0.8);
+                width: 0px;
+                height: 0px;
+                margin: 0px;
             }
         """

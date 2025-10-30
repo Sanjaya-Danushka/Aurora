@@ -18,6 +18,8 @@ from git_manager import GitManager
 from styles import Styles
 from components import SourceCard, FilterCard
 
+app = QApplication(sys.argv)
+
 class PackageLoaderWorker(QObject):
     packages_loaded = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
@@ -314,6 +316,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             if svg_renderer.isValid():
                 # Create pixmap and render SVG in white
                 pixmap = QPixmap(50, 50)
+                if pixmap.isNull():
+                    raise ValueError("Pixmap is null")
                 pixmap.fill(Qt.GlobalColor.transparent)
                 
                 painter = QPainter(pixmap)
@@ -376,6 +380,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             if svg_renderer.isValid():
                 # Create pixmap and render SVG in white
                 pixmap = QPixmap(28, 28)  # Match icon size
+                if pixmap.isNull():
+                    raise ValueError("Pixmap is null")
                 pixmap.fill(Qt.GlobalColor.transparent)
                 
                 painter = QPainter(pixmap)
@@ -460,6 +466,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Try to load SVG icon, fallback to emoji
         try:
             pixmap = QPixmap(icon_size, icon_size)
+            if pixmap.isNull():
+                raise ValueError("Pixmap is null")
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -548,6 +556,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         def get_white_icon_pixmap(path, size=20):
             pixmap = QPixmap(size, size)
+            if pixmap.isNull():
+                raise ValueError("Pixmap is null")
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -734,6 +744,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         def get_white_icon_pixmap(path, size=20):
             pixmap = QPixmap(size, size)
+            if pixmap.isNull():
+                raise ValueError("Pixmap is null")
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -815,6 +827,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             def get_white_icon_pixmap(path, size=20):
                 pixmap = QPixmap(size, size)
+                if pixmap.isNull():
+                    raise ValueError("Pixmap is null")
                 pixmap.fill(Qt.GlobalColor.transparent)
                 painter = QPainter(pixmap)
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -895,6 +909,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             icon_path, title, subtitle = header_data
             try:
                 pixmap = QPixmap(24, 24)
+                if pixmap.isNull():
+                    raise ValueError("Pixmap is null")
                 pixmap.fill(Qt.GlobalColor.transparent)
                 painter = QPainter(pixmap)
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -1869,12 +1885,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.log(f"{title}: {text}")
     
     def animate_spinner(self):
-        """Animate the spinner by rotating it"""
-        self.spinner_angle = (self.spinner_angle + 30) % 360
+        if not hasattr(self, 'spinner_label') or not self.spinner_label:
+            return
+            
         pixmap = QPixmap(48, 48)
+        if pixmap.isNull():
+            return  # Skip animation if pixmap can't be created
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
         painter.translate(24, 24)
         painter.rotate(self.spinner_angle)
         painter.translate(-24, -24)
@@ -1885,13 +1905,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "⟳")
         painter.end()
         self.spinner_label.setPixmap(pixmap)
+        
+        self.spinner_angle = (self.spinner_angle + 10) % 360
+    
+    def log(self, message):
+        self.console.append(message)
     
     def show_about(self):
         QMessageBox.information(self, "About NeoArch", 
                               "NeoArch - Elevate Your \nArch Experience\nVersion 1.0\n\nBuilt with PyQt6")
-    
-    def log(self, message):
-        self.console.append(message)
 
 def main():
     if len(sys.argv) > 1:
@@ -1909,7 +1931,6 @@ def main():
         print("Do not run this application as root.")
         sys.exit(1)
     
-    app = QApplication(sys.argv)
     window = ArchPkgManagerUniGetUI()
     window.show()
     sys.exit(app.exec())

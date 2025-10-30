@@ -2,7 +2,7 @@
 SourceCard Component - Card-style container for source selection
 """
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QButtonGroup
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QButtonGroup, QGraphicsDropShadowEffect
 from PyQt6.QtCore import pyqtSignal
 from .source_item import SourceItem
 
@@ -47,8 +47,8 @@ class SourceCard(QWidget):
         # Container for source items
         self.sources_container = QWidget()
         self.sources_layout = QVBoxLayout(self.sources_container)
-        self.sources_layout.setContentsMargins(0, 0, 0, 0)
-        self.sources_layout.setSpacing(4)
+        self.sources_layout.setContentsMargins(6, 4, 6, 4)
+        self.sources_layout.setSpacing(6)
 
         layout.addWidget(self.sources_container)
 
@@ -97,6 +97,17 @@ class SourceCard(QWidget):
 
         # Connect radio button signals
         self.radio_group.buttonClicked.connect(self.on_search_mode_changed)
+
+        # Subtle drop shadow for the entire card
+        try:
+            shadow = QGraphicsDropShadowEffect(self)
+            shadow.setBlurRadius(18)
+            shadow.setOffset(0, 2)
+            from PyQt6.QtGui import QColor as _QColor
+            shadow.setColor(_QColor(0, 0, 0, 80))
+            self.setGraphicsEffect(shadow)
+        except:
+            pass
 
         # Apply styling
         self.setStyleSheet(self.get_stylesheet())

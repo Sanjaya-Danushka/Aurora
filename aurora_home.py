@@ -447,6 +447,50 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         else:
             return "📦"
     
+    def get_source_icon(self, source, size=18):
+        icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+        mapping = {
+            "pacman": "pacman.svg",
+            "AUR": "aur.svg",
+            "Flatpak": "flatpack.svg",
+            "npm": "node.svg",
+            "pip": "python.svg",
+        }
+        filename = mapping.get(source, "packagename.svg")
+        icon_path = os.path.join(icon_dir, filename)
+        pixmap = QPixmap(size, size)
+        if pixmap.isNull():
+            return QIcon()
+        pixmap.fill(Qt.GlobalColor.transparent)
+        with QPainter(pixmap) as painter:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            renderer = QSvgRenderer(icon_path)
+            if renderer.isValid():
+                try:
+                    renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                except:
+                    pass
+        return QIcon(pixmap)
+
+    def get_svg_icon(self, icon_path, size=18):
+        pixmap = QPixmap(size, size)
+        if pixmap.isNull():
+            return QIcon()
+        pixmap.fill(Qt.GlobalColor.transparent)
+        with QPainter(pixmap) as painter:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            renderer = QSvgRenderer(icon_path)
+            if renderer.isValid():
+                try:
+                    renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                except:
+                    pass
+        return QIcon(pixmap)
+    
     def create_toolbar_button(self, icon_path, tooltip, callback, icon_size=24):
         """Create a reusable toolbar button with icon and tooltip"""
         btn = QPushButton()
@@ -496,6 +540,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         return btn
     
+    def get_row_checkbox(self, row):
+        cell = self.package_table.cellWidget(row, 0)
+        if isinstance(cell, QCheckBox):
+            return cell
+        if cell is not None:
+            cb = cell.findChild(QCheckBox)
+            return cb
+        return None
+
     def create_content_area(self):
         content = QWidget()
         layout = QVBoxLayout(content)
@@ -618,8 +671,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         """Install selected packages with sudo privileges"""
         selected_rows = []
         for row in range(self.package_table.rowCount()):
-            checkbox = self.package_table.cellWidget(row, 0)
-            if checkbox and checkbox.isChecked():
+            checkbox = self.get_row_checkbox(row)
+            if checkbox is not None and checkbox.isChecked():
                 selected_rows.append(row)
         
         if not selected_rows:
@@ -1079,50 +1132,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
         elif view_id == "discover":
-            self.package_table.setColumnCount(6)
-            self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Description", "Source"])
+            self.package_table.setColumnCount(5)
+            self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Source"])
             self.package_table.setObjectName("discoverTable")  # Apply special styling
             self.package_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-            self.package_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+            self.package_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-            self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
-            self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
-            
-            # Add icons to headers
-            icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
-            
-            def get_white_icon_pixmap(path, size=16):
-                pixmap = QPixmap(size, size)
-                if pixmap.isNull():
-                    return pixmap
-                pixmap.fill(Qt.GlobalColor.transparent)
-                with QPainter(pixmap) as painter:
-                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                    renderer = QSvgRenderer(path)
-                    if renderer.isValid():
-                        try:
-                            renderer.render(painter, QRectF(pixmap.rect()))
-                            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                            painter.fillRect(pixmap.rect(), QColor("white"))
-                        except:
-                            pass
-                return pixmap
-            
-            header_item1 = QTableWidgetItem()
-            header_item1.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "packagename.svg"))))
-            header_item1.setText("Package Name")
-            self.package_table.setHorizontalHeaderItem(1, header_item1)
-            
-            header_item2 = QTableWidgetItem()
-            header_item2.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "pacakgeid.svg"))))
-            header_item2.setText("Package ID")
-            self.package_table.setHorizontalHeaderItem(2, header_item2)
-            
-            header_item3 = QTableWidgetItem()
-            header_item3.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "version.svg"))))
-            header_item3.setText("Version")
-            self.package_table.setHorizontalHeaderItem(3, header_item3)
+            self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+            self.package_table.setShowGrid(False)
+            self.package_table.setIconSize(QSize(20, 20))
+            self.package_table.setWordWrap(True)
+            self.package_table.verticalHeader().setDefaultSectionSize(56)
         else:
             self.package_table.setColumnCount(6)
             self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "New Version", "Source"])
@@ -1361,8 +1382,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Uncheck the newly loaded items
         old_count = self.package_table.rowCount() - len(page_packages)
         for i in range(old_count, self.package_table.rowCount()):
-            checkbox = self.package_table.cellWidget(i, 0)
-            if checkbox:
+            checkbox = self.get_row_checkbox(i)
+            if checkbox is not None:
                 checkbox.setChecked(False)
     
     def add_discover_row(self, pkg):
@@ -1370,8 +1391,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.package_table.insertRow(row)
         
         checkbox = QCheckBox()
-        checkbox.setChecked(False)  # Default to unchecked
-        self.package_table.setCellWidget(row, 0, checkbox)
+        checkbox.setObjectName("tableCheckbox")
+        checkbox.setChecked(False)
+        cb_container = QWidget()
+        cb_layout = QHBoxLayout(cb_container)
+        cb_layout.setContentsMargins(0, 0, 0, 0)
+        cb_layout.addStretch()
+        cb_layout.addWidget(checkbox)
+        cb_layout.addStretch()
+        self.package_table.setCellWidget(row, 0, cb_container)
         checkbox.stateChanged.connect(lambda state, r=row: self.on_checkbox_changed(r, state))
         
         name_item = QTableWidgetItem(pkg['name'])
@@ -1379,31 +1407,56 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         font = QFont()
         font.setBold(True)
         name_item.setFont(font)
+        icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+        name_item.setIcon(self.get_svg_icon(os.path.join(icon_dir, "packagename.svg"), 20))
         self.package_table.setItem(row, 1, name_item)
-        self.package_table.setItem(row, 2, QTableWidgetItem(pkg['id']))
-        self.package_table.setItem(row, 3, QTableWidgetItem(pkg['version']))
-        desc_item = QTableWidgetItem(pkg.get('description', ''))
-        desc_item.setForeground(QColor("#C9C9C9"))
-        desc_item.setToolTip(pkg.get('description', ''))
-        self.package_table.setItem(row, 4, desc_item)
-        self.package_table.setItem(row, 5, QTableWidgetItem(pkg['source']))
+        id_item = QTableWidgetItem(pkg['id'])
+        id_item.setIcon(self.get_svg_icon(os.path.join(icon_dir, "pacakgeid.svg"), 18))
+        self.package_table.setItem(row, 2, id_item)
+        ver_item = QTableWidgetItem(pkg['version'])
+        ver_item.setIcon(self.get_svg_icon(os.path.join(icon_dir, "version.svg"), 18))
+        self.package_table.setItem(row, 3, ver_item)
+        source_chip = QWidget()
+        source_chip.setObjectName("sourceChip")
+        chip_layout = QHBoxLayout(source_chip)
+        chip_layout.setContentsMargins(6, 2, 6, 2)
+        chip_layout.setSpacing(6)
+        chip_icon = QLabel()
+        chip_icon.setPixmap(self.get_source_icon(pkg.get('source', ''), 16).pixmap(16, 16))
+        chip_layout.addWidget(chip_icon)
+        chip_text = QLabel(pkg.get('source', ''))
+        chip_layout.addWidget(chip_text)
+        self.package_table.setCellWidget(row, 4, source_chip)
     
     def add_package_row(self, name, pkg_id, version, new_version, source, pkg_data=None):
         row = self.package_table.rowCount()
         self.package_table.insertRow(row)
         
         checkbox = QCheckBox()
+        checkbox.setObjectName("tableCheckbox")
         checkbox.setChecked(True)
-        self.package_table.setCellWidget(row, 0, checkbox)
+        cb_container = QWidget()
+        cb_layout = QHBoxLayout(cb_container)
+        cb_layout.setContentsMargins(0, 0, 0, 0)
+        cb_layout.addStretch()
+        cb_layout.addWidget(checkbox)
+        cb_layout.addStretch()
+        self.package_table.setCellWidget(row, 0, cb_container)
         checkbox.stateChanged.connect(lambda state, r=row: self.on_checkbox_changed(r, state))
         
         name_item = QTableWidgetItem(name)
         font = QFont()
         font.setBold(True)
         name_item.setFont(font)
+        icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+        name_item.setIcon(self.get_svg_icon(os.path.join(icon_dir, "packagename.svg"), 20))
         self.package_table.setItem(row, 1, name_item)
-        self.package_table.setItem(row, 2, QTableWidgetItem(pkg_id))
-        self.package_table.setItem(row, 3, QTableWidgetItem(version))
+        id_item = QTableWidgetItem(pkg_id)
+        id_item.setIcon(self.get_svg_icon(os.path.join(icon_dir, "pacakgeid.svg"), 18))
+        self.package_table.setItem(row, 2, id_item)
+        ver_item = QTableWidgetItem(version)
+        ver_item.setIcon(self.get_svg_icon(os.path.join(icon_dir, "version.svg"), 18))
+        self.package_table.setItem(row, 3, ver_item)
         
         if self.current_view == "installed" and pkg_data:
             self.package_table.setItem(row, 4, QTableWidgetItem(pkg_data.get('source', 'pacman')))
@@ -1879,8 +1932,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def on_selection_changed(self):
         selected_rows = set(index.row() for index in self.package_table.selectionModel().selectedRows())
         for row in range(self.package_table.rowCount()):
-            checkbox = self.package_table.cellWidget(row, 0)
-            if checkbox:
+            checkbox = self.get_row_checkbox(row)
+            if checkbox is not None:
                 checkbox.setChecked(row in selected_rows)
     
     def on_checkbox_changed(self, row, state):

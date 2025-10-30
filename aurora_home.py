@@ -501,7 +501,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 height: 20px;
                 border-radius: 10px;
                 border: 2px solid rgba({r}, {g}, {b}, 0.4);
-                background-color: rgba(42, 45, 51, 0.8);
+                background-color: transparent;
             }}
             QCheckBox#tableCheckbox::indicator:checked {{
                 background-color: {hex_color};
@@ -1442,6 +1442,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         checkbox.setChecked(False)
         self.apply_checkbox_accent(checkbox, pkg.get('source', ''))
         cb_container = QWidget()
+        cb_container.setStyleSheet("background: transparent;")
         cb_layout = QHBoxLayout(cb_container)
         cb_layout.setContentsMargins(0, 0, 0, 0)
         cb_layout.addStretch()
@@ -1485,6 +1486,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         checkbox.setChecked(True)
         self.apply_checkbox_accent(checkbox, source if source else "")
         cb_container = QWidget()
+        cb_container.setStyleSheet("background: transparent;")
         cb_layout = QHBoxLayout(cb_container)
         cb_layout.setContentsMargins(0, 0, 0, 0)
         cb_layout.addStretch()

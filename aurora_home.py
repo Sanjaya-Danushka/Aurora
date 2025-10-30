@@ -866,17 +866,23 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def create_toolbar_button(self, icon_path, tooltip, callback, icon_size=24):
         """Create a reusable toolbar button with icon and tooltip"""
         btn = QPushButton()
-        btn.setFixedSize(44, 44)
+        btn.setFixedSize(40, 40)  # Slightly smaller for better fit
         btn.setToolTip(tooltip)
         btn.clicked.connect(callback)
         btn.setStyleSheet("""
             QPushButton {
-                padding: 4px;
+                padding: 6px;
                 margin: 2px;
-                border-radius: 4px;
+                border: none;
+                border-radius: 6px;
+                background-color: transparent;
             }
             QPushButton:hover {
-                background-color: rgba(0, 191, 174, 0.1);
+                background-color: rgba(0, 191, 174, 0.15);
+                border-radius: 6px;
+            }
+            QPushButton:pressed {
+                background-color: rgba(0, 191, 174, 0.25);
             }
         """)
         
@@ -1213,7 +1219,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.toolbar_layout.addLayout(layout)
         elif self.current_view == "discover":
             layout = QHBoxLayout()
-            layout.setSpacing(12)
+            layout.setSpacing(8)  # Tighter spacing
             
             install_btn = QPushButton("Install selected packages")
             install_btn.setMinimumHeight(36)
@@ -1237,9 +1243,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             layout.addWidget(install_btn)
             
-            layout.addStretch()
+            layout.addStretch()  # Push all buttons to the right
             
-            # Add new toolbar buttons
+            # Action buttons grouped on the right side
             help_btn = self.create_toolbar_button(
                 os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
                 "Help & Documentation",
@@ -1261,10 +1267,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             )
             layout.addWidget(sudo_btn)
             
-            # Add some spacing before Git button so it's not against the corner
-            layout.addSpacing(10)
-            
-            # Git button on the right side
+            # Git button on the far right
             git_btn = self.create_toolbar_button(
                 os.path.join(icon_dir, "git.svg"),
                 "Git Repository Manager",

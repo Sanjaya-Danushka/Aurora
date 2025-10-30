@@ -80,9 +80,9 @@ class LargeSearchBox(QWidget):
         highlights_layout.setSpacing(18)
 
         highlights = [
-            ("🚀", "Instant multi-repo search", "Type once to search pacman, AUR, Flatpak, npm, and pip together."),
-            ("⭐", "Curated results", "Smart defaults surface popular packages and trusted maintainers."),
-            ("⚙️", "Power user ready", "Filter by source, version, and install with one click when ready.")
+            ("🚀", "Instant multi-repo search", "Search every source online in one go."),
+            ("⭐", "Curated results", "See trusted packages surfaced automatically."),
+            ("⚙️", "Power user ready", "Fine-tune sources and installs without friction.")
         ]
 
         for emoji, title, description in highlights:
@@ -103,7 +103,7 @@ class LargeSearchBox(QWidget):
 
             description_label = QLabel(description)
             description_label.setObjectName("highlightDescription")
-            description_label.setWordWrap(True)
+            description_label.setWordWrap(False)
             card_layout_inner.addWidget(description_label)
 
             highlights_layout.addWidget(highlight_card, 1)
@@ -189,7 +189,6 @@ class LargeSearchBox(QWidget):
                 background-color: rgba(32, 34, 40, 0.95);
                 border-radius: 28px;
                 border: 1px solid rgba(0, 191, 174, 0.18);
-                box-shadow: 0px 18px 44px rgba(0, 0, 0, 0.35);
             }
 
             QLabel#heroTitle {

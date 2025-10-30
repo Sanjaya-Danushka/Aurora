@@ -1246,7 +1246,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             # Git button on the left side
             git_btn = self.create_toolbar_button(
                 os.path.join(icon_dir, "git.svg"),
-                "Git Repository Manager",
+                "Install via GitHub",
                 self.show_git_dialog
             )
             layout.addWidget(git_btn)

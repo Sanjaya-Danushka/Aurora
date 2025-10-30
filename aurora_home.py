@@ -545,6 +545,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.current_page = 0
         self.loader_thread = None
         self.git_manager = None  # Will be initialized when sources layout is ready
+        self.docker_manager = None  # Docker manager instance
         self.packages_ready.connect(self.on_packages_loaded)
         self.discover_results_ready.connect(self.display_discover_results)
         self.show_message.connect(self._show_message)
@@ -1008,9 +1009,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def show_docker_install_dialog(self):
         """Show Docker container management dialog"""
-        from docker_manager import DockerManager
-        docker_manager = DockerManager(self.log_signal, self.show_message, self.sources_layout)
-        docker_manager.install_from_docker()
+        if not self.docker_manager:
+            from docker_manager import DockerManager
+            self.docker_manager = DockerManager(self.log_signal, self.show_message, self.sources_layout, self)
+        
+        self.docker_manager.install_from_docker()
     
     def show_help(self):
         """Show help dialog"""

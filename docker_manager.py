@@ -13,13 +13,15 @@ from PyQt6.QtSvg import QSvgRenderer
 class DockerManager(QObject):
     """Docker container management component for Aurora"""
 
-    def __init__(self, log_signal, show_message_signal, sources_layout):
+    def __init__(self, log_signal, show_message_signal, sources_layout, parent=None):
         super().__init__()
         self.log_signal = log_signal
         self.show_message = show_message_signal
         self.sources_layout = sources_layout
+        self.parent = parent  # Reference to main window
 
         # UI elements that will be created
+        self.docker_section = None  # Reference to the docker section widget
         self.recent_containers_label = None
         self.recent_containers_list = None
 
@@ -28,8 +30,8 @@ class DockerManager(QObject):
 
     def create_docker_section(self):
         """Create and add the Docker section to the sources layout"""
-        docker_section = QWidget()
-        docker_layout = QVBoxLayout(docker_section)
+        self.docker_section = QWidget()
+        docker_layout = QVBoxLayout(self.docker_section)
         docker_layout.setContentsMargins(0, 8, 0, 0)  # Add top margin for spacing
         docker_layout.setSpacing(10)  # Increase spacing between elements
 
@@ -197,7 +199,7 @@ class DockerManager(QObject):
         self.recent_containers_list.setVisible(False)  # Initially hidden
         docker_layout.addWidget(self.recent_containers_list)
 
-        self.sources_layout.addWidget(docker_section)
+        self.sources_layout.addWidget(self.docker_section)
 
         # Load running containers on startup
         self.load_running_containers()
@@ -384,10 +386,22 @@ class DockerManager(QObject):
                 self.show_message.emit("Containers Stopped", f"Stopped {len(containers)} containers")
                 # Refresh the running containers list
                 self.load_running_containers()
-            else:
-                self.log_signal.emit("No running containers to stop")
+                # Remove the Docker section from the UI after stopping containers
+                self.remove_docker_section()
         except Exception as e:
             self.log_signal.emit(f"Error stopping containers: {str(e)}")
+
+    def remove_docker_section(self):
+        """Remove the Docker section from the sources layout"""
+        if self.docker_section and self.sources_layout:
+            self.sources_layout.removeWidget(self.docker_section)
+            self.docker_section.setParent(None)
+            self.docker_section.deleteLater()
+            self.docker_section = None
+            self.log_signal.emit("Docker section removed from sources panel")
+            # Clear the reference in parent so it can be recreated
+            if self.parent:
+                self.parent.docker_manager = None
 
     def clean_docker_containers(self):
         """Clean up Docker containers and images"""

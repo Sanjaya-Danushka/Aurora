@@ -799,7 +799,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             layout.addStretch()
             self.toolbar_layout.addLayout(layout)
         elif self.current_view == "installed":
-            
+            layout = QHBoxLayout()
             layout.addStretch()
             self.toolbar_layout.addLayout(layout)
         elif self.current_view == "discover":

@@ -358,6 +358,126 @@ QWidget#loadingSpinner QLabel {
     font-size: 14px;
     font-weight: 500;
 }
+
+/* SourceItem component styles */
+SourceItem {
+    background-color: transparent;
+    border-radius: 8px;
+    margin: 2px 0px;
+}
+
+SourceItem:hover {
+    background-color: rgba(0, 191, 174, 0.05);
+    border-radius: 8px;
+}
+
+QWidget#sourceIconContainer {
+    background-color: rgba(0, 191, 174, 0.1);
+    border: 1px solid rgba(0, 191, 174, 0.3);
+    border-radius: 8px;
+}
+
+QWidget#sourceIconContainer:checked {
+    background-color: rgba(0, 191, 174, 0.2);
+    border-color: rgba(0, 191, 174, 0.6);
+}
+
+QCheckBox#sourceCheckbox {
+    color: #F0F0F0;
+    font-size: 13px;
+    font-weight: 500;
+    spacing: 8px;
+}
+
+QCheckBox#sourceCheckbox::indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    border: 2px solid rgba(0, 191, 174, 0.4);
+    background-color: rgba(42, 45, 51, 0.8);
+}
+
+QCheckBox#sourceCheckbox::indicator:checked {
+    background-color: #00BFAE;
+    border: 2px solid #00BFAE;
+}
+
+QCheckBox#sourceCheckbox::indicator:unchecked {
+    background-color: rgba(42, 45, 51, 0.8);
+}
+
+QCheckBox#sourceCheckbox::indicator:hover {
+    border-color: rgba(0, 191, 174, 0.8);
+}
+
+/* SourceSelector component styles */
+SourceSelector {
+    background-color: rgba(42, 45, 51, 0.3);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 191, 174, 0.1);
+}
+
+QLabel#sourceSelectorTitle {
+    color: #00BFAE;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 0px;
+}
+
+QPushButton#selectAllBtn {
+    background-color: transparent;
+    color: #00BFAE;
+    border: 1px solid rgba(0, 191, 174, 0.3);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+QPushButton#selectAllBtn:hover {
+    background-color: rgba(0, 191, 174, 0.1);
+    border-color: rgba(0, 191, 174, 0.5);
+}
+
+QPushButton#selectAllBtn:pressed {
+    background-color: rgba(0, 191, 174, 0.2);
+}
+
+/* SourceCard component styles */
+SourceCard {
+    background-color: rgba(42, 45, 51, 0.4);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 191, 174, 0.2);
+    margin: 4px 0px;
+}
+
+QLabel#sourceCardTitle {
+    color: #00BFAE;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* FilterCard component styles */
+FilterCard {
+    background-color: rgba(42, 45, 51, 0.4);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 191, 174, 0.2);
+    margin: 4px 0px;
+}
+
+QLabel#filterCardTitle {
+    color: #00BFAE;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 """
 
 

@@ -16,6 +16,7 @@ from PyQt6.QtSvg import QSvgRenderer
 from git_manager import GitManager
 
 from styles import Styles
+from components import SourceCard, FilterCard
 
 class PackageLoaderWorker(QObject):
     packages_loaded = pyqtSignal(list)
@@ -940,29 +941,28 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 item.widget().deleteLater()
         
         # Recreate filters based on view
-        filters_label = QLabel("Filters")
-        filters_label.setObjectName("sectionLabel")
-        self.filters_layout.addWidget(filters_label)
-        
         if view_id == "updates":
             # For updates view, filter by source
-            filter_options = ["pacman", "AUR"]
+            self.filter_card = FilterCard(self)
+            self.filter_card.filter_changed.connect(self.on_filter_selection_changed)
+            
+            # Add source filters
+            self.filter_card.add_filter("pacman")
+            self.filter_card.add_filter("AUR")
+            
+            self.filters_layout.addWidget(self.filter_card)
         elif view_id == "installed":
             # For installed view, filter by update status
-            filter_options = ["Updates available", "Installed"]
+            self.filter_card = FilterCard(self)
+            self.filter_card.filter_changed.connect(self.on_filter_selection_changed)
+            
+            # Add status filters
+            self.filter_card.add_filter("Updates available")
+            self.filter_card.add_filter("Installed")
+            
+            self.filters_layout.addWidget(self.filter_card)
         else:
             filter_options = []
-        
-        self.filter_checkboxes = {}
-        for option in filter_options:
-            checkbox = QCheckBox(option)
-            checkbox.setChecked(True)
-            if view_id == "updates":
-                checkbox.stateChanged.connect(self.apply_update_filters)
-            elif view_id == "installed":
-                checkbox.stateChanged.connect(self.apply_filters)
-            self.filter_checkboxes[option] = checkbox
-            self.filters_layout.addWidget(checkbox)
         
         # Update visibility
         if view_id in ["installed", "updates"]:
@@ -976,65 +976,49 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(True)
     
+    def on_filter_selection_changed(self, filter_states):
+        """Handle changes in filter selection"""
+        self.log(f"Filter selection changed: {filter_states}")
+        # Apply filtering based on current view
+        if self.current_view == "installed":
+            self.apply_filters()
+        elif self.current_view == "updates":
+            self.apply_update_filters()
+    
     def update_discover_sources(self):
+        """Update the discover sources using the new SourceCard component"""
+        # Clear existing sources layout (except the title label)
         while self.sources_layout.count() > 1:
             item = self.sources_layout.takeAt(1)
             if item.widget():
                 item.widget().deleteLater()
         
+        # Always create a new SourceCard component
+        self.source_card = SourceCard(self)
+        self.source_card.source_changed.connect(self.on_source_selection_changed)
+        
+        # Add the three main sources
         sources = [
-            ("pacman", "pacman.svg"),
-            ("AUR", "aur.svg"),
-            ("Flatpak", "flatpack.svg")
+            ("pacman", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "pacman.svg")),
+            ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg")),
+            ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg"))
         ]
-        self.source_checkboxes = {}
-        for source, icon_file in sources:
-            # Create container widget
-            container = QWidget()
-            layout = QHBoxLayout(container)
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.setSpacing(8)
-            
-            # Icon
-            icon_label = QLabel()
-            icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", icon_file)
-            try:
-                svg_renderer = QSvgRenderer(icon_path)
-                if svg_renderer.isValid():
-                    pixmap = QPixmap(20, 20)
-                    pixmap.fill(Qt.GlobalColor.transparent)
-                    painter = QPainter(pixmap)
-                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                    svg_renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("white"))
-                    painter.end()
-                    icon_label.setPixmap(pixmap)
-                else:
-                    icon_label.setText("📦")
-            except:
-                icon_label.setText("📦")
-            
-            layout.addWidget(icon_label)
-            
-            # Checkbox
-            checkbox = QCheckBox(source)
-            checkbox.setChecked(True)
-            checkbox.stateChanged.connect(self.apply_source_filter)
-            layout.addWidget(checkbox)
-            
-            layout.addStretch()
-            
-            self.source_checkboxes[source] = checkbox
-            self.sources_layout.addWidget(container)
+        
+        for source_name, icon_path in sources:
+            self.source_card.add_source(source_name, icon_path)
+        
+        self.sources_layout.addWidget(self.source_card)
         
         # Initialize Git Manager for sources panel
         if not hasattr(self, 'git_manager') or self.git_manager is None:
             from git_manager import GitManager
             self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
     
-    def apply_source_filter(self):
-        if self.current_view == "discover" and self.search_results:
+    def on_source_selection_changed(self, source_states):
+        """Handle changes in source selection"""
+        self.log(f"Source selection changed: {source_states}")
+        # Apply source filtering if we have search results
+        if self.current_view == "discover" and hasattr(self, 'search_results') and self.search_results:
             self.display_discover_results()
     
     def update_table_columns(self, view_id):
@@ -1500,9 +1484,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if packages is not None:
             self.search_results = packages
         
-        show_pacman = self.source_checkboxes.get("pacman", QCheckBox()).isChecked() if isinstance(self.source_checkboxes.get("pacman"), QCheckBox) else True
-        show_aur = self.source_checkboxes.get("AUR", QCheckBox()).isChecked() if isinstance(self.source_checkboxes.get("AUR"), QCheckBox) else True
-        show_flatpak = self.source_checkboxes.get("Flatpak", QCheckBox()).isChecked() if isinstance(self.source_checkboxes.get("Flatpak"), QCheckBox) else True
+        # Get selected sources from the SourceCard component
+        selected_sources = {}
+        if hasattr(self, 'source_card') and self.source_card:
+            selected_sources = self.source_card.get_selected_sources()
+        else:
+            # Fallback to showing all sources if component not initialized
+            selected_sources = {"pacman": True, "AUR": True, "Flatpak": True}
+        
+        show_pacman = selected_sources.get("pacman", True)
+        show_aur = selected_sources.get("AUR", True)
+        show_flatpak = selected_sources.get("Flatpak", True)
         
         filtered = []
         for pkg in self.search_results:
@@ -1703,13 +1695,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if self.current_view != "installed" or not self.all_packages:
             return
         
-        show_updates = self.filter_checkboxes.get("Updates available", True)
-        show_installed = self.filter_checkboxes.get("Installed", True)
+        # Get selected filters from the FilterCard component
+        selected_filters = {}
+        if hasattr(self, 'filter_card') and self.filter_card:
+            selected_filters = self.filter_card.get_selected_filters()
+        else:
+            # Fallback to showing all filters if component not initialized
+            selected_filters = {"Updates available": True, "Installed": True}
         
-        if isinstance(show_updates, QCheckBox):
-            show_updates = show_updates.isChecked()
-        if isinstance(show_installed, QCheckBox):
-            show_installed = show_installed.isChecked()
+        show_updates = selected_filters.get("Updates available", True)
+        show_installed = selected_filters.get("Installed", True)
         
         filtered = []
         for pkg in self.all_packages:
@@ -1741,13 +1736,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if self.current_view != "updates" or not self.all_packages:
             return
         
-        show_pacman = self.filter_checkboxes.get("pacman", True)
-        show_aur = self.filter_checkboxes.get("AUR", True)
+        # Get selected filters from the FilterCard component
+        selected_filters = {}
+        if hasattr(self, 'filter_card') and self.filter_card:
+            selected_filters = self.filter_card.get_selected_filters()
+        else:
+            # Fallback to showing all filters if component not initialized
+            selected_filters = {"pacman": True, "AUR": True}
         
-        if isinstance(show_pacman, QCheckBox):
-            show_pacman = show_pacman.isChecked()
-        if isinstance(show_aur, QCheckBox):
-            show_aur = show_aur.isChecked()
+        show_pacman = selected_filters.get("pacman", True)
+        show_aur = selected_filters.get("AUR", True)
         
         filtered = []
         for pkg in self.all_packages:

@@ -28,9 +28,9 @@ class LargeSearchBox(QWidget):
         layout.setContentsMargins(32, 48, 32, 48)
         layout.setSpacing(24)
 
-        card = QFrame()
-        card.setObjectName("largeSearchCard")
-        card_layout = QVBoxLayout(card)
+        hero_card = QFrame()
+        hero_card.setObjectName("largeSearchCard")
+        card_layout = QVBoxLayout(hero_card)
         card_layout.setContentsMargins(36, 40, 36, 40)
         card_layout.setSpacing(24)
 
@@ -73,32 +73,45 @@ class LargeSearchBox(QWidget):
 
         card_layout.addWidget(search_container)
 
-        suggestions_container = QWidget()
-        suggestions_container.setObjectName("suggestionsContainer")
-        suggestions_layout = QHBoxLayout(suggestions_container)
-        suggestions_layout.setContentsMargins(0, 0, 0, 0)
-        suggestions_layout.setSpacing(12)
-        suggestions_layout.addStretch()
+        highlights_container = QWidget()
+        highlights_container.setObjectName("highlightsContainer")
+        highlights_layout = QHBoxLayout(highlights_container)
+        highlights_layout.setContentsMargins(0, 0, 0, 0)
+        highlights_layout.setSpacing(18)
 
-        suggestions = [
-            "Essentials",
-            "Development Tools",
-            "AUR Helpers",
-            "Flatpak Apps"
+        highlights = [
+            ("🚀", "Instant multi-repo search", "Type once to search pacman, AUR, Flatpak, npm, and pip together."),
+            ("⭐", "Curated results", "Smart defaults surface popular packages and trusted maintainers."),
+            ("⚙️", "Power user ready", "Filter by source, version, and install with one click when ready.")
         ]
-        for suggestion in suggestions:
-            btn = QPushButton(suggestion)
-            btn.setObjectName("suggestionChip")
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setCheckable(False)
-            btn.clicked.connect(lambda checked, term=suggestion: self.on_suggestion_clicked(term))
-            suggestions_layout.addWidget(btn)
 
-        suggestions_layout.addStretch()
-        card_layout.addWidget(suggestions_container)
+        for emoji, title, description in highlights:
+            highlight_card = QFrame()
+            highlight_card.setObjectName("highlightCard")
+            card_layout_inner = QVBoxLayout(highlight_card)
+            card_layout_inner.setContentsMargins(18, 18, 18, 18)
+            card_layout_inner.setSpacing(6)
+
+            icon_label = QLabel(emoji)
+            icon_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            icon_label.setObjectName("highlightIcon")
+            card_layout_inner.addWidget(icon_label)
+
+            title_label = QLabel(title)
+            title_label.setObjectName("highlightTitle")
+            card_layout_inner.addWidget(title_label)
+
+            description_label = QLabel(description)
+            description_label.setObjectName("highlightDescription")
+            description_label.setWordWrap(True)
+            card_layout_inner.addWidget(description_label)
+
+            highlights_layout.addWidget(highlight_card, 1)
+
+        card_layout.addWidget(highlights_container)
 
         layout.addStretch()
-        layout.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(hero_card, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addStretch()
 
         self.setStyleSheet(self.get_stylesheet())
@@ -164,10 +177,6 @@ class LargeSearchBox(QWidget):
         if query:
             self.search_timer.stop()  # Stop any pending auto-search
             self.search_requested.emit(query)
-
-    def on_suggestion_clicked(self, term):
-        self.search_input.setText(term)
-        self.on_search_triggered()
 
     def get_stylesheet(self):
         """Get stylesheet for this component"""
@@ -249,26 +258,29 @@ class LargeSearchBox(QWidget):
                 background-color: #009688;
             }
 
-            QWidget#suggestionsContainer {
+            QWidget#highlightsContainer {
                 background-color: transparent;
             }
 
-            QPushButton#suggestionChip {
-                background-color: rgba(0, 191, 174, 0.16);
-                border: 1px solid rgba(0, 191, 174, 0.35);
-                border-radius: 16px;
-                padding: 6px 14px;
-                color: #E3F7F5;
-                font-size: 14px;
-                font-weight: 500;
+            QFrame#highlightCard {
+                background-color: rgba(18, 21, 27, 0.9);
+                border-radius: 18px;
+                border: 1px solid rgba(0, 191, 174, 0.14);
             }
 
-            QPushButton#suggestionChip:hover {
-                background-color: rgba(0, 191, 174, 0.26);
-                border-color: rgba(0, 230, 214, 0.55);
+            QLabel#highlightIcon {
+                font-size: 24px;
             }
 
-            QPushButton#suggestionChip:pressed {
-                background-color: rgba(0, 191, 174, 0.36);
+            QLabel#highlightTitle {
+                color: #EAF6F5;
+                font-size: 15px;
+                font-weight: 600;
+            }
+
+            QLabel#highlightDescription {
+                color: #9CA6B4;
+                font-size: 13px;
+                line-height: 1.4em;
             }
         """

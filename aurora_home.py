@@ -1243,7 +1243,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             layout.addWidget(install_btn)
             
-            layout.addStretch()  # Push buttons to the right
+            # Git button on the left side
+            git_btn = self.create_toolbar_button(
+                os.path.join(icon_dir, "git.svg"),
+                "Git Repository Manager",
+                self.show_git_dialog
+            )
+            layout.addWidget(git_btn)
+            
+            layout.addStretch()  # Push remaining buttons to the right
             
             # Action buttons on the right side
             bundles_btn = self.create_toolbar_button(
@@ -1259,14 +1267,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.sudo_install_selected
             )
             layout.addWidget(sudo_btn)
-            
-            # Git button next
-            git_btn = self.create_toolbar_button(
-                os.path.join(icon_dir, "git.svg"),
-                "Git Repository Manager",
-                self.show_git_dialog
-            )
-            layout.addWidget(git_btn)
             
             # Help button on the far right
             help_btn = self.create_toolbar_button(

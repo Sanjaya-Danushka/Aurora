@@ -130,7 +130,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.switch_view(self.current_view)
         
         # Debounce search input
-        self.search_timer.setInterval(300)
+        self.search_timer.setInterval(800)
         self.search_timer.setSingleShot(True)
         self.search_timer.timeout.connect(self.perform_search)
         self.search_input.textChanged.connect(self.on_search_text_changed)

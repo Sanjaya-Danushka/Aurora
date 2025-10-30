@@ -329,21 +329,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     raise ValueError("Pixmap is null")
                 pixmap.fill(Qt.GlobalColor.transparent)
                 
-                painter = QPainter(pixmap)
-                if not painter.isActive():
-                    raise ValueError("Painter not active")
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                with QPainter(pixmap) as painter:
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                    
+                    try:
+                        # Set composition mode and color for white rendering
+                        svg_renderer.render(painter, QRectF(pixmap.rect()))
+                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                        painter.fillRect(pixmap.rect(), QColor("white"))
+                    except:
+                        pass
                 
-                try:
-                    # Set composition mode and color for white rendering
-                    svg_renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("white"))
-                except:
-                    pass  # If render fails, leave pixmap transparent
-                
-                painter.end()
                 icon_label.setPixmap(pixmap)
             else:
                 raise
@@ -395,21 +392,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     raise ValueError("Pixmap is null")
                 pixmap.fill(Qt.GlobalColor.transparent)
                 
-                painter = QPainter(pixmap)
-                if not painter.isActive():
-                    raise ValueError("Painter not active")
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                with QPainter(pixmap) as painter:
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                    
+                    try:
+                        from PyQt6.QtCore import QRectF
+                        svg_renderer.render(painter, QRectF(pixmap.rect()))
+                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                        painter.fillRect(pixmap.rect(), QColor("white"))
+                    except:
+                        pass
                 
-                try:
-                    from PyQt6.QtCore import QRectF
-                    svg_renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("white"))
-                except:
-                    pass
-                
-                painter.end()
                 icon_label.setPixmap(pixmap)
             else:
                 raise
@@ -482,16 +476,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             if pixmap.isNull():
                 raise ValueError("Pixmap is null")
             pixmap.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(pixmap)
-            if not painter.isActive():
-                raise ValueError("Painter not active")
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            renderer = QSvgRenderer(icon_path)
-            if renderer.isValid():
-                renderer.render(painter, QRectF(pixmap.rect()))
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("white"))
-            painter.end()
+            with QPainter(pixmap) as painter:
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                renderer = QSvgRenderer(icon_path)
+                if renderer.isValid():
+                    renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
             btn.setIcon(QIcon(pixmap))
             btn.setIconSize(QSize(icon_size, icon_size))
         except:
@@ -574,20 +565,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             if pixmap.isNull():
                 raise ValueError("Pixmap is null")
             pixmap.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(pixmap)
-            if not painter.isActive():
-                painter.end()
-                return pixmap
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            renderer = QSvgRenderer(path)
-            if renderer.isValid():
-                try:
-                    renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("white"))
-                except:
-                    pass
-            painter.end()
+            with QPainter(pixmap) as painter:
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                renderer = QSvgRenderer(path)
+                if renderer.isValid():
+                    try:
+                        renderer.render(painter, QRectF(pixmap.rect()))
+                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                        painter.fillRect(pixmap.rect(), QColor("white"))
+                    except:
+                        pass
             return pixmap
         
         refresh_btn.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "refresh.svg"))))
@@ -770,21 +757,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             if pixmap.isNull():
                 raise ValueError("Pixmap is null")
             pixmap.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(pixmap)
-            if not painter.isActive():
-                painter.end()
-                return pixmap
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            renderer = QSvgRenderer(path)
-            if renderer.isValid():
-                
-                try:
-                    renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("white"))
-                except:
-                    pass
-            painter.end()
+            with QPainter(pixmap) as painter:
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                renderer = QSvgRenderer(path)
+                if renderer.isValid():
+                    
+                    try:
+                        renderer.render(painter, QRectF(pixmap.rect()))
+                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                        painter.fillRect(pixmap.rect(), QColor("white"))
+                    except:
+                        pass
             return pixmap
         
         self.load_more_btn.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "load-more.svg"))))
@@ -856,14 +839,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 if pixmap.isNull():
                     raise ValueError("Pixmap is null")
                 pixmap.fill(Qt.GlobalColor.transparent)
-                painter = QPainter(pixmap)
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                renderer = QSvgRenderer(path)
-                if renderer.isValid():
-                    renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("white"))
-                painter.end()
+                with QPainter(pixmap) as painter:
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    renderer = QSvgRenderer(path)
+                    if renderer.isValid():
+                        renderer.render(painter, QRectF(pixmap.rect()))
+                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                        painter.fillRect(pixmap.rect(), QColor("white"))
                 return pixmap
             
             install_btn.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "install-selected packge.svg"))))
@@ -938,16 +920,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 if pixmap.isNull():
                     raise ValueError("Pixmap is null")
                 pixmap.fill(Qt.GlobalColor.transparent)
-                painter = QPainter(pixmap)
-                if not painter.isActive():
-                    raise ValueError("Painter not active")
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                renderer = QSvgRenderer(icon_path)
-                if renderer.isValid():
-                    renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("#00BFAE"))
-                painter.end()
+                with QPainter(pixmap) as painter:
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    renderer = QSvgRenderer(icon_path)
+                    if renderer.isValid():
+                        renderer.render(painter, QRectF(pixmap.rect()))
+                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                        painter.fillRect(pixmap.rect(), QColor("#00BFAE"))
                 self.header_icon.setPixmap(pixmap)
                 self.header_icon.setVisible(True)
             except:
@@ -1112,19 +1091,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 if pixmap.isNull():
                     return pixmap
                 pixmap.fill(Qt.GlobalColor.transparent)
-                painter = QPainter(pixmap)
-                if not painter.isActive():
-                    return pixmap
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                renderer = QSvgRenderer(path)
-                if renderer.isValid():
-                    try:
-                        renderer.render(painter, QRectF(pixmap.rect()))
-                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                        painter.fillRect(pixmap.rect(), QColor("white"))
-                    except:
-                        pass
-                painter.end()
+                with QPainter(pixmap) as painter:
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    renderer = QSvgRenderer(path)
+                    if renderer.isValid():
+                        try:
+                            renderer.render(painter, QRectF(pixmap.rect()))
+                            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                            painter.fillRect(pixmap.rect(), QColor("white"))
+                        except:
+                            pass
                 return pixmap
             
             header_item1 = QTableWidgetItem()

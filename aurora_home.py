@@ -16,7 +16,7 @@ from PyQt6.QtSvg import QSvgRenderer
 from git_manager import GitManager
 
 from styles import Styles
-from components import SourceCard, FilterCard
+from components import SourceCard, FilterCard, LargeSearchBox
 
 app = QApplication(sys.argv)
 
@@ -135,17 +135,28 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.search_timer.timeout.connect(self.perform_search)
         self.search_input.textChanged.connect(self.on_search_text_changed)
 
+    def on_large_search_requested(self, query):
+        """Handle search request from large search box"""
+        self.search_input.setText(query)
+        self.perform_search()
+
     def on_search_text_changed(self):
         self.search_timer.start()
 
     def perform_search(self):
         query = self.search_input.text().strip()
         if len(query) < 3:
+            if self.current_view == "discover":
+                self.large_search_box.setVisible(True)
+                self.package_table.setVisible(False)
+                self.load_more_btn.setVisible(False)
             self.package_table.setRowCount(0)
             self.header_info.setText("Search and discover new packages to install")
             self.log("Type a package name to search in AUR and official repositories")
             return
         if self.current_view == "discover":
+            self.large_search_box.setVisible(False)
+            self.package_table.setVisible(True)
             self.search_discover_packages(query)
         else:
             self.filter_packages()
@@ -154,19 +165,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.GlobalColor.transparent)
         
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        painter.setBrush(QColor(0, 212, 255))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(4, 4, 56, 56)
-        
-        font = QFont("Segoe UI", 32, QFont.Weight.Bold)
-        painter.setFont(font)
-        painter.setPen(QColor(26, 26, 26))
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "A")
-        
-        painter.end()
+        with QPainter(pixmap) as painter:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            
+            painter.setBrush(QColor(0, 212, 255))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(4, 4, 56, 56)
+            
+            font = QFont("Segoe UI", 32, QFont.Weight.Bold)
+            painter.setFont(font)
+            painter.setPen(QColor(26, 26, 26))
+            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "A")
         
         icon = QIcon(pixmap)
         self.setWindowIcon(icon)
@@ -729,6 +738,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         layout.addWidget(self.loading_widget)
         
+        # Large search box for discover page
+        self.large_search_box = LargeSearchBox()
+        self.large_search_box.search_requested.connect(self.on_large_search_requested)
+        layout.addWidget(self.large_search_box)
+        
         # Packages Table
         self.package_table = QTableWidget()
         self.package_table.setColumnCount(6)
@@ -957,6 +971,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         elif view_id == "installed":
             self.load_installed_packages()
         elif view_id == "discover":
+            self.large_search_box.setVisible(True)
+            self.package_table.setVisible(False)
+            self.load_more_btn.setVisible(False)
             self.package_table.setRowCount(0)
             self.header_info.setText("Search and discover new packages to install")
             self.log("Type a package name to search in AUR and official repositories")

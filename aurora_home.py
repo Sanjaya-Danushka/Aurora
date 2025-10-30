@@ -949,6 +949,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout = QHBoxLayout(header)
         layout.setContentsMargins(20, 0, 20, 0)
         
+        # Icon label (hidden by default)
+        self.header_icon = QLabel()
+        self.header_icon.setVisible(False)
+        layout.addWidget(self.header_icon)
+        
         self.header_label = QLabel("🔄 Software Updates")
         self.header_label.setObjectName("headerLabel")
         layout.addWidget(self.header_label)
@@ -1291,13 +1296,35 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         headers = {
             "updates": ("🔄 Software Updates", "24 packages were found, 24 of which match the specified filters"),
             "installed": ("📦 Installed Packages", "View all installed packages on your system"),
-            "discover": ("🔍 Discover Packages", "Search and discover new packages to install"),
+            "discover": ("/home/alexa/StudioProjects/Aurora/assets/icons/discover/search.svg", "Discover Packages", "Search and discover new packages to install"),
             "bundles": ("📋 Package Bundles", "Manage package bundles"),
         }
         
-        header_text, info_text = headers.get(view_id, ("NeoArch", ""))
-        self.header_label.setText(header_text)
-        self.header_info.setText(info_text)
+        header_data = headers.get(view_id, ("NeoArch", ""))
+        if len(header_data) == 3:  # Icon, title, subtitle
+            icon_path, title, subtitle = header_data
+            try:
+                pixmap = QPixmap(24, 24)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                renderer = QSvgRenderer(icon_path)
+                if renderer.isValid():
+                    renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("#00BFAE"))
+                painter.end()
+                self.header_icon.setPixmap(pixmap)
+                self.header_icon.setVisible(True)
+            except:
+                self.header_icon.setVisible(False)
+            self.header_label.setText(title)
+            self.header_info.setText(subtitle)
+        else:  # Title, subtitle
+            title, subtitle = header_data
+            self.header_icon.setVisible(False)
+            self.header_label.setText(title)
+            self.header_info.setText(subtitle)
         
         self.update_table_columns(view_id)
         self.update_filters_panel(view_id)

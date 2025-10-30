@@ -187,9 +187,9 @@ class SourceCard(QWidget):
         """Get stylesheet for this component"""
         return """
             SourceCard {
-                background-color: rgba(42, 45, 51, 0.4);
+                background-color: #0f0f0f;
                 border-radius: 12px;
-                border: 1px solid rgba(0, 191, 174, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.06);
                 margin: 4px 0px;
             }
 
@@ -238,18 +238,18 @@ class SourceCard(QWidget):
                 spacing: 8px;
                 padding: 6px 12px;
                 border-radius: 6px;
-                background-color: rgba(42, 45, 51, 0.6);
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                background-color: #0f0f0f;
+                border: 1px solid rgba(255, 255, 255, 0.08);
             }
 
             QRadioButton#searchModeRadio:hover {
-                background-color: rgba(0, 191, 174, 0.1);
-                border-color: rgba(0, 191, 174, 0.3);
+                background-color: #121212;
+                border-color: rgba(0, 191, 174, 0.4);
             }
 
             QRadioButton#searchModeRadio:checked {
-                background-color: rgba(0, 191, 174, 0.2);
-                border-color: rgba(0, 191, 174, 0.5);
+                background-color: #121212;
+                border-color: #00BFAE;
                 color: #00BFAE;
                 font-weight: 600;
             }

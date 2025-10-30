@@ -1243,16 +1243,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             layout.addWidget(install_btn)
             
-            layout.addStretch()  # Push all buttons to the right
+            layout.addStretch()  # Push buttons to the right
             
-            # Action buttons grouped on the right side
-            help_btn = self.create_toolbar_button(
-                os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
-                "Help & Documentation",
-                self.show_help
-            )
-            layout.addWidget(help_btn)
-            
+            # Action buttons on the right side
             bundles_btn = self.create_toolbar_button(
                 os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
                 "Go to Package Bundles",
@@ -1261,19 +1254,27 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             layout.addWidget(bundles_btn)
             
             sudo_btn = self.create_toolbar_button(
-                "",  # No icon path, will use emoji fallback
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "sudo.svg"),
                 "Install with Sudo Privileges",
                 self.sudo_install_selected
             )
             layout.addWidget(sudo_btn)
             
-            # Git button on the far right
+            # Git button next
             git_btn = self.create_toolbar_button(
                 os.path.join(icon_dir, "git.svg"),
                 "Git Repository Manager",
                 self.show_git_dialog
             )
             layout.addWidget(git_btn)
+            
+            # Help button on the far right
+            help_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
+                "Help & Documentation",
+                self.show_help
+            )
+            layout.addWidget(help_btn)
             
             self.toolbar_layout.addLayout(layout)
         # For bundles, no toolbar

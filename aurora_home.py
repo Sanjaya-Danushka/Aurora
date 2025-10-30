@@ -13,8 +13,67 @@ from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF
 from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
 from PyQt6.QtSvg import QSvgRenderer
 
-from styles import Styles
 from git_manager import GitManager
+
+from styles import Styles
+
+
+class GitDialog(QDialog):
+    """Dialog for Git repository management"""
+    
+    def __init__(self, log_signal, show_message_signal, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Git Repository Manager")
+        self.setModal(True)
+        self.setMinimumSize(500, 600)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #1E1E1E;
+                color: #F0F0F0;
+                border: 1px solid rgba(0, 191, 174, 0.2);
+            }
+        """)
+        
+        # Create main layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(10)
+        
+        # Create scroll area for Git content
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        
+        # Create container widget for GitManager content
+        git_container = QWidget()
+        git_container.setStyleSheet("background-color: transparent;")
+        git_layout = QVBoxLayout(git_container)
+        git_layout.setContentsMargins(0, 0, 0, 0)
+        git_layout.setSpacing(10)
+        
+        # Create GitManager with the container layout
+        self.git_manager = GitManager(log_signal, show_message_signal, git_layout)
+        
+        scroll_area.setWidget(git_container)
+        layout.addWidget(scroll_area)
+        
+        # Add close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(42, 45, 51, 0.6);
+                color: #F0F0F0;
+                border: 1px solid rgba(0, 191, 174, 0.2);
+                border-radius: 4px;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background-color: rgba(42, 45, 51, 0.8);
+            }
+        """)
+        layout.addWidget(close_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
 class PackageLoaderWorker(QObject):
     packages_loaded = pyqtSignal(list)
@@ -509,6 +568,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         return header
     
+    def show_git_dialog(self):
+        """Show Git repository management dialog"""
+        dialog = GitDialog(self.log_signal, self.show_message, self)
+        dialog.exec()
+    
     def create_filters_panel(self):
         panel = QFrame()
         panel.setStyleSheet(Styles.get_filters_panel_stylesheet())
@@ -709,6 +773,25 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             layout.addWidget(install_btn)
             
             layout.addStretch()
+            
+            # Add some spacing before Git button so it's not against the corner
+            layout.addSpacing(10)
+            
+            # Git button on the right side
+            git_btn = QPushButton()
+            git_btn.setFixedSize(36, 36)
+            git_btn.setToolTip("Git Repository Manager")
+            git_btn.clicked.connect(self.show_git_dialog)
+            
+            # Try to use git.svg icon, fallback to emoji
+            try:
+                git_icon_pixmap = get_white_icon_pixmap(os.path.join(icon_dir, "git.svg"))
+                git_btn.setIcon(QIcon(git_icon_pixmap))
+            except:
+                git_btn.setText("📁")
+            
+            layout.addWidget(git_btn)
+            
             self.toolbar_layout.addLayout(layout)
         # For bundles, no toolbar
     
@@ -844,16 +927,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             self.source_checkboxes[source] = checkbox
             self.sources_layout.addWidget(container)
-        
-        # Add visual separator before Git section
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        separator.setStyleSheet(Styles.get_separator_stylesheet())
-        self.sources_layout.addWidget(separator)
-
-        # Initialize Git Manager
-        self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout)
     
     def apply_source_filter(self):
         if self.current_view == "discover" and self.search_results:

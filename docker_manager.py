@@ -41,13 +41,7 @@ class DockerManager(QObject):
         docker_label.setStyleSheet("font-size: 11px; margin-bottom: 4px;")
         docker_layout.addWidget(docker_label)
 
-        # Docker buttons container - now horizontal layout like other sources
-        docker_buttons_widget = QWidget()
-        docker_buttons_layout = QHBoxLayout(docker_buttons_widget)
-        docker_buttons_layout.setContentsMargins(0, 0, 0, 0)
-        docker_buttons_layout.setSpacing(8)
-
-        # Install from Docker button (with icon)
+        # Main Run from Docker button (separate at top)
         install_docker_container = QWidget()
         install_docker_layout = QHBoxLayout(install_docker_container)
         install_docker_layout.setContentsMargins(0, 0, 0, 0)
@@ -99,9 +93,9 @@ class DockerManager(QObject):
         install_docker_btn.clicked.connect(self.install_from_docker)
         install_docker_layout.addWidget(install_docker_btn)
 
-        docker_buttons_layout.addWidget(install_docker_container)
+        docker_layout.addWidget(install_docker_container)
 
-        # Secondary buttons widget
+        # Secondary buttons widget (at bottom)
         secondary_buttons_widget = QWidget()
         secondary_layout = QHBoxLayout(secondary_buttons_widget)
         secondary_layout.setContentsMargins(0, 0, 0, 0)
@@ -170,9 +164,7 @@ class DockerManager(QObject):
         clean_containers_btn.clicked.connect(self.clean_docker_containers)
         secondary_layout.addWidget(clean_containers_btn)
 
-        docker_buttons_layout.addWidget(secondary_buttons_widget)
-
-        docker_layout.addWidget(docker_buttons_widget)
+        docker_layout.addWidget(secondary_buttons_widget)
 
         # Recent containers list (compact)
         self.recent_containers_label = QLabel("Running:")

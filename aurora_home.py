@@ -779,14 +779,25 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             # Git button on the right side
             git_btn = QPushButton()
-            git_btn.setFixedSize(36, 36)
+            git_btn.setFixedSize(44, 44)  # Slightly larger for better spacing
             git_btn.setToolTip("Git Repository Manager")
             git_btn.clicked.connect(self.show_git_dialog)
+            git_btn.setStyleSheet("""
+                QPushButton {
+                    padding: 4px;
+                    margin: 2px;
+                    border-radius: 4px;
+                }
+                QPushButton:hover {
+                    background-color: rgba(0, 191, 174, 0.1);
+                }
+            """)
             
             # Try to use git.svg icon, fallback to emoji
             try:
                 git_icon_pixmap = get_white_icon_pixmap(os.path.join(icon_dir, "git.svg"))
                 git_btn.setIcon(QIcon(git_icon_pixmap))
+                git_btn.setIconSize(QSize(24, 24))  # Smaller icon to fit in padded button
             except:
                 git_btn.setText("📁")
             

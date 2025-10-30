@@ -59,6 +59,10 @@ class SourceItem(QWidget):
             svg_renderer = QSvgRenderer(icon_path)
             if svg_renderer.isValid():
                 pixmap = QPixmap(24, 24)
+                if pixmap.isNull():
+                    self.icon_label.setText("📦")
+                    self.icon_label.setStyleSheet("font-size: 16px; color: white;")
+                    return
                 pixmap.fill(Qt.GlobalColor.transparent)
 
                 painter = QPainter(pixmap)

@@ -321,6 +321,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 pixmap.fill(Qt.GlobalColor.transparent)
                 
                 painter = QPainter(pixmap)
+                if not painter.isActive():
+                    raise ValueError("Painter not active")
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
                 
@@ -385,6 +387,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 pixmap.fill(Qt.GlobalColor.transparent)
                 
                 painter = QPainter(pixmap)
+                if not painter.isActive():
+                    raise ValueError("Painter not active")
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
                 
@@ -470,6 +474,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 raise ValueError("Pixmap is null")
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
+            if not painter.isActive():
+                raise ValueError("Painter not active")
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             renderer = QSvgRenderer(icon_path)
             if renderer.isValid():
@@ -560,6 +566,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 raise ValueError("Pixmap is null")
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
+            if not painter.isActive():
+                painter.end()
+                return pixmap
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             renderer = QSvgRenderer(path)
             if renderer.isValid():
@@ -748,6 +757,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 raise ValueError("Pixmap is null")
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
+            if not painter.isActive():
+                painter.end()
+                return pixmap
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             renderer = QSvgRenderer(path)
             if renderer.isValid():
@@ -913,6 +925,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     raise ValueError("Pixmap is null")
                 pixmap.fill(Qt.GlobalColor.transparent)
                 painter = QPainter(pixmap)
+                if not painter.isActive():
+                    raise ValueError("Painter not active")
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 renderer = QSvgRenderer(icon_path)
                 if renderer.isValid():
@@ -1078,14 +1092,21 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             def get_white_icon_pixmap(path, size=16):
                 pixmap = QPixmap(size, size)
+                if pixmap.isNull():
+                    return pixmap
                 pixmap.fill(Qt.GlobalColor.transparent)
                 painter = QPainter(pixmap)
+                if not painter.isActive():
+                    return pixmap
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 renderer = QSvgRenderer(path)
                 if renderer.isValid():
-                    renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("white"))
+                    try:
+                        renderer.render(painter, QRectF(pixmap.rect()))
+                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                        painter.fillRect(pixmap.rect(), QColor("white"))
+                    except:
+                        pass
                 painter.end()
                 return pixmap
             

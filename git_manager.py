@@ -54,15 +54,19 @@ class GitManager(QObject):
             svg_renderer = QSvgRenderer(git_icon_path)
             if svg_renderer.isValid():
                 pixmap = QPixmap(20, 20)
-                pixmap.fill(Qt.GlobalColor.transparent)
-                painter = QPainter(pixmap)
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                from PyQt6.QtCore import QRectF
-                svg_renderer.render(painter, QRectF(pixmap.rect()))
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("white"))
-                painter.end()
-                git_icon_label.setPixmap(pixmap)
+                if pixmap.isNull():
+                    git_icon_label.setText("📦")
+                    git_icon_label.setStyleSheet("font-size: 14px; color: white;")
+                else:
+                    pixmap.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(pixmap)
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    from PyQt6.QtCore import QRectF
+                    svg_renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                    painter.end()
+                    git_icon_label.setPixmap(pixmap)
             else:
                 git_icon_label.setText("📦")
         except:

@@ -863,6 +863,48 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         else:
             return "📦"
     
+    def create_toolbar_button(self, icon_path, tooltip, callback, icon_size=24):
+        """Create a reusable toolbar button with icon and tooltip"""
+        btn = QPushButton()
+        btn.setFixedSize(44, 44)
+        btn.setToolTip(tooltip)
+        btn.clicked.connect(callback)
+        btn.setStyleSheet("""
+            QPushButton {
+                padding: 4px;
+                margin: 2px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: rgba(0, 191, 174, 0.1);
+            }
+        """)
+        
+        # Try to load SVG icon, fallback to emoji
+        try:
+            pixmap = QPixmap(icon_size, icon_size)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            renderer = QSvgRenderer(icon_path)
+            if renderer.isValid():
+                renderer.render(painter, QRectF(pixmap.rect()))
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(pixmap.rect(), QColor("white"))
+            painter.end()
+            btn.setIcon(QIcon(pixmap))
+            btn.setIconSize(QSize(icon_size, icon_size))
+        except:
+            # Fallback to emoji based on icon path
+            emoji = self.get_fallback_icon(icon_path)
+            if "help" in icon_path.lower():
+                emoji = "❓"
+            elif "add" in icon_path.lower() or "sudo" in icon_path.lower():
+                emoji = "➕"
+            btn.setText(emoji)
+        
+        return btn
+    
     def create_content_area(self):
         content = QWidget()
         layout = QVBoxLayout(content)
@@ -949,6 +991,52 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         """Show Git repository management dialog"""
         dialog = GitDialog(self.log_signal, self.show_message, self)
         dialog.exec()
+    
+    def show_help(self):
+        """Show help dialog"""
+        QMessageBox.information(self, "Help - NeoArch", 
+                              "NeoArch Package Manager Help\n\n"
+                              "• Discover: Search and install packages from pacman, AUR, and Flatpak\n"
+                              "• Updates: View and update available package updates\n"
+                              "• Installed: View all installed packages\n"
+                              "• Bundles: Manage package bundles\n\n"
+                              "For more information, visit the project documentation.")
+    
+    def go_to_bundles(self):
+        """Switch to bundles view"""
+        self.switch_view("bundles")
+    
+    def sudo_install_selected(self):
+        """Install selected packages with sudo privileges"""
+        selected_rows = []
+        for row in range(self.package_table.rowCount()):
+            checkbox = self.package_table.cellWidget(row, 0)
+            if checkbox and checkbox.isChecked():
+                selected_rows.append(row)
+        
+        if not selected_rows:
+            QMessageBox.information(self, "No Selection", "Please select packages to install.")
+            return
+        
+        # Get package names
+        packages_to_install = []
+        for row in selected_rows:
+            package_name = self.package_table.item(row, 1).text()
+            packages_to_install.append(package_name)
+        
+        # Show confirmation dialog
+        package_list = "\n".join(f"• {pkg}" for pkg in packages_to_install)
+        reply = QMessageBox.question(
+            self, "Install Packages with Sudo",
+            f"This will install the following packages with elevated privileges:\n\n{package_list}\n\nContinue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            self.log(f"Installing packages with sudo: {', '.join(packages_to_install)}")
+            # Note: Actual sudo installation would require additional implementation
+            QMessageBox.information(self, "Sudo Install", "Sudo installation feature is under development.")
     
     def create_filters_panel(self):
         panel = QFrame()
@@ -1151,33 +1239,37 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             layout.addStretch()
             
+            # Add new toolbar buttons
+            help_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
+                "Help & Documentation",
+                self.show_help
+            )
+            layout.addWidget(help_btn)
+            
+            bundles_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
+                "Go to Package Bundles",
+                self.go_to_bundles
+            )
+            layout.addWidget(bundles_btn)
+            
+            sudo_btn = self.create_toolbar_button(
+                "",  # No icon path, will use emoji fallback
+                "Install with Sudo Privileges",
+                self.sudo_install_selected
+            )
+            layout.addWidget(sudo_btn)
+            
             # Add some spacing before Git button so it's not against the corner
             layout.addSpacing(10)
             
             # Git button on the right side
-            git_btn = QPushButton()
-            git_btn.setFixedSize(44, 44)  # Slightly larger for better spacing
-            git_btn.setToolTip("Git Repository Manager")
-            git_btn.clicked.connect(self.show_git_dialog)
-            git_btn.setStyleSheet("""
-                QPushButton {
-                    padding: 4px;
-                    margin: 2px;
-                    border-radius: 4px;
-                }
-                QPushButton:hover {
-                    background-color: rgba(0, 191, 174, 0.1);
-                }
-            """)
-            
-            # Try to use git.svg icon, fallback to emoji
-            try:
-                git_icon_pixmap = get_white_icon_pixmap(os.path.join(icon_dir, "git.svg"))
-                git_btn.setIcon(QIcon(git_icon_pixmap))
-                git_btn.setIconSize(QSize(24, 24))  # Smaller icon to fit in padded button
-            except:
-                git_btn.setText("📁")
-            
+            git_btn = self.create_toolbar_button(
+                os.path.join(icon_dir, "git.svg"),
+                "Git Repository Manager",
+                self.show_git_dialog
+            )
             layout.addWidget(git_btn)
             
             self.toolbar_layout.addLayout(layout)

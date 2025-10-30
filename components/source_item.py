@@ -78,7 +78,9 @@ class SourceItem(QWidget):
             emoji_map = {
                 "pacman": "📦",
                 "AUR": "🧡",
-                "Flatpak": "📱"
+                "Flatpak": "📱",
+                "npm": "📦",
+                "pip": "🐍"
             }
             self.icon_label.setText(emoji_map.get(self.source_name.lower(), "📦"))
             self.icon_label.setStyleSheet("font-size: 16px; color: #00BFAE;")

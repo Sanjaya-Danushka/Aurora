@@ -74,8 +74,8 @@ class DockerManager(QObject):
         install_docker_btn = QPushButton("Run from Docker")
         install_docker_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(0, 191, 174, 0.8);
-                color: #1E1E1E;
+                background-color: transparent;
+                color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.3);
                 border-radius: 6px;
                 padding: 6px 10px;
@@ -83,11 +83,11 @@ class DockerManager(QObject):
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: rgba(0, 191, 174, 0.9);
+                background-color: rgba(0, 191, 174, 0.15);
                 border-color: rgba(0, 191, 174, 0.5);
             }
             QPushButton:pressed {
-                background-color: rgba(0, 191, 174, 0.7);
+                background-color: rgba(0, 191, 174, 0.25);
             }
         """)
         install_docker_btn.clicked.connect(self.install_from_docker)
@@ -105,7 +105,7 @@ class DockerManager(QObject):
         list_containers_btn = QPushButton("📋 List")
         list_containers_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(42, 45, 51, 0.5);
+                background-color: transparent;
                 color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.15);
                 border-radius: 4px;
@@ -114,7 +114,7 @@ class DockerManager(QObject):
                 text-align: center;
             }
             QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.7);
+                background-color: rgba(0, 191, 174, 0.15);
                 border-color: rgba(0, 191, 174, 0.35);
                 color: #00BFAE;
             }
@@ -126,7 +126,7 @@ class DockerManager(QObject):
         stop_containers_btn = QPushButton("⏹️ Stop")
         stop_containers_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(42, 45, 51, 0.5);
+                background-color: transparent;
                 color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.15);
                 border-radius: 4px;
@@ -135,7 +135,7 @@ class DockerManager(QObject):
                 text-align: center;
             }
             QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.7);
+                background-color: rgba(0, 191, 174, 0.15);
                 border-color: rgba(0, 191, 174, 0.35);
                 color: #FF6B6B;
             }
@@ -147,7 +147,7 @@ class DockerManager(QObject):
         clean_containers_btn = QPushButton("🗑️ Clean")
         clean_containers_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(42, 45, 51, 0.5);
+                background-color: transparent;
                 color: #F0F0F0;
                 border: 1px solid rgba(0, 191, 174, 0.15);
                 border-radius: 4px;
@@ -156,7 +156,7 @@ class DockerManager(QObject):
                 text-align: center;
             }
             QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.7);
+                background-color: rgba(0, 191, 174, 0.15);
                 border-color: rgba(0, 191, 174, 0.35);
                 color: #FF6B6B;
             }

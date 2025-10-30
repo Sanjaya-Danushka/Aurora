@@ -861,6 +861,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             return "🎁"
         elif "settings" in icon_path:
             return "⚙️"
+        elif "docker" in icon_path.lower():
+            return "🐳"
         else:
             return "📦"
     
@@ -1003,6 +1005,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         """Show Git repository management dialog"""
         dialog = GitDialog(self.log_signal, self.show_message, self)
         dialog.exec()
+    
+    def show_docker_install_dialog(self):
+        """Show Docker container management dialog"""
+        from docker_manager import DockerManager
+        docker_manager = DockerManager(self.log_signal, self.show_message, self.sources_layout)
+        docker_manager.install_from_docker()
     
     def show_help(self):
         """Show help dialog"""
@@ -1256,6 +1264,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.show_git_dialog
             )
             layout.addWidget(git_btn)
+            
+            # Docker button next to Git
+            docker_btn = self.create_toolbar_button(
+                os.path.join(icon_dir, "docker.svg"),
+                "Install via Docker",
+                self.show_docker_install_dialog
+            )
+            layout.addWidget(docker_btn)
             
             layout.addStretch()  # Push remaining buttons to the right
             

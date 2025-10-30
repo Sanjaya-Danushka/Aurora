@@ -2,7 +2,7 @@
 LargeSearchBox Component - Large search box for package discovery
 """
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel, QPushButton, QFrame
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QRectF, QTimer
 from PyQt6.QtGui import QPixmap, QPainter, QIcon, QColor
 from PyQt6.QtSvg import QSvgRenderer
@@ -25,49 +25,82 @@ class LargeSearchBox(QWidget):
     def init_ui(self):
         """Initialize the large search box UI"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(40, 60, 40, 60)  # Large margins for centering
-        layout.setSpacing(20)
+        layout.setContentsMargins(32, 48, 32, 48)
+        layout.setSpacing(24)
 
-        # Main search container
+        card = QFrame()
+        card.setObjectName("largeSearchCard")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(36, 40, 36, 40)
+        card_layout.setSpacing(24)
+
+        title_label = QLabel("Discover New Packages")
+        title_label.setObjectName("heroTitle")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_layout.addWidget(title_label)
+
+        subtitle_label = QLabel("Search across pacman, AUR, Flatpak, npm, and pip repositories")
+        subtitle_label.setObjectName("heroSubtitle")
+        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_layout.addWidget(subtitle_label)
+
         search_container = QWidget()
         search_container.setObjectName("largeSearchContainer")
         search_layout = QHBoxLayout(search_container)
-        search_layout.setContentsMargins(30, 20, 30, 20)
-        search_layout.setSpacing(15)
+        search_layout.setContentsMargins(24, 18, 24, 18)
+        search_layout.setSpacing(16)
 
-        # Search icon
         self.search_icon = QLabel()
-        self.search_icon.setFixedSize(32, 32)
+        self.search_icon.setFixedSize(40, 40)
+        self.search_icon.setObjectName("searchIconBubble")
         self.set_search_icon()
         search_layout.addWidget(self.search_icon)
 
-        # Large search input
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Search for packages...")
+        self.search_input.setPlaceholderText("Try \"system monitor\" or \"AUR helpers\"")
         self.search_input.setObjectName("largeSearchInput")
         self.search_input.returnPressed.connect(self.on_search_triggered)
         self.search_input.textChanged.connect(self.on_text_changed)
         search_layout.addWidget(self.search_input, 1)
 
-        # Search button
-        self.search_button = QPushButton()
-        self.search_button.setFixedSize(48, 48)
+        self.search_button = QPushButton("Search")
+        self.search_button.setMinimumWidth(110)
+        self.search_button.setFixedHeight(48)
         self.search_button.setObjectName("largeSearchButton")
         self.search_button.clicked.connect(self.on_search_triggered)
         self.set_button_icon()
         search_layout.addWidget(self.search_button)
 
-        layout.addWidget(search_container, alignment=Qt.AlignmentFlag.AlignCenter)
+        card_layout.addWidget(search_container)
 
-        # Hint text
-        hint_label = QLabel("Discover packages from pacman, AUR, Flatpak, npm, and pip")
-        hint_label.setObjectName("searchHint")
-        hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(hint_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        suggestions_container = QWidget()
+        suggestions_container.setObjectName("suggestionsContainer")
+        suggestions_layout = QHBoxLayout(suggestions_container)
+        suggestions_layout.setContentsMargins(0, 0, 0, 0)
+        suggestions_layout.setSpacing(12)
+        suggestions_layout.addStretch()
 
-        layout.addStretch()  # Push everything to center
+        suggestions = [
+            "Essentials",
+            "Development Tools",
+            "AUR Helpers",
+            "Flatpak Apps"
+        ]
+        for suggestion in suggestions:
+            btn = QPushButton(suggestion)
+            btn.setObjectName("suggestionChip")
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setCheckable(False)
+            btn.clicked.connect(lambda checked, term=suggestion: self.on_suggestion_clicked(term))
+            suggestions_layout.addWidget(btn)
 
-        # Apply styling
+        suggestions_layout.addStretch()
+        card_layout.addWidget(suggestions_container)
+
+        layout.addStretch()
+        layout.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addStretch()
+
         self.setStyleSheet(self.get_stylesheet())
 
     def set_search_icon(self):
@@ -132,40 +165,66 @@ class LargeSearchBox(QWidget):
             self.search_timer.stop()  # Stop any pending auto-search
             self.search_requested.emit(query)
 
+    def on_suggestion_clicked(self, term):
+        self.search_input.setText(term)
+        self.on_search_triggered()
+
     def get_stylesheet(self):
         """Get stylesheet for this component"""
         return """
             LargeSearchBox {
-                background-color: rgba(42, 45, 51, 0.95);
-                border-radius: 12px;
+                background-color: transparent;
+            }
+
+            QFrame#largeSearchCard {
+                background-color: rgba(32, 34, 40, 0.95);
+                border-radius: 28px;
+                border: 1px solid rgba(0, 191, 174, 0.18);
+                box-shadow: 0px 18px 44px rgba(0, 0, 0, 0.35);
+            }
+
+            QLabel#heroTitle {
+                color: #F6F7FB;
+                font-size: 28px;
+                font-weight: 600;
+                letter-spacing: 0.6px;
+            }
+
+            QLabel#heroSubtitle {
+                color: #AEB4C2;
+                font-size: 16px;
             }
 
             QWidget#largeSearchContainer {
-                background-color: rgba(52, 55, 61, 0.9);
-                border: 2px solid rgba(0, 191, 174, 0.3);
-                border-radius: 25px;
-                min-width: 400px;
-                max-width: 600px;
+                background-color: rgba(20, 22, 28, 0.9);
+                border-radius: 28px;
+                border: 1px solid rgba(0, 191, 174, 0.35);
             }
 
             QWidget#largeSearchContainer:hover {
-                border-color: rgba(0, 191, 174, 0.6);
-                background-color: rgba(52, 55, 61, 0.95);
+                border-color: rgba(0, 230, 214, 0.65);
+                background-color: rgba(22, 26, 34, 0.95);
+            }
+
+            QLabel#searchIconBubble {
+                background-color: rgba(0, 191, 174, 0.12);
+                border-radius: 20px;
+                padding: 4px;
             }
 
             QLineEdit#largeSearchInput {
                 background-color: transparent;
                 border: none;
-                color: #F0F0F0;
+                color: #F0F3F5;
                 font-size: 18px;
                 font-weight: 400;
-                padding: 10px 0px;
+                padding: 8px 0px;
                 selection-background-color: rgba(0, 191, 174, 0.3);
             }
 
             QLineEdit#largeSearchInput::placeholder {
-                color: #888888;
-                font-size: 18px;
+                color: #8C94A4;
+                font-size: 17px;
             }
 
             QLineEdit#largeSearchInput:focus {
@@ -176,7 +235,10 @@ class LargeSearchBox(QWidget):
                 background-color: #00BFAE;
                 border: none;
                 border-radius: 24px;
-                padding: 12px;
+                padding: 0 24px;
+                color: #081017;
+                font-size: 17px;
+                font-weight: 600;
             }
 
             QPushButton#largeSearchButton:hover {
@@ -187,9 +249,26 @@ class LargeSearchBox(QWidget):
                 background-color: #009688;
             }
 
-            QLabel#searchHint {
-                color: #A0A0A0;
+            QWidget#suggestionsContainer {
+                background-color: transparent;
+            }
+
+            QPushButton#suggestionChip {
+                background-color: rgba(0, 191, 174, 0.16);
+                border: 1px solid rgba(0, 191, 174, 0.35);
+                border-radius: 16px;
+                padding: 6px 14px;
+                color: #E3F7F5;
                 font-size: 14px;
-                margin-top: 20px;
+                font-weight: 500;
+            }
+
+            QPushButton#suggestionChip:hover {
+                background-color: rgba(0, 191, 174, 0.26);
+                border-color: rgba(0, 230, 214, 0.55);
+            }
+
+            QPushButton#suggestionChip:pressed {
+                background-color: rgba(0, 191, 174, 0.36);
             }
         """

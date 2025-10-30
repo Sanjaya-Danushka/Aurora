@@ -1779,7 +1779,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if hasattr(self, 'filter_card') and self.filter_card:
             selected_filters = self.filter_card.get_selected_filters()
         else:
-            # Fallback to showing all filters if component not initialized
+            # Fallback to showing all filters if component is not initialized
             selected_filters = {"Updates available": True, "Installed": True}
         
         show_updates = selected_filters.get("Updates available", True)

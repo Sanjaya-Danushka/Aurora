@@ -181,7 +181,7 @@ class SourceItem(QWidget):
                 QWidget#sourceIconContainer {{
                     background-color: rgba({r}, {g}, {b}, 0.14);
                     border: 1px solid rgba({r}, {g}, {b}, 0.4);
-                    border-radius: 10px;
+                    border-radius: 12px;
                 }}
                 """
             )
@@ -190,7 +190,7 @@ class SourceItem(QWidget):
                 QWidget#sourceIconContainer {
                     background-color: rgba(42, 45, 51, 0.3);
                     border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 10px;
+                    border-radius: 12px;
                 }
             """)
 
@@ -199,13 +199,13 @@ class SourceItem(QWidget):
         return """
             SourceItem {
                 background-color: transparent;
-                border-radius: 8px;
+                border-radius: 12px;
                 margin: 2px 0px;
             }
 
             SourceItem:hover {
                 background-color: rgba(0, 191, 174, 0.05);
-                border-radius: 8px;
+                border-radius: 12px;
             }
 
             QCheckBox#sourceCheckbox {
@@ -239,7 +239,7 @@ class SourceItem(QWidget):
             QWidget#sourceIconContainer {
                 background-color: rgba(0, 191, 174, 0.1);
                 border: 1px solid rgba(0, 191, 174, 0.3);
-                border-radius: 8px;
+                border-radius: 12px;
             }
         """
 

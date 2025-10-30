@@ -80,9 +80,9 @@ class LargeSearchBox(QWidget):
         highlights_layout.setSpacing(18)
 
         highlights = [
-            ("🚀", "Instant multi-repo search", "Search every source online in one go."),
-            ("⭐", "Curated results", "See trusted packages surfaced automatically."),
-            ("⚙️", "Power user ready", "Fine-tune sources and installs without friction.")
+            ("🚀", "Instant multi-repo search", "Instant unified search"),
+            ("⭐", "Curated results", "Trusted package picks"),
+            ("⚙️", "Power user ready", "Advanced user control")
         ]
 
         for emoji, title, description in highlights:

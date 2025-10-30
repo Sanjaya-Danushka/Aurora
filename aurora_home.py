@@ -25,8 +25,8 @@ class GitDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Git Repository Manager")
         self.setModal(True)
-        self.setMinimumSize(600, 700)
-        self.setMaximumSize(800, 900)
+        self.setMinimumSize(600, 500)
+        self.setMaximumSize(800, 650)
         self.setStyleSheet("""
             QDialog {
                 background-color: #1E1E1E;

@@ -572,6 +572,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         query = self.search_input.text().strip()
         if len(query) < 3:
             self.package_table.setRowCount(0)
+            self.header_info.setText("Search and discover new packages to install")
             self.log("Type a package name to search in AUR and official repositories")
             return
         if self.current_view == "discover":
@@ -1338,6 +1339,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_installed_packages()
         elif view_id == "discover":
             self.package_table.setRowCount(0)
+            self.header_info.setText("Search and discover new packages to install")
             self.log("Type a package name to search in AUR and official repositories")
         elif view_id == "bundles":
             self.package_table.setRowCount(0)
@@ -1944,9 +1946,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Provide feedback if no results match
         if not filtered:
+            self.header_info.setText(f"No packages found matching '{query}'.")
             self.log(f"No packages found matching '{query}'.")
         else:
-            self.log(f"Found {len(filtered)} packages matching '{query}'. Showing first 10...")
+            count = len(filtered)
+            self.header_info.setText(f"{count} packages were found, {count} of which match the specified filters")
+            self.log(f"Found {count} packages matching '{query}'. Showing first 10...")
 
     def refresh_packages(self):
         if self.current_view == "updates":

@@ -474,6 +474,45 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     pass
         return QIcon(pixmap)
 
+    def get_source_accent(self, source):
+        m = {
+            "pacman": "#4FC3F7",
+            "AUR": "#FF8A65",
+            "Flatpak": "#26A69A",
+            "npm": "#E53935",
+            "pip": "#FBC02D",
+        }
+        return m.get(source, "#00BFAE")
+
+    def apply_checkbox_accent(self, checkbox, source):
+        hex_color = self.get_source_accent(source)
+        c = QColor(hex_color)
+        r, g, b = c.red(), c.green(), c.blue()
+        checkbox.setStyleSheet(
+            f"""
+            QCheckBox#tableCheckbox {{
+                color: #F0F0F0;
+                font-size: 13px;
+                font-weight: 500;
+                spacing: 8px;
+            }}
+            QCheckBox#tableCheckbox::indicator {{
+                width: 20px;
+                height: 20px;
+                border-radius: 10px;
+                border: 2px solid rgba({r}, {g}, {b}, 0.4);
+                background-color: rgba(42, 45, 51, 0.8);
+            }}
+            QCheckBox#tableCheckbox::indicator:checked {{
+                background-color: {hex_color};
+                border: 2px solid {hex_color};
+            }}
+            QCheckBox#tableCheckbox::indicator:hover {{
+                border-color: rgba({r}, {g}, {b}, 0.8);
+            }}
+            """
+        )
+
     def get_svg_icon(self, icon_path, size=18):
         pixmap = QPixmap(size, size)
         if pixmap.isNull():
@@ -1135,11 +1174,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.setColumnCount(5)
             self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Source"])
             self.package_table.setObjectName("discoverTable")  # Apply special styling
-            self.package_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            self.package_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-            self.package_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-            self.package_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-            self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+            header = self.package_table.horizontalHeader()
+            header.setStretchLastSection(False)
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+            header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
+            header.setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)
+            self.package_table.setColumnWidth(0, 48)
+            self.package_table.setColumnWidth(2, 220)
+            self.package_table.setColumnWidth(3, 140)
+            self.package_table.setColumnWidth(4, 120)
             self.package_table.setShowGrid(False)
             self.package_table.setIconSize(QSize(20, 20))
             self.package_table.setWordWrap(True)
@@ -1395,6 +1440,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         checkbox = QCheckBox()
         checkbox.setObjectName("tableCheckbox")
         checkbox.setChecked(False)
+        self.apply_checkbox_accent(checkbox, pkg.get('source', ''))
         cb_container = QWidget()
         cb_layout = QHBoxLayout(cb_container)
         cb_layout.setContentsMargins(0, 0, 0, 0)
@@ -1437,6 +1483,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         checkbox = QCheckBox()
         checkbox.setObjectName("tableCheckbox")
         checkbox.setChecked(True)
+        self.apply_checkbox_accent(checkbox, source if source else "")
         cb_container = QWidget()
         cb_layout = QHBoxLayout(cb_container)
         cb_layout.setContentsMargins(0, 0, 0, 0)

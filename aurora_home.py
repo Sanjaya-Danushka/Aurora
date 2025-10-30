@@ -1340,6 +1340,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         for pkg in page_packages:
             if self.current_view == "installed":
                 self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'), pkg)
+            elif self.current_view == "discover":
+                self.add_discover_row(pkg)
             else:
                 self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'))
         
@@ -1717,8 +1719,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def update_selected(self):
         packages = []
         for row in range(self.package_table.rowCount()):
-            checkbox = self.package_table.cellWidget(row, 0)
-            if checkbox and isinstance(checkbox, QCheckBox) and checkbox.isChecked():
+            checkbox = self.get_row_checkbox(row)
+            if checkbox is not None and checkbox.isChecked():
                 pkg_name = self.package_table.item(row, 1).text()
                 packages.append(pkg_name.lower())
         
@@ -1771,10 +1773,19 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def install_selected(self):
         packages_by_source = {}
         for row in range(self.package_table.rowCount()):
-            checkbox = self.package_table.cellWidget(row, 0)
-            if checkbox and isinstance(checkbox, QCheckBox) and checkbox.isChecked():
+            checkbox = self.get_row_checkbox(row)
+            if checkbox is not None and checkbox.isChecked():
                 pkg_name = self.package_table.item(row, 1).text().lower()
-                source = self.package_table.item(row, 5).text()
+                if self.current_view == "discover":
+                    source = ""
+                    chip = self.package_table.cellWidget(row, 4)
+                    if chip is not None:
+                        labels = chip.findChildren(QLabel)
+                        if labels:
+                            source = labels[-1].text()
+                else:
+                    source_item = self.package_table.item(row, 5)
+                    source = source_item.text() if source_item else "pacman"
                 if source not in packages_by_source:
                     packages_by_source[source] = []
                 packages_by_source[source].append(pkg_name)

@@ -659,9 +659,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.sources_layout.setContentsMargins(0, 0, 0, 0)
         self.sources_layout.setSpacing(8)
         
-        sources_label = QLabel("Sources")
-        sources_label.setObjectName("sectionLabel")
-        self.sources_layout.addWidget(sources_label)
+        self.sources_title_label = QLabel("Sources")
+        self.sources_title_label.setObjectName("sectionLabel")
+        self.sources_layout.addWidget(self.sources_title_label)
         
         sources = ["pacman", "AUR", "Flatpak"]
         self.source_checkboxes = {}
@@ -995,13 +995,19 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if view_id in ["installed", "updates"]:
             self.sources_section.setVisible(False)
             self.filters_section.setVisible(True)
+            if hasattr(self, 'sources_title_label'):
+                self.sources_title_label.setVisible(True)
         elif view_id == "discover":
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(False)
+            if hasattr(self, 'sources_title_label'):
+                self.sources_title_label.setVisible(False)
             self.update_discover_sources()
         else:
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(True)
+            if hasattr(self, 'sources_title_label'):
+                self.sources_title_label.setVisible(True)
     
     def on_filter_selection_changed(self, filter_states):
         """Handle changes in filter selection"""

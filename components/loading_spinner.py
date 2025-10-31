@@ -53,7 +53,7 @@ class LoadingSpinner(QWidget):
         """)
 
     def animate_spinner(self):
-        """Animate the spinner with a beautiful cycling effect"""
+        """Animate the spinner with a beautiful colorful cycling effect"""
         self.spinner_angle = (self.spinner_angle + 15) % 360
         
         pixmap = QPixmap(48, 48)
@@ -67,30 +67,38 @@ class LoadingSpinner(QWidget):
             
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # Center of the spinner
-        center = pixmap.rect().center()
+        # Define rainbow colors for the segments
+        rainbow_colors = [
+            QColor("#FF6B6B"),  # Red
+            QColor("#FFD93D"),  # Yellow
+            QColor("#6BCF7F"),  # Green
+            QColor("#4ECDC4"),  # Teal
+            QColor("#45B7D1"),  # Blue
+            QColor("#96CEB4"),  # Mint
+            QColor("#FECA57"),  # Orange
+            QColor("#FF9FF3"),  # Pink
+        ]
         
-        # Draw the cycling spinner
+        # Draw the cycling spinner with rainbow colors
         for i in range(8):  # 8 segments
             angle = (self.spinner_angle + i * 45) % 360
             # Calculate opacity based on position in cycle
-            # Segments fade in and out in a wave pattern
             progress = (angle / 360.0)
-            opacity = 0.3 + 0.7 * (1 - abs(progress - 0.5) * 2)  # Peak at 0.5, fade to 0.3
+            opacity = 0.2 + 0.8 * (1 - abs(progress - 0.5) * 2)  # Peak at 0.5, fade to 0.2
             
-            # Set color with opacity
-            color = QColor("#00BFAE")
+            # Get rainbow color for this segment
+            color = rainbow_colors[i].lighter(120)  # Slightly brighter
             color.setAlphaF(opacity)
             
-            painter.setPen(QPen(color, 3, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+            painter.setPen(QPen(color, 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             
             # Draw arc segment
             start_angle = angle * 16  # Qt uses 1/16th degrees
-            span_angle = 30 * 16  # 30 degree arc
+            span_angle = 35 * 16  # Slightly larger arc for better visibility
             
-            # Rectangle for the arc (slightly inset from edges)
-            rect = QRectF(6, 6, 36, 36)  # 48-12=36 diameter
+            # Rectangle for the arc (centered and sized for beautiful appearance)
+            rect = QRectF(8, 8, 32, 32)  # 48-16=32 diameter, centered
             painter.drawArc(rect, start_angle, span_angle)
         
         painter.end()

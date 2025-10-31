@@ -320,31 +320,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Try to load and render SVG in white
-        try:
-            svg_renderer = QSvgRenderer(icon_path)
-            if svg_renderer.isValid():
-                # Create pixmap and render SVG in white
-                pixmap = QPixmap(50, 50)
-                if pixmap.isNull():
-                    raise ValueError("Pixmap is null")
-                pixmap.fill(Qt.GlobalColor.transparent)
-                
-                with QPainter(pixmap) as painter:
-                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-                    
-                    try:
-                        # Set composition mode and color for white rendering
-                        svg_renderer.render(painter, QRectF(pixmap.rect()))
-                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                        painter.fillRect(pixmap.rect(), QColor("white"))
-                    except:
-                        pass
-                
-                icon_label.setPixmap(pixmap)
-            else:
-                raise
-        except:
+        pixmap = self.get_svg_icon(icon_path, 50).pixmap(50, 50)
+        if pixmap and not pixmap.isNull():
+            icon_label.setPixmap(pixmap)
+        else:
             # Fallback to black icon or emoji
             icon = QIcon(icon_path)
             if not icon.isNull():
@@ -383,31 +362,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Try to load and render SVG in white
-        try:
-            svg_renderer = QSvgRenderer(icon_path)
-            if svg_renderer.isValid():
-                # Create pixmap and render SVG in white
-                pixmap = QPixmap(28, 28)  # Match icon size
-                if pixmap.isNull():
-                    raise ValueError("Pixmap is null")
-                pixmap.fill(Qt.GlobalColor.transparent)
-                
-                with QPainter(pixmap) as painter:
-                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-                    
-                    try:
-                        from PyQt6.QtCore import QRectF
-                        svg_renderer.render(painter, QRectF(pixmap.rect()))
-                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                        painter.fillRect(pixmap.rect(), QColor("white"))
-                    except:
-                        pass
-                
-                icon_label.setPixmap(pixmap)
-            else:
-                raise
-        except:
+        pixmap = self.get_svg_icon(icon_path, 28).pixmap(28, 28)
+        if pixmap and not pixmap.isNull():
+            icon_label.setPixmap(pixmap)
+        else:
             # Fallback to black icon or emoji
             icon = QIcon(icon_path)
             if not icon.isNull():
@@ -457,21 +415,35 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         }
         filename = mapping.get(source, "packagename.svg")
         icon_path = os.path.join(icon_dir, filename)
-        pixmap = QPixmap(size, size)
-        if pixmap.isNull():
-            return QIcon()
-        pixmap.fill(Qt.GlobalColor.transparent)
-        with QPainter(pixmap) as painter:
+
+        try:
+            pixmap = QPixmap(size, size)
+            if pixmap.isNull() or not pixmap.size().isValid():
+                return QIcon()
+
+            pixmap.fill(Qt.GlobalColor.transparent)
+
+            painter = QPainter(pixmap)
+            if not painter.isActive():
+                return QIcon()
+
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
             renderer = QSvgRenderer(icon_path)
             if renderer.isValid():
-                try:
-                    renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("white"))
-                except:
-                    pass
-        return QIcon(pixmap)
+                renderer.render(painter, QRectF(pixmap.rect()))
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(pixmap.rect(), QColor("white"))
+            else:
+                # Fallback: try to load as regular icon
+                painter.end()
+                return QIcon(icon_path)
+
+            painter.end()
+            return QIcon(pixmap)
+        except:
+            return QIcon()
 
     def get_source_accent(self, source):
         m = {
@@ -512,21 +484,34 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         )
 
     def get_svg_icon(self, icon_path, size=18):
-        pixmap = QPixmap(size, size)
-        if pixmap.isNull():
-            return QIcon()
-        pixmap.fill(Qt.GlobalColor.transparent)
-        with QPainter(pixmap) as painter:
+        try:
+            pixmap = QPixmap(size, size)
+            if pixmap.isNull() or not pixmap.size().isValid():
+                return QIcon()
+
+            pixmap.fill(Qt.GlobalColor.transparent)
+
+            painter = QPainter(pixmap)
+            if not painter.isActive():
+                return QIcon()
+
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
             renderer = QSvgRenderer(icon_path)
             if renderer.isValid():
-                try:
-                    renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("white"))
-                except:
-                    pass
-        return QIcon(pixmap)
+                renderer.render(painter, QRectF(pixmap.rect()))
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(pixmap.rect(), QColor("white"))
+            else:
+                # Fallback: try to load as regular icon
+                painter.end()
+                return QIcon(icon_path)
+
+            painter.end()
+            return QIcon(pixmap)
+        except:
+            return QIcon()
     
     def create_toolbar_button(self, icon_path, tooltip, callback, icon_size=24):
         """Create a reusable toolbar button with icon and tooltip"""
@@ -552,21 +537,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         """)
         
         # Try to load SVG icon, fallback to emoji
-        try:
-            pixmap = QPixmap(icon_size, icon_size)
-            if pixmap.isNull():
-                raise ValueError("Pixmap is null")
-            pixmap.fill(Qt.GlobalColor.transparent)
-            with QPainter(pixmap) as painter:
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                renderer = QSvgRenderer(icon_path)
-                if renderer.isValid():
-                    renderer.render(painter, QRectF(pixmap.rect()))
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(pixmap.rect(), QColor("white"))
-            btn.setIcon(QIcon(pixmap))
+        icon = self.get_svg_icon(icon_path, icon_size)
+        if not icon.isNull():
+            btn.setIcon(icon)
             btn.setIconSize(QSize(icon_size, icon_size))
-        except:
+        else:
             # Fallback to emoji based on icon path
             emoji = self.get_fallback_icon(icon_path)
             if "help" in icon_path.lower():
@@ -650,24 +625,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         refresh_btn.setFixedSize(36, 36)
         icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
         
-        def get_white_icon_pixmap(path, size=20):
-            pixmap = QPixmap(size, size)
-            if pixmap.isNull():
-                raise ValueError("Pixmap is null")
-            pixmap.fill(Qt.GlobalColor.transparent)
-            with QPainter(pixmap) as painter:
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                renderer = QSvgRenderer(path)
-                if renderer.isValid():
-                    try:
-                        renderer.render(painter, QRectF(pixmap.rect()))
-                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                        painter.fillRect(pixmap.rect(), QColor("white"))
-                    except:
-                        pass
-            return pixmap
-        
-        refresh_btn.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "refresh.svg"))))
+        refresh_btn.setIcon(self.get_svg_icon(os.path.join(icon_dir, "refresh.svg"), 20))
         refresh_btn.setToolTip("Refresh")
         refresh_btn.clicked.connect(self.refresh_packages)
         layout.addWidget(refresh_btn)
@@ -842,25 +800,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.load_more_btn.setMinimumHeight(36)
         icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
         
-        def get_white_icon_pixmap(path, size=20):
-            pixmap = QPixmap(size, size)
-            if pixmap.isNull():
-                raise ValueError("Pixmap is null")
-            pixmap.fill(Qt.GlobalColor.transparent)
-            with QPainter(pixmap) as painter:
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                renderer = QSvgRenderer(path)
-                if renderer.isValid():
-                    
-                    try:
-                        renderer.render(painter, QRectF(pixmap.rect()))
-                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                        painter.fillRect(pixmap.rect(), QColor("white"))
-                    except:
-                        pass
-            return pixmap
-        
-        self.load_more_btn.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "load-more.svg"))))
+        self.load_more_btn.setIcon(self.get_svg_icon(os.path.join(icon_dir, "load-more.svg"), 20))
         self.load_more_btn.clicked.connect(self.load_more_packages)
         self.load_more_btn.setVisible(False)
         layout.addWidget(self.load_more_btn)
@@ -924,21 +864,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             install_btn.clicked.connect(self.install_selected)
             icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
             
-            def get_white_icon_pixmap(path, size=20):
-                pixmap = QPixmap(size, size)
-                if pixmap.isNull():
-                    raise ValueError("Pixmap is null")
-                pixmap.fill(Qt.GlobalColor.transparent)
-                with QPainter(pixmap) as painter:
-                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                    renderer = QSvgRenderer(path)
-                    if renderer.isValid():
-                        renderer.render(painter, QRectF(pixmap.rect()))
-                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                        painter.fillRect(pixmap.rect(), QColor("white"))
-                return pixmap
-            
-            install_btn.setIcon(QIcon(get_white_icon_pixmap(os.path.join(icon_dir, "install-selected packge.svg"))))
+            install_btn.setIcon(self.get_svg_icon(os.path.join(icon_dir, "install-selected packge.svg"), 20))
             
             layout.addWidget(install_btn)
             
@@ -1005,22 +931,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         header_data = headers.get(view_id, ("NeoArch", ""))
         if len(header_data) == 3:  # Icon, title, subtitle
             icon_path, title, subtitle = header_data
-            try:
-                pixmap = QPixmap(24, 24)
-                if pixmap.isNull():
-                    raise ValueError("Pixmap is null")
-                pixmap.fill(Qt.GlobalColor.transparent)
-                with QPainter(pixmap) as painter:
-                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                    renderer = QSvgRenderer(icon_path)
-                    if renderer.isValid():
-                        renderer.render(painter, QRectF(pixmap.rect()))
-                        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                        painter.fillRect(pixmap.rect(), QColor("#00BFAE"))
-                self.header_icon.setPixmap(pixmap)
-                self.header_icon.setVisible(True)
-            except:
-                self.header_icon.setVisible(False)
+            self.header_icon.setPixmap(self.get_svg_icon(icon_path, 24).pixmap(24, 24))
+            self.header_icon.setVisible(True)
             self.header_label.setText(title)
             self.header_info.setText(subtitle)
         else:  # Title, subtitle
@@ -1411,6 +1323,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         for pkg in page_packages:
             if self.current_view == "installed":
                 self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'), pkg)
+            elif self.current_view == "discover":
+                self.add_discover_row(pkg)
             else:
                 self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'))
         self.package_table.setUpdatesEnabled(True)
@@ -1468,7 +1382,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         chip_layout.setContentsMargins(6, 2, 6, 2)
         chip_layout.setSpacing(6)
         chip_icon = QLabel()
-        chip_icon.setPixmap(self.get_source_icon(pkg.get('source', ''), 16).pixmap(16, 16))
+        source_icon = self.get_source_icon(pkg.get('source', ''), 16)
+        if not source_icon.isNull():
+            chip_icon.setPixmap(source_icon.pixmap(16, 16))
         chip_layout.addWidget(chip_icon)
         chip_text = QLabel(pkg.get('source', ''))
         chip_layout.addWidget(chip_text)

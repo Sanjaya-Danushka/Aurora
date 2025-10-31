@@ -169,7 +169,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.load_more_btn.setVisible(False)
             self.package_table.setRowCount(0)
             self.header_info.setText("Search and discover new packages to install")
-            self.log("Type a package name to search in AUR and official repositories")
+            # Removed verbose log message: "Type a package name to search in AUR and official repositories"
             return
         if self.current_view == "discover":
             self.large_search_box.setVisible(False)
@@ -968,10 +968,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_more_btn.setVisible(False)
             self.package_table.setRowCount(0)
             self.header_info.setText("Search and discover new packages to install")
-            self.log("Type a package name to search in AUR and official repositories")
+            # Removed verbose log: self.log("Type a package name to search in AUR and official repositories")
         elif view_id == "bundles":
             self.package_table.setRowCount(0)
-            self.log("Package bundles feature")
+            # Removed verbose log: self.log("Package bundles feature")
     
     def update_filters_panel(self, view_id):
         # Clear existing filters section
@@ -1064,14 +1064,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def on_source_selection_changed(self, source_states):
         """Handle changes in source selection"""
-        self.log(f"Source selection changed: {source_states}")
+        # Removed verbose log: self.log(f"Source selection changed: {source_states}")
         # Apply source filtering if we have search results
         if self.current_view == "discover" and hasattr(self, 'search_results') and self.search_results:
             self.display_discover_results(selected_sources=source_states)
     
     def on_search_mode_changed(self, search_mode):
         """Handle changes in search mode"""
-        self.log(f"Search mode changed to: {search_mode}")
+        # Removed verbose log: self.log(f"Search mode changed to: {search_mode}")
         # Store the current search mode for future searches
         self.current_search_mode = search_mode
         # Re-run search if we have a current query
@@ -1121,7 +1121,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
     
     def load_updates(self):
-        self.log("Checking for updates...")
+        # Removed verbose log: self.log("Checking for updates...")
         self.package_table.setRowCount(0)
         self.all_packages = []
         self.current_page = 0
@@ -1215,7 +1215,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         Thread(target=load_in_thread, daemon=True).start()
     
     def load_installed_packages(self):
-        self.log("Loading installed packages...")
+        # Removed verbose log: self.log("Loading installed packages...")
         self.package_table.setRowCount(0)
         self.all_packages = []
         self.current_page = 0
@@ -1549,7 +1549,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.log(f"Found {len(self.search_results)} packages matching '{query}'. Showing first 10...")
     
     def search_discover_packages(self, query):
-        self.log(f"Searching for '{query}' in AUR, official repositories, and Flatpak...")
+        # Removed verbose search message: self.log(f"Searching for '{query}' in AUR, official repositories, and Flatpak...")
         self.package_table.setRowCount(0)
         self.search_results = []
         
@@ -1782,7 +1782,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.search_discover_packages(query)
             else:
                 self.package_table.setRowCount(0)
-                self.log("Type a package name to search in AUR and official repositories")
+                # Removed verbose log: self.log("Type a package name to search in AUR and official repositories")
     
     def update_selected(self):
         packages = []

@@ -124,13 +124,13 @@ class SourceCard(QWidget):
 
     def on_source_changed(self):
         """Handle when any source selection changes"""
-        states = {name: item.is_checked() for name, item in self.sources.items()}
+        states = {name: item.checkbox.isChecked() for name, item in self.sources.items()}
         self.source_changed.emit(states)
         self.update_select_all_button()
 
     def update_select_all_button(self):
         """Update the select all button text based on current state"""
-        checked_count = sum(1 for item in self.sources.values() if item.is_checked())
+        checked_count = sum(1 for item in self.sources.values() if item.checkbox.isChecked())
         total_count = len(self.sources)
 
         if checked_count == total_count:
@@ -163,13 +163,13 @@ class SourceCard(QWidget):
             item.checkbox.blockSignals(False)
         
         # Emit signal once with final state
-        states = {name: item.is_checked() for name, item in self.sources.items()}
+        states = {name: item.checkbox.isChecked() for name, item in self.sources.items()}
         self.source_changed.emit(states)
         self.update_select_all_button()
 
     def get_selected_sources(self):
         """Return dict of selected sources"""
-        return {name: item.is_checked() for name, item in self.sources.items()}
+        return {name: item.checkbox.isChecked() for name, item in self.sources.items()}
 
     def on_search_mode_changed(self, button):
         """Handle search mode radio button changes"""

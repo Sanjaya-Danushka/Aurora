@@ -114,7 +114,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.loader_thread = None
         self.git_manager = None  # Will be initialized when sources layout is ready
         self.docker_manager = None  # Docker manager instance
-        self.current_search_mode = 'both'  # Default search mode
+        self.current_search_mode = 'both'
+        self.filtered_results = []
         self.packages_ready.connect(self.on_packages_loaded)
         self.discover_results_ready.connect(self.display_discover_results)
         self.show_message.connect(self._show_message)
@@ -1290,12 +1291,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         start = self.current_page * self.packages_per_page
         end = start + self.packages_per_page
         
-        if hasattr(self, 'search_results') and self.search_results:
-            page_packages = self.search_results[start:end]
-            total = len(self.search_results)
+        if self.current_view == "discover":
+            dataset = self.filtered_results if self.filtered_results else self.search_results
         else:
-            page_packages = self.all_packages[start:end]
-            total = len(self.all_packages)
+            dataset = self.search_results if self.search_results else self.all_packages
+        
+        page_packages = dataset[start:end]
+        total = len(dataset)
         
         self.package_table.setUpdatesEnabled(False)
         for pkg in page_packages:
@@ -1641,12 +1643,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 return (exact, starts, contains, source_priority, desc_contains)
         
         filtered.sort(key=get_sort_key, reverse=True)
+        self.filtered_results = filtered
+        self.current_page = 0
         
         self.package_table.setUpdatesEnabled(False)
         self.package_table.setRowCount(0)
         
         start = 0
-        end = min(10, len(filtered))
+        end = min(self.packages_per_page, len(filtered))
         for pkg in filtered[start:end]:
             if self.current_view == "discover":
                 self.add_discover_row(pkg)

@@ -3,7 +3,7 @@ import sys
 import os
 import subprocess
 import json
-from threading import Thread
+from threading import Thread, Event
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
                              QLabel, QFileDialog, QMessageBox, QHeaderView, QFrame, QSplitter,
@@ -108,7 +108,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     log_signal = pyqtSignal(str)
     load_error = pyqtSignal()
     search_timer = QTimer()
-    installation_progress = pyqtSignal(bool)
+    installation_progress = pyqtSignal(str, bool)  # status, can_cancel
     
     def __init__(self):
         super().__init__()
@@ -765,7 +765,22 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Loading spinner widget
         self.loading_widget = LoadingSpinner(message="Checking for updates...")
         self.loading_widget.setVisible(False)  # Hidden by default
-        layout.addWidget(self.loading_widget)
+        
+        # Cancel button for installation
+        self.cancel_install_btn = QPushButton("Cancel Installation")
+        self.cancel_install_btn.setMinimumHeight(36)
+        self.cancel_install_btn.setVisible(False)  # Hidden by default
+        self.cancel_install_btn.clicked.connect(self.cancel_installation)
+        
+        # Container for loading widget and cancel button
+        loading_container = QWidget()
+        loading_layout = QHBoxLayout(loading_container)
+        loading_layout.setContentsMargins(0, 0, 0, 0)
+        loading_layout.addWidget(self.loading_widget)
+        loading_layout.addWidget(self.cancel_install_btn)
+        loading_layout.addStretch()
+        
+        layout.addWidget(loading_container)
         
         # Large search box for discover page
         self.large_search_box = LargeSearchBox()
@@ -1279,16 +1294,39 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.package_table.setVisible(True)
         self.log("Failed to load packages. Please check the logs for details.")
     
-    def on_installation_progress(self, starting):
-        if starting:
+    def cancel_installation(self):
+        """Cancel the ongoing installation process"""
+        if hasattr(self, 'install_cancel_event'):
+            self.install_cancel_event.set()
+            self.log("Installation cancellation requested...")
+    
+    def on_installation_progress(self, status, can_cancel):
+        if status == "start":
             self.load_more_btn.setVisible(False)
             self.loading_widget.set_message("Installing packages...")
             self.loading_widget.setVisible(True)
             self.loading_widget.start_animation()
-        else:
-            self.loading_widget.setVisible(False)
-            self.loading_widget.stop_animation()
-            self.update_load_more_visibility()
+            self.cancel_install_btn.setVisible(can_cancel)
+        elif status == "success":
+            self.loading_widget.set_message("Success")
+            self.cancel_install_btn.setVisible(False)
+            # Keep spinner visible briefly to show success, then hide
+            QTimer.singleShot(1500, lambda: self.finish_installation_progress())
+        elif status == "failed":
+            self.loading_widget.set_message("Install failed")
+            self.cancel_install_btn.setVisible(False)
+            # Keep spinner visible briefly to show failure, then hide
+            QTimer.singleShot(2000, lambda: self.finish_installation_progress())
+        elif status == "cancelled":
+            self.loading_widget.set_message("Installation cancelled")
+            self.cancel_install_btn.setVisible(False)
+            # Keep spinner visible briefly to show cancellation, then hide
+            QTimer.singleShot(1500, lambda: self.finish_installation_progress())
+    
+    def finish_installation_progress(self):
+        self.loading_widget.setVisible(False)
+        self.loading_widget.stop_animation()
+        self.update_load_more_visibility()
     
     def update_load_more_visibility(self):
         if self.current_view == "discover":
@@ -1827,10 +1865,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.log_signal.emit(f"Proceeding with installation...")
         
         def install():
-            self.installation_progress.emit(True)  # Start installation progress
+            self.install_cancel_event = Event()
+            self.installation_progress.emit("start", True)  # Start with cancel enabled
             self.log_signal.emit("Installation thread started")
+            
+            success = True
             try:
                 for source, packages in packages_by_source.items():
+                    if self.install_cancel_event.is_set():
+                        self.log_signal.emit("Installation cancelled by user")
+                        self.installation_progress.emit("cancelled", False)
+                        return
+                    
                     if source == 'pacman':
                         cmd = ["pacman", "-S", "--noconfirm"] + packages
                     elif source == 'AUR':
@@ -1844,17 +1890,72 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                         continue
                     
                     self.log_signal.emit(f"Running command for {source}: {' '.join(cmd)}")
+                    
+                    # Check for cancellation before each command
+                    if self.install_cancel_event.is_set():
+                        self.log_signal.emit("Installation cancelled by user")
+                        self.installation_progress.emit("cancelled", False)
+                        return
+                    
                     worker = CommandWorker(cmd, sudo=(source in ['pacman', 'AUR']))
                     worker.output.connect(lambda msg: self.log_signal.emit(msg))
                     worker.error.connect(lambda msg: self.log_signal.emit(msg))
-                    worker.run()
+                    
+                    # Run the command with cancellation check
+                    process = subprocess.Popen(
+                        worker.command if not worker.sudo else ["pkexec", "--disable-internal-agent"] + worker.command,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        bufsize=1
+                    )
+                    
+                    while True:
+                        if self.install_cancel_event.is_set():
+                            process.terminate()
+                            try:
+                                process.wait(timeout=5)
+                            except subprocess.TimeoutExpired:
+                                process.kill()
+                            self.log_signal.emit("Installation cancelled by user")
+                            self.installation_progress.emit("cancelled", False)
+                            return
+                            
+                        if process.poll() is not None:
+                            break
+                        
+                        # Read output
+                        if process.stdout:
+                            line = process.stdout.readline()
+                            if line:
+                                worker.output.emit(line.strip())
+                        
+                        import time
+                        time.sleep(0.1)  # Small delay to prevent busy waiting
+                    
+                    # Check return code
+                    if process.returncode != 0:
+                        success = False
+                        if process.stderr:
+                            error_output = process.stderr.read()
+                            if error_output:
+                                worker.error.emit(f"Error: {error_output}")
+                        break
                 
-                self.log_signal.emit("Install completed")
-                self.show_message.emit("Installation Complete", f"Successfully installed packages.")
+                if success and not self.install_cancel_event.is_set():
+                    self.log_signal.emit("Install completed")
+                    self.show_message.emit("Installation Complete", f"Successfully installed packages.")
+                    self.installation_progress.emit("success", False)
+                elif not success and not self.install_cancel_event.is_set():
+                    self.log_signal.emit("Install failed")
+                    self.installation_progress.emit("failed", False)
+                    
             except Exception as e:
                 self.log_signal.emit(f"Error in installation thread: {str(e)}")
+                self.installation_progress.emit("failed", False)
             finally:
-                self.installation_progress.emit(False)  # End installation progress
+                if hasattr(self, 'install_cancel_event'):
+                    delattr(self, 'install_cancel_event')
         
         Thread(target=install, daemon=True).start()
     

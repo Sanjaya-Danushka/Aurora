@@ -1147,7 +1147,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.log(f"Source selection changed: {source_states}")
         # Apply source filtering if we have search results
         if self.current_view == "discover" and hasattr(self, 'search_results') and self.search_results:
-            self.display_discover_results()
+            self.display_discover_results(selected_sources=source_states)
     
     def on_search_mode_changed(self, search_mode):
         """Handle changes in search mode"""
@@ -1675,17 +1675,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         Thread(target=search_in_thread, daemon=True).start()
 
-    def display_discover_results(self, packages=None):
+    def display_discover_results(self, packages=None, selected_sources=None):
         if packages is not None:
             self.search_results = packages
         
-        # Get selected sources from the SourceCard component
-        selected_sources = {}
-        if hasattr(self, 'source_card') and self.source_card:
-            selected_sources = self.source_card.get_selected_sources()
-        else:
-            # Fallback to showing all sources if component not initialized
-            selected_sources = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True, "pip": True}
+        if selected_sources is None:
+            # Get selected sources from the SourceCard component
+            selected_sources = {}
+            if hasattr(self, 'source_card') and self.source_card:
+                selected_sources = self.source_card.get_selected_sources()
+            else:
+                # Fallback to showing all sources if component not initialized
+                selected_sources = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True, "pip": True}
         
         show_pacman = selected_sources.get("pacman", True)
         show_aur = selected_sources.get("AUR", True)

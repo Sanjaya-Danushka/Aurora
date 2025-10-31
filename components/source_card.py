@@ -145,6 +145,10 @@ class SourceCard(QWidget):
         checked_count = sum(1 for item in self.sources.values() if item.is_checked())
         total_count = len(self.sources)
 
+        # Block signals during bulk changes
+        for item in self.sources.values():
+            item.checkbox.blockSignals(True)
+        
         if checked_count == total_count:
             # All selected, deselect all
             for item in self.sources.values():
@@ -153,6 +157,15 @@ class SourceCard(QWidget):
             # Not all selected, select all
             for item in self.sources.values():
                 item.set_checked(True)
+        
+        # Unblock signals
+        for item in self.sources.values():
+            item.checkbox.blockSignals(False)
+        
+        # Emit signal once with final state
+        states = {name: item.is_checked() for name, item in self.sources.items()}
+        self.source_changed.emit(states)
+        self.update_select_all_button()
 
     def get_selected_sources(self):
         """Return dict of selected sources"""

@@ -279,7 +279,7 @@ class LargeSearchBox(QWidget):
 
             QLabel#highlightDescription {
                 color: #9CA6B4;
-                font-size: 13px;
+                font-size: 11px;
                 line-height: 1.4em;
             }
         """

@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QLabel, QFileDialog, QMessageBox, QHeaderView, QFrame, QSplitter,
                              QScrollArea, QCheckBox, QListWidget, QListWidgetItem, QSizePolicy,
                              QDialog, QTabWidget, QGroupBox, QGridLayout)
-from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF, QItemSelectionModel
+from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF, QItemSelectionModel, qInstallMessageHandler, QtMsgType
 from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
 from PyQt6.QtSvg import QSvgRenderer
 
@@ -17,6 +17,19 @@ from git_manager import GitManager
 
 from styles import Styles
 from components import SourceCard, FilterCard, LargeSearchBox, LoadingSpinner
+
+def _qt_msg_handler(mode, context, message):
+    s = str(message)
+    if "QPainter::" in s:
+        return
+    if mode in (QtMsgType.QtDebugMsg, QtMsgType.QtInfoMsg):
+        return
+    try:
+        sys.stderr.write(s + "\n")
+    except Exception:
+        pass
+
+qInstallMessageHandler(_qt_msg_handler)
 
 app = QApplication(sys.argv)
 

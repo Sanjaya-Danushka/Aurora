@@ -39,7 +39,7 @@ class LargeSearchBox(QWidget):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(title_label)
 
-        subtitle_label = QLabel("Search across pacman, AUR, Flatpak, npm, and pip repositories")
+        subtitle_label = QLabel("Search across pacman, AUR, Flatpak, and npm repositories")
         subtitle_label.setObjectName("heroSubtitle")
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(subtitle_label)

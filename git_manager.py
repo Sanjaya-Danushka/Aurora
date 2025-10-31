@@ -339,21 +339,8 @@ class GitManager(QObject):
                 # Change to clone directory
                 os.chdir(clone_path)
 
-                # Check if it's a Python project
-                if os.path.exists(os.path.join(clone_path, "setup.py")) or os.path.exists(os.path.join(clone_path, "pyproject.toml")):
-                    self.log_signal.emit("Detected Python project, installing with pip...")
-                    install_cmd = ["pip", "install", "-e", clone_path]
-                    install_result = subprocess.run(install_cmd, capture_output=True, text=True, timeout=300)
-
-                    if install_result.returncode == 0:
-                        self.log_signal.emit("Python package installed successfully")
-                        self.show_message.emit("Installation Complete", f"Successfully installed {repo_name} from Git")
-                    else:
-                        self.log_signal.emit(f"Failed to install Python package: {install_result.stderr}")
-                        self.show_message.emit("Installation Failed", f"Failed to install Python package: {install_result.stderr}")
-
                 # Check for Rust project
-                elif os.path.exists(os.path.join(clone_path, "Cargo.toml")):
+                if os.path.exists(os.path.join(clone_path, "Cargo.toml")):
                     self.log_signal.emit("Detected Rust project, installing with cargo...")
                     install_cmd = ["cargo", "install", "--path", clone_path]
                     install_result = subprocess.run(install_cmd, capture_output=True, text=True, timeout=600)
@@ -440,8 +427,6 @@ class GitManager(QObject):
                     self.log_signal.emit("  # ./configure && make && sudo make install")
                     self.log_signal.emit("  # OR")
                     self.log_signal.emit("  # make && sudo make install")
-                    self.log_signal.emit("  # OR")
-                    self.log_signal.emit("  # pip install .")
                     self.log_signal.emit("  # OR")
                     self.log_signal.emit("  # cargo install --path .")
 

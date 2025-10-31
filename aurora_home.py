@@ -454,7 +454,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             "AUR": "aur.svg",
             "Flatpak": "flatpack.svg",
             "npm": "node.svg",
-            "pip": "python.svg",
         }
         filename = mapping.get(source, "packagename.svg")
         icon_path = os.path.join(icon_dir, filename)
@@ -480,7 +479,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             "AUR": "#FF8A65",
             "Flatpak": "#26A69A",
             "npm": "#E53935",
-            "pip": "#FBC02D",
         }
         return m.get(source, "#00BFAE")
 
@@ -1123,13 +1121,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.source_card.source_changed.connect(self.on_source_selection_changed)
         self.source_card.search_mode_changed.connect(self.on_search_mode_changed)
         
-        # Add the five main sources
+        # Add the four main sources
         sources = [
             ("pacman", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "pacman.svg")),
             ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg")),
             ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
-            ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg")),
-            ("pip", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "python.svg"))
+            ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg"))
         ]
         
         for source_name, icon_path in sources:
@@ -1646,29 +1643,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     # npm not available, try alternative method
                     pass
                 
-                # Search pip packages
-                try:
-                    result_pip = subprocess.run(["pip", "search", query], capture_output=True, text=True, timeout=30)
-                    if result_pip.returncode == 0 and result_pip.stdout:
-                        lines = result_pip.stdout.strip().split('\n')
-                        for line in lines:
-                            if ' - ' in line:
-                                parts = line.split(' - ', 1)
-                                if len(parts) == 2:
-                                    name = parts[0].strip()
-                                    description = parts[1].strip()
-                                    packages.append({
-                                        'name': name,
-                                        'version': 'latest',
-                                        'id': name,
-                                        'source': 'pip',
-                                        'description': description,
-                                        'has_update': False
-                                    })
-                except (subprocess.CalledProcessError, FileNotFoundError):
-                    # pip search not available (deprecated in newer pip versions)
-                    pass
-                
                 self.discover_results_ready.emit(packages)
             except Exception as e:
                 self.log(f"Search error: {str(e)}")
@@ -1686,13 +1660,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 selected_sources = self.source_card.get_selected_sources()
             else:
                 # Fallback to showing all sources if component not initialized
-                selected_sources = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True, "pip": True}
+                selected_sources = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True}
         
         show_pacman = selected_sources.get("pacman", True)
         show_aur = selected_sources.get("AUR", True)
         show_flatpak = selected_sources.get("Flatpak", True)
         show_npm = selected_sources.get("npm", True)
-        show_pip = selected_sources.get("pip", True)
         
         filtered = []
         for pkg in self.search_results:
@@ -1703,8 +1676,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             elif pkg['source'] == 'Flatpak' and show_flatpak:
                 filtered.append(pkg)
             elif pkg['source'] == 'npm' and show_npm:
-                filtered.append(pkg)
-            elif pkg['source'] == 'pip' and show_pip:
                 filtered.append(pkg)
         
         # Sort results by relevance to the query based on search mode
@@ -1860,8 +1831,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                         cmd = ["flatpak", "install", "--noninteractive", "--or-update"] + packages
                     elif source == 'npm':
                         cmd = ["npm", "install", "-g"] + packages
-                    elif source == 'pip':
-                        cmd = ["pip", "install"] + packages
                     else:
                         self.log_signal.emit(f"Unknown source {source} for packages {packages}")
                         continue

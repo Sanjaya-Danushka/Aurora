@@ -105,7 +105,6 @@ class SourceItem(QWidget):
                 "aur": "🧡",
                 "flatpak": "📱",
                 "npm": "📦",
-                "pip": "🐍"
             }
             self.icon_label.setText(emoji_map.get(self.source_name.lower(), "📦"))
             self.icon_label.setStyleSheet("font-size: 16px; color: white;")
@@ -141,7 +140,6 @@ class SourceItem(QWidget):
             "aur": "#FF8A65",
             "flatpak": "#26A69A",
             "npm": "#E53935",
-            "pip": "#FBC02D",
         }
         return mapping.get(n, "#00BFAE")
 

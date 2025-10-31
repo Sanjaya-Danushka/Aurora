@@ -1469,26 +1469,57 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             try:
                 packages = []
                 
-                result = subprocess.run(["pacman", "-Ss", query], capture_output=True, text=True, timeout=30)
-                if result.returncode == 0 and result.stdout:
-                    lines = result.stdout.strip().split('\n')
-                    i = 0
-                    while i < len(lines):
-                        if lines[i].strip() and '/' in lines[i]:
-                            parts = lines[i].split()
-                            if len(parts) >= 2:
-                                name = parts[0].split('/')[-1]
-                                version = parts[1]
-                                description = ' '.join(parts[2:]) if len(parts) > 2 else ''
-                                packages.append({
-                                    'name': name,
-                                    'version': version,
-                                    'id': name,
-                                    'source': 'pacman',
-                                    'description': description,
-                                    'has_update': False
-                                })
-                        i += 1
+                tokens = [t for t in query.split() if t]
+                pacman_seen = set()
+                if len(tokens) > 1:
+                    for tok in tokens:
+                        try:
+                            result = subprocess.run(["pacman", "-Ss", tok], capture_output=True, text=True, timeout=30)
+                        except Exception:
+                            result = None
+                        if result and result.returncode == 0 and result.stdout:
+                            lines = result.stdout.strip().split('\n')
+                            i = 0
+                            while i < len(lines):
+                                if lines[i].strip() and '/' in lines[i]:
+                                    parts = lines[i].split()
+                                    if len(parts) >= 2:
+                                        name = parts[0].split('/')[-1]
+                                        version = parts[1]
+                                        description = ' '.join(parts[2:]) if len(parts) > 2 else ''
+                                        key = ('pacman', name)
+                                        if key not in pacman_seen:
+                                            pacman_seen.add(key)
+                                            packages.append({
+                                                'name': name,
+                                                'version': version,
+                                                'id': name,
+                                                'source': 'pacman',
+                                                'description': description,
+                                                'has_update': False
+                                            })
+                                i += 1
+                else:
+                    result = subprocess.run(["pacman", "-Ss", query], capture_output=True, text=True, timeout=30)
+                    if result.returncode == 0 and result.stdout:
+                        lines = result.stdout.strip().split('\n')
+                        i = 0
+                        while i < len(lines):
+                            if lines[i].strip() and '/' in lines[i]:
+                                parts = lines[i].split()
+                                if len(parts) >= 2:
+                                    name = parts[0].split('/')[-1]
+                                    version = parts[1]
+                                    description = ' '.join(parts[2:]) if len(parts) > 2 else ''
+                                    packages.append({
+                                        'name': name,
+                                        'version': version,
+                                        'id': name,
+                                        'source': 'pacman',
+                                        'description': description,
+                                        'has_update': False
+                                    })
+                            i += 1
                 
                 result_aur = subprocess.run(["curl", "-s", f"https://aur.archlinux.org/rpc/?v=5&type=search&by=name&arg={query}"], capture_output=True, text=True, timeout=10)
                 if result_aur.returncode == 0:
@@ -1588,16 +1619,26 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         search_mode = self.current_search_mode
         
         def get_sort_key(pkg):
-            name_match = query in pkg['name'].lower()
-            id_match = query in pkg['id'].lower()
-            desc_match = query in (pkg.get('description') or '').lower()
-            
+            name_lower = pkg['name'].lower()
+            id_lower = pkg['id'].lower()
+            desc_lower = (pkg.get('description') or '').lower()
+            exact = (name_lower == query) or (id_lower == query)
+            starts = name_lower.startswith(query) or id_lower.startswith(query)
+            contains = (query in name_lower) or (query in id_lower)
+            desc_contains = (query in desc_lower)
+            source_priority = {'pacman': 3, 'AUR': 2, 'Flatpak': 1, 'npm': 0}.get(pkg.get('source'), 0)
             if search_mode == 'name':
-                return (name_match, False, False)
+                exact_flag = (name_lower == query)
+                starts_flag = name_lower.startswith(query)
+                contains_flag = (query in name_lower)
+                return (exact_flag, starts_flag, contains_flag, source_priority, desc_contains)
             elif search_mode == 'id':
-                return (id_match, False, False)
+                exact_flag = (id_lower == query)
+                starts_flag = id_lower.startswith(query)
+                contains_flag = (query in id_lower)
+                return (exact_flag, starts_flag, contains_flag, source_priority, desc_contains)
             else:  # 'both'
-                return (name_match or id_match, desc_match, False)
+                return (exact, starts, contains, source_priority, desc_contains)
         
         filtered.sort(key=get_sort_key, reverse=True)
         

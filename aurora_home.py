@@ -1292,7 +1292,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         end = start + self.packages_per_page
         
         if self.current_view == "discover":
-            dataset = self.filtered_results if self.filtered_results else self.search_results
+            dataset = self.get_filtered_discover_results()
         else:
             dataset = self.search_results if self.search_results else self.all_packages
         
@@ -1582,29 +1582,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         Thread(target=search_in_thread, daemon=True).start()
 
-    def display_discover_results(self, packages=None, selected_sources=None):
-        if packages is not None:
-            self.search_results = packages
-        
-        # Hide loading spinner and show package table
-        self.loading_widget.setVisible(False)
-        self.loading_widget.stop_animation()
-        self.package_table.setVisible(True)
-        
+    def get_filtered_discover_results(self, selected_sources=None):
         if selected_sources is None:
-            # Get selected sources from the SourceCard component
-            selected_sources = {}
             if hasattr(self, 'source_card') and self.source_card:
                 selected_sources = self.source_card.get_selected_sources()
             else:
-                # Fallback to showing all sources if component not initialized
                 selected_sources = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True}
-        
         show_pacman = selected_sources.get("pacman", True)
         show_aur = selected_sources.get("AUR", True)
         show_flatpak = selected_sources.get("Flatpak", True)
         show_npm = selected_sources.get("npm", True)
-        
         filtered = []
         for pkg in self.search_results:
             if pkg['source'] == 'pacman' and show_pacman:
@@ -1615,11 +1602,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 filtered.append(pkg)
             elif pkg['source'] == 'npm' and show_npm:
                 filtered.append(pkg)
-        
-        # Sort results by relevance to the query based on search mode
         query = self.search_input.text().strip().lower()
         search_mode = self.current_search_mode
-        
         def get_sort_key(pkg):
             name_lower = pkg['name'].lower()
             id_lower = pkg['id'].lower()
@@ -1639,12 +1623,33 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 starts_flag = id_lower.startswith(query)
                 contains_flag = (query in id_lower)
                 return (exact_flag, starts_flag, contains_flag, source_priority, desc_contains)
-            else:  # 'both'
+            else:
                 return (exact, starts, contains, source_priority, desc_contains)
-        
         filtered.sort(key=get_sort_key, reverse=True)
+        return filtered
+
+    def display_discover_results(self, packages=None, selected_sources=None):
+        if packages is not None:
+            self.search_results = packages
+        
+        # Hide loading spinner and show package table
+        self.loading_widget.setVisible(False)
+        self.loading_widget.stop_animation()
+        self.package_table.setVisible(True)
+        
+        if selected_sources is None:
+            # Get selected sources from the SourceCard component
+            selected_sources = {}
+            if hasattr(self, 'source_card') and self.source_card:
+                selected_sources = self.source_card.get_selected_sources()
+            else:
+                # Fallback to showing all sources if component not initialized
+                selected_sources = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True}
+        
+        filtered = self.get_filtered_discover_results(selected_sources)
         self.filtered_results = filtered
         self.current_page = 0
+        query = self.search_input.text().strip()
         
         self.package_table.setUpdatesEnabled(False)
         self.package_table.setRowCount(0)

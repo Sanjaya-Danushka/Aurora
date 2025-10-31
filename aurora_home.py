@@ -2007,6 +2007,8 @@ fi
                     elif source == 'AUR':
                         cmd = [
                             "yay",
+                            "--sudo", "/usr/bin/pkexec",
+                            "--sudoflags", "--disable-internal-agent",
                             "-S", "--noconfirm",
                             "--answerclean", "None",
                             "--answerdiff", "None",
@@ -2031,8 +2033,6 @@ fi
                     # Prepare environment and worker
                     env = os.environ.copy()
                     cleanup_path = None
-                    if source == 'AUR':
-                        env, cleanup_path = self.prepare_askpass_env()
                     worker = CommandWorker(cmd, sudo=(source == 'pacman'), env=env)
                     worker.output.connect(lambda msg: self.log_signal.emit(msg))
                     worker.error.connect(lambda msg: self.log_signal.emit(msg))

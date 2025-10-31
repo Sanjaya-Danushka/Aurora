@@ -4,6 +4,8 @@ import os
 import subprocess
 import json
 import re
+import shutil
+import tempfile
 from threading import Thread, Event
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
@@ -68,10 +70,11 @@ class CommandWorker(QObject):
     output = pyqtSignal(str)
     error = pyqtSignal(str)
     
-    def __init__(self, command, sudo=False):
+    def __init__(self, command, sudo=False, env=None):
         super().__init__()
         self.command = command
         self.sudo = sudo
+        self.env = env if env is not None else os.environ.copy()
     
     def run(self):
         try:
@@ -82,8 +85,11 @@ class CommandWorker(QObject):
                 self.command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                stdin=subprocess.DEVNULL,
                 text=True,
-                bufsize=1
+                bufsize=1,
+                preexec_fn=os.setsid,
+                env=self.env
             )
             
             while True:
@@ -101,6 +107,10 @@ class CommandWorker(QObject):
         except Exception as e:
             self.error.emit(f"Error running command: {str(e)}")
             self.finished.emit()
+    
+    def _command_exists(self, cmd):
+        """Check if a command exists in PATH"""
+        return subprocess.run(['which', cmd], capture_output=True).returncode == 0
 
 class ArchPkgManagerUniGetUI(QMainWindow):
     packages_ready = pyqtSignal(list)
@@ -464,6 +474,54 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             return QIcon(pixmap)
         except:
             return QIcon()
+    
+    def get_sudo_askpass(self):
+        candidates = [
+            "ksshaskpass",
+            "ssh-askpass",
+            "qt5-askpass",
+            "lxqt-openssh-askpass",
+        ]
+        for c in candidates:
+            p = shutil.which(c)
+            if p:
+                return p
+        return None
+
+    def prepare_askpass_env(self):
+        env = os.environ.copy()
+        cleanup_path = None
+        if not env.get("SUDO_ASKPASS"):
+            askpass = self.get_sudo_askpass()
+            if not askpass:
+                # Create a temporary askpass script using kdialog/zenity/yad if available
+                try:
+                    script = """#!/bin/sh
+prompt=${SUDO_ASKPASS_PROMPT:-"Authentication required"}
+if command -v kdialog >/dev/null 2>&1; then
+  kdialog --password "$prompt"
+elif command -v zenity >/dev/null 2>&1; then
+  zenity --password --title="$prompt"
+elif command -v yad >/dev/null 2>&1; then
+  yad --entry --hide-text --title="$prompt"
+else
+  exit 1
+fi
+"""
+                    fd, path = tempfile.mkstemp(prefix="neoarch-askpass-", suffix=".sh")
+                    with os.fdopen(fd, "w") as f:
+                        f.write(script)
+                    os.chmod(path, 0o700)
+                    askpass = path
+                    cleanup_path = path
+                except Exception:
+                    askpass = None
+            if askpass:
+                env["SUDO_ASKPASS"] = askpass
+                env["SSH_ASKPASS"] = askpass
+                # Prefer using askpass, even if a tty exists
+                env.setdefault("SUDO_ASKPASS_REQUIRE", "force")
+        return env, cleanup_path
 
     def get_source_accent(self, source):
         m = {
@@ -1947,7 +2005,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     if source == 'pacman':
                         cmd = ["pacman", "-S", "--noconfirm"] + packages
                     elif source == 'AUR':
-                        cmd = ["yay", "-S", "--noconfirm"] + packages
+                        cmd = [
+                            "yay",
+                            "-S", "--noconfirm",
+                            "--answerclean", "None",
+                            "--answerdiff", "None",
+                            "--answeredit", "None"
+                        ] + packages
                     elif source == 'Flatpak':
                         cmd = ["flatpak", "install", "--noninteractive", "--or-update"] + packages
                     elif source == 'npm':
@@ -1964,7 +2028,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                         self.installation_progress.emit("cancelled", False)
                         return
                     
-                    worker = CommandWorker(cmd, sudo=(source in ['pacman', 'AUR']))
+                    # Prepare environment and worker
+                    env = os.environ.copy()
+                    cleanup_path = None
+                    if source == 'AUR':
+                        env, cleanup_path = self.prepare_askpass_env()
+                    worker = CommandWorker(cmd, sudo=(source == 'pacman'), env=env)
                     worker.output.connect(lambda msg: self.log_signal.emit(msg))
                     worker.error.connect(lambda msg: self.log_signal.emit(msg))
                     
@@ -1972,47 +2041,67 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     worker.output.connect(parse_output_line)
                     
                     # Run the command with cancellation check
-                    process = subprocess.Popen(
-                        worker.command if not worker.sudo else ["pkexec", "--disable-internal-agent"] + worker.command,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        bufsize=1
-                    )
-                    
-                    while True:
-                        if self.install_cancel_event.is_set():
-                            process.terminate()
-                            try:
-                                process.wait(timeout=5)
-                            except subprocess.TimeoutExpired:
-                                process.kill()
-                            self.log_signal.emit("Installation cancelled by user")
-                            self.installation_progress.emit("cancelled", False)
-                            return
+                    try:
+                        exec_cmd = worker.command
+                        if source == 'pacman':
+                            exec_cmd = ["pkexec", "--disable-internal-agent"] + exec_cmd
+                        process = subprocess.Popen(
+                            exec_cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            stdin=subprocess.DEVNULL,
+                            text=True,
+                            bufsize=1,
+                            preexec_fn=os.setsid,
+                            env=worker.env
+                        )
+
+                        while True:
+                            if self.install_cancel_event.is_set():
+                                process.terminate()
+                                try:
+                                    process.wait(timeout=5)
+                                except subprocess.TimeoutExpired:
+                                    process.kill()
+                                self.log_signal.emit("Installation cancelled by user")
+                                self.installation_progress.emit("cancelled", False)
+                                return
+                                
+                            if process.poll() is not None:
+                                break
                             
-                        if process.poll() is not None:
+                            # Read output
+                            if process.stdout:
+                                line = process.stdout.readline()
+                                if line:
+                                    line = line.strip()
+                                    parse_output_line(line)
+                                    worker.output.emit(line)
+                            
+                            import time
+                            time.sleep(0.1)  # Small delay to prevent busy waiting
+                        
+                        # Check return code
+                        if process.returncode != 0:
+                            success = False
+                            if process.stderr:
+                                error_output = process.stderr.read()
+                                if error_output:
+                                    error_text = f"Error: {error_output}"
+                                    # Check for tar ownership error
+                                    if "Cannot change ownership" in error_output and "Value too large for defined data type" in error_output:
+                                        error_text += "\n\nThis error occurs when tar tries to set file ownership to UIDs/GIDs that don't exist in the current environment.\n"
+                                        error_text += "To fix this, you can modify the PKGBUILD to add '--no-same-owner' to the tar command.\n"
+                                        error_text += "For example, change 'tar -xzf file.tar.gz' to 'tar -xzf file.tar.gz --no-same-owner'"
+                                    worker.error.emit(error_text)
                             break
-                        
-                        # Read output
-                        if process.stdout:
-                            line = process.stdout.readline()
-                            if line:
-                                line = line.strip()
-                                parse_output_line(line)
-                                worker.output.emit(line)
-                        
-                        import time
-                        time.sleep(0.1)  # Small delay to prevent busy waiting
-                    
-                    # Check return code
-                    if process.returncode != 0:
-                        success = False
-                        if process.stderr:
-                            error_output = process.stderr.read()
-                            if error_output:
-                                worker.error.emit(f"Error: {error_output}")
-                        break
+                    finally:
+                        # Remove temporary askpass script if created
+                        if source == 'AUR' and cleanup_path and os.path.exists(cleanup_path):
+                            try:
+                                os.remove(cleanup_path)
+                            except Exception:
+                                pass
                 
                 if success and not self.install_cancel_event.is_set():
                     self.log_signal.emit("Install completed")

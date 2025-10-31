@@ -943,6 +943,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.log(welcome_messages[self.welcome_index])
                 self.welcome_index += 1
                 QTimer.singleShot(800, animate_next_message)  # 800ms delay between messages
+            else:
+                # Clear the console after the animation completes
+                QTimer.singleShot(2000, lambda: self.console.clear())  # Wait 2 seconds then clear
         
         # Start the animation
         animate_next_message()

@@ -146,6 +146,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Initialize the default view
         self.switch_view(self.current_view)
         
+        # Show welcome animation in console on first launch
+        QTimer.singleShot(500, self.show_welcome_animation)
+        
         # Debounce search input
         self.search_timer.setInterval(800)
         self.search_timer.setSingleShot(True)
@@ -922,6 +925,27 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             self.toolbar_layout.addLayout(layout)
         # For bundles, no toolbar
+    
+    def show_welcome_animation(self):
+        """Display a welcome animation in the console when the app first opens"""
+        welcome_messages = [
+            "🌟 Welcome to NeoArch Package Manager!",
+            "🚀 Ready to elevate your Arch experience",
+            "📦 Search, install, and manage packages with ease",
+            "⚡ Multi-repo support: pacman, AUR, Flatpak & npm",
+            "🔍 Start by searching for packages above"
+        ]
+        
+        self.welcome_index = 0
+        
+        def animate_next_message():
+            if self.welcome_index < len(welcome_messages):
+                self.log(welcome_messages[self.welcome_index])
+                self.welcome_index += 1
+                QTimer.singleShot(800, animate_next_message)  # 800ms delay between messages
+        
+        # Start the animation
+        animate_next_message()
     
     def switch_view(self, view_id):
         self.current_view = view_id

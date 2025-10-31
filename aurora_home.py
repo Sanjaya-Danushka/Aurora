@@ -108,6 +108,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     log_signal = pyqtSignal(str)
     load_error = pyqtSignal()
     search_timer = QTimer()
+    installation_progress = pyqtSignal(bool)
     
     def __init__(self):
         super().__init__()
@@ -134,6 +135,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.show_message.connect(self._show_message)
         self.log_signal.connect(self.log)
         self.load_error.connect(self.on_load_error)
+        self.installation_progress.connect(self.on_installation_progress)
         self.setup_ui()
         # Set initial nav button state
         for btn_id, btn in self.nav_buttons.items():
@@ -1277,6 +1279,43 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.package_table.setVisible(True)
         self.log("Failed to load packages. Please check the logs for details.")
     
+    def on_installation_progress(self, starting):
+        if starting:
+            self.load_more_btn.setVisible(False)
+            self.loading_widget.set_message("Installing packages...")
+            self.loading_widget.setVisible(True)
+            self.loading_widget.start_animation()
+        else:
+            self.loading_widget.setVisible(False)
+            self.loading_widget.stop_animation()
+            self.update_load_more_visibility()
+    
+    def update_load_more_visibility(self):
+        if self.current_view == "discover":
+            if hasattr(self, 'filtered_results') and self.filtered_results:
+                total = len(self.filtered_results)
+                displayed = (self.current_page + 1) * self.packages_per_page
+                has_more = displayed < total
+                self.load_more_btn.setVisible(has_more)
+            else:
+                self.load_more_btn.setVisible(False)
+        elif self.current_view == "installed":
+            if self.all_packages:
+                total = len(self.all_packages)
+                displayed = (self.current_page + 1) * self.packages_per_page
+                has_more = displayed < total
+                self.load_more_btn.setVisible(has_more)
+            else:
+                self.load_more_btn.setVisible(False)
+        elif self.current_view == "updates":
+            if self.all_packages:
+                total = len(self.all_packages)
+                displayed = (self.current_page + 1) * self.packages_per_page
+                has_more = displayed < total
+                self.load_more_btn.setVisible(has_more)
+            else:
+                self.load_more_btn.setVisible(False)
+    
     def display_page(self):
         self.package_table.setUpdatesEnabled(False)
         start = self.current_page * self.packages_per_page
@@ -1788,6 +1827,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.log_signal.emit(f"Proceeding with installation...")
         
         def install():
+            self.installation_progress.emit(True)  # Start installation progress
             self.log_signal.emit("Installation thread started")
             try:
                 for source, packages in packages_by_source.items():
@@ -1813,6 +1853,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.show_message.emit("Installation Complete", f"Successfully installed packages.")
             except Exception as e:
                 self.log_signal.emit(f"Error in installation thread: {str(e)}")
+            finally:
+                self.installation_progress.emit(False)  # End installation progress
         
         Thread(target=install, daemon=True).start()
     

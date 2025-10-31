@@ -3,6 +3,7 @@ import sys
 import os
 import subprocess
 import json
+import re
 from threading import Thread, Event
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
@@ -776,9 +777,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         loading_container = QWidget()
         loading_layout = QHBoxLayout(loading_container)
         loading_layout.setContentsMargins(0, 0, 0, 0)
+        loading_layout.addStretch()  # Left stretch to center
         loading_layout.addWidget(self.loading_widget)
         loading_layout.addWidget(self.cancel_install_btn)
-        loading_layout.addStretch()
+        loading_layout.addStretch()  # Right stretch to center
         
         layout.addWidget(loading_container)
         
@@ -1870,6 +1872,44 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.log_signal.emit("Installation thread started")
             
             success = True
+            current_download_info = ""
+            
+            def update_progress_message(msg):
+                """Update the loading spinner message with download details"""
+                if current_download_info:
+                    self.loading_widget.set_message(f"Installing packages...\n{current_download_info}")
+                else:
+                    self.loading_widget.set_message("Installing packages...")
+            
+            def parse_output_line(line):
+                """Parse pacman/yay output for download information"""
+                nonlocal current_download_info
+                
+                # Look for download progress lines
+                if "downloading" in line.lower() and ("mib" in line.lower() or "kib" in line.lower() or "gib" in line.lower()):
+                    # Extract size information from "downloading package.tar.xz (10.5 MiB)"
+                    size_match = re.search(r'\(([\d.]+)\s*(MiB|KiB|GiB|B)\)', line)
+                    if size_match:
+                        size, unit = size_match.groups()
+                        current_download_info = f"Downloading {size} {unit}"
+                        update_progress_message("")
+                
+                # Look for progress bar lines like "package.tar.xz ... 10.5 MiB/s 00:30 [####################] 100%"
+                elif re.search(r'\[.*\]\s*\d+%', line):
+                    progress_match = re.search(r'(\d+)%', line)
+                    if progress_match:
+                        percentage = progress_match.group(1)
+                        if current_download_info:
+                            current_download_info = f"{current_download_info} - {percentage}%"
+                        else:
+                            current_download_info = f"Downloading... {percentage}%"
+                        update_progress_message("")
+                
+                # Reset download info when download completes
+                elif "installed" in line.lower() or "upgraded" in line.lower():
+                    current_download_info = ""
+                    update_progress_message("")
+            
             try:
                 for source, packages in packages_by_source.items():
                     if self.install_cancel_event.is_set():
@@ -1901,6 +1941,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     worker.output.connect(lambda msg: self.log_signal.emit(msg))
                     worker.error.connect(lambda msg: self.log_signal.emit(msg))
                     
+                    # Also connect to parse download progress
+                    worker.output.connect(parse_output_line)
+                    
                     # Run the command with cancellation check
                     process = subprocess.Popen(
                         worker.command if not worker.sudo else ["pkexec", "--disable-internal-agent"] + worker.command,
@@ -1928,7 +1971,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                         if process.stdout:
                             line = process.stdout.readline()
                             if line:
-                                worker.output.emit(line.strip())
+                                line = line.strip()
+                                parse_output_line(line)
+                                worker.output.emit(line)
                         
                         import time
                         time.sleep(0.1)  # Small delay to prevent busy waiting

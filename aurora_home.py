@@ -1955,13 +1955,20 @@ fi
             success = True
             current_download_info = ""
             
-            # Calculate total packages for progress tracking
+            # Calculate total packages and sources for progress tracking
             total_packages = sum(len(pkgs) for pkgs in packages_by_source.values())
+            total_sources = len(packages_by_source)
             completed_packages = 0
+            completed_sources = 0
             
             def update_progress_message(msg=""):
                 """Update the loading spinner message with overall progress"""
-                percentage = int((completed_packages / total_packages) * 100) if total_packages > 0 else 0
+                if completed_sources == total_sources:
+                    percentage = 100
+                else:
+                    # Show progress based on sources completed
+                    percentage = int((completed_sources / total_sources) * 100) if total_sources > 0 else 0
+                
                 base_msg = f"Installing: {completed_packages}/{total_packages} packages ({percentage}%)"
                 if current_download_info and msg:
                     self.loading_widget.set_message(f"{base_msg}\n{current_download_info}")
@@ -2008,7 +2015,7 @@ fi
                         self.installation_progress.emit("cancelled", False)
                         return
                     
-                    update_progress_message(f"Processing {source} packages...")
+                    update_progress_message(f"Installing from {source}...")
                     
                     if source == 'pacman':
                         cmd = ["pacman", "-S", "--noconfirm"] + packages
@@ -2042,6 +2049,13 @@ fi
                     cleanup_path = None
                     if source == 'AUR':
                         env, cleanup_path = self.prepare_askpass_env()
+                        # Configure git to use HTTPS instead of SSH for GitHub URLs
+                        # This prevents "Permission denied (publickey)" errors during AUR builds
+                        env['GIT_CONFIG_KEY_0'] = 'url.https://github.com/.insteadOf'
+                        env['GIT_CONFIG_VALUE_0'] = 'git@github.com:'
+                        env['GIT_CONFIG_KEY_1'] = 'url.https://github.com/.insteadOf'  
+                        env['GIT_CONFIG_VALUE_1'] = 'ssh://git@github.com/'
+                        env['GIT_CONFIG_COUNT'] = '2'
                         # Customize prompt content
                         try:
                             title = "NeoArch - Confirm AUR Install"
@@ -2109,8 +2123,9 @@ fi
                         
                         # Check return code
                         if process.returncode == 0:
-                            # Success - increment completed packages
+                            # Success - increment completed packages and sources
                             completed_packages += len(packages)
+                            completed_sources += 1
                             update_progress_message(f"Completed {source} packages")
                             self.log_signal.emit(f"Successfully installed {len(packages)} {source} package(s)")
                         else:

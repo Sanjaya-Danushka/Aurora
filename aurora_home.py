@@ -2095,6 +2095,7 @@ fi
                             preexec_fn=os.setsid,
                             env=worker.env
                         )
+                        
 
                         while True:
                             if self.install_cancel_event.is_set():

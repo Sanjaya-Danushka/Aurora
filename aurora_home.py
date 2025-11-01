@@ -491,36 +491,32 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def prepare_askpass_env(self):
         env = os.environ.copy()
         cleanup_path = None
-        if not env.get("SUDO_ASKPASS"):
-            askpass = self.get_sudo_askpass()
-            if not askpass:
-                # Create a temporary askpass script using kdialog/zenity/yad if available
-                try:
-                    script = """#!/bin/sh
-prompt=${SUDO_ASKPASS_PROMPT:-"Authentication required"}
+        # Always use our custom askpass to ensure consistent UI and messaging
+        try:
+            script = """#!/bin/sh
+title=${NEOARCH_ASKPASS_TITLE:-"NeoArch - AUR Install"}
+text=${NEOARCH_ASKPASS_TEXT:-"AUR packages are community-maintained and may be unsafe.\nEnter your password to proceed."}
+icon=${NEOARCH_ASKPASS_ICON:-"dialog-password"}
 if command -v kdialog >/dev/null 2>&1; then
-  kdialog --password "$prompt"
+  kdialog --title "$title" --icon "$icon" --password "$text"
 elif command -v zenity >/dev/null 2>&1; then
-  zenity --password --title="$prompt"
+  zenity --password --title="$title" --text="$text" --window-icon="$icon"
 elif command -v yad >/dev/null 2>&1; then
-  yad --entry --hide-text --title="$prompt"
+  yad --title="$title" --text="$text" --entry --hide-text --window-icon="$icon"
 else
   exit 1
 fi
 """
-                    fd, path = tempfile.mkstemp(prefix="neoarch-askpass-", suffix=".sh")
-                    with os.fdopen(fd, "w") as f:
-                        f.write(script)
-                    os.chmod(path, 0o700)
-                    askpass = path
-                    cleanup_path = path
-                except Exception:
-                    askpass = None
-            if askpass:
-                env["SUDO_ASKPASS"] = askpass
-                env["SSH_ASKPASS"] = askpass
-                # Prefer using askpass, even if a tty exists
-                env.setdefault("SUDO_ASKPASS_REQUIRE", "force")
+            fd, path = tempfile.mkstemp(prefix="neoarch-askpass-", suffix=".sh")
+            with os.fdopen(fd, "w") as f:
+                f.write(script)
+            os.chmod(path, 0o700)
+            cleanup_path = path
+            env["SUDO_ASKPASS"] = path
+            env["SSH_ASKPASS"] = path
+            env["SUDO_ASKPASS_REQUIRE"] = "force"
+        except Exception:
+            pass
         return env, cleanup_path
 
     def get_source_accent(self, source):
@@ -2034,6 +2030,23 @@ fi
                     cleanup_path = None
                     if source == 'AUR':
                         env, cleanup_path = self.prepare_askpass_env()
+                        # Customize prompt content
+                        try:
+                            title = "NeoArch - Confirm AUR Install"
+                            if len(packages) <= 3:
+                                pkg_list = ", ".join(packages)
+                            else:
+                                pkg_list = ", ".join(packages[:3]) + f" and {len(packages)-3} more"
+                            text = (
+                                "AUR packages are community-maintained and may be unsafe.\n"
+                                f"Packages: {pkg_list}\n\n"
+                                "Enter your password to proceed."
+                            )
+                            env["NEOARCH_ASKPASS_TITLE"] = title
+                            env["NEOARCH_ASKPASS_TEXT"] = text
+                            env["NEOARCH_ASKPASS_ICON"] = "dialog-password"
+                        except Exception:
+                            pass
                     worker = CommandWorker(cmd, sudo=(source == 'pacman'), env=env)
                     worker.output.connect(lambda msg: self.log_signal.emit(msg))
                     worker.error.connect(lambda msg: self.log_signal.emit(msg))

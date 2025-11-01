@@ -1955,12 +1955,22 @@ fi
             success = True
             current_download_info = ""
             
-            def update_progress_message(msg):
-                """Update the loading spinner message with download details"""
-                if current_download_info:
-                    self.loading_widget.set_message(f"Installing packages...\n{current_download_info}")
+            # Calculate total packages for progress tracking
+            total_packages = sum(len(pkgs) for pkgs in packages_by_source.values())
+            completed_packages = 0
+            
+            def update_progress_message(msg=""):
+                """Update the loading spinner message with overall progress"""
+                percentage = int((completed_packages / total_packages) * 100) if total_packages > 0 else 0
+                base_msg = f"Installing: {completed_packages}/{total_packages} packages ({percentage}%)"
+                if current_download_info and msg:
+                    self.loading_widget.set_message(f"{base_msg}\n{current_download_info}")
+                elif current_download_info:
+                    self.loading_widget.set_message(f"{base_msg}\n{current_download_info}")
+                elif msg:
+                    self.loading_widget.set_message(f"{base_msg}\n{msg}")
                 else:
-                    self.loading_widget.set_message("Installing packages...")
+                    self.loading_widget.set_message(base_msg)
             
             def parse_output_line(line):
                 """Parse pacman/yay output for download information"""
@@ -1997,6 +2007,8 @@ fi
                         self.log_signal.emit("Installation cancelled by user")
                         self.installation_progress.emit("cancelled", False)
                         return
+                    
+                    update_progress_message(f"Processing {source} packages...")
                     
                     if source == 'pacman':
                         cmd = ["pacman", "-S", "--noconfirm"] + packages
@@ -2096,7 +2108,12 @@ fi
                             time.sleep(0.1)  # Small delay to prevent busy waiting
                         
                         # Check return code
-                        if process.returncode != 0:
+                        if process.returncode == 0:
+                            # Success - increment completed packages
+                            completed_packages += len(packages)
+                            update_progress_message(f"Completed {source} packages")
+                            self.log_signal.emit(f"Successfully installed {len(packages)} {source} package(s)")
+                        else:
                             success = False
                             if process.stderr:
                                 error_output = process.stderr.read()
@@ -2118,8 +2135,9 @@ fi
                                 pass
                 
                 if success and not self.install_cancel_event.is_set():
+                    update_progress_message("Installation complete!")
                     self.log_signal.emit("Install completed")
-                    self.show_message.emit("Installation Complete", f"Successfully installed packages.")
+                    self.show_message.emit("Installation Complete", f"Successfully installed {total_packages} package(s).")
                     self.installation_progress.emit("success", False)
                 elif not success and not self.install_cancel_event.is_set():
                     self.log_signal.emit("Install failed")

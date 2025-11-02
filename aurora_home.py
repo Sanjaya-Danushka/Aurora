@@ -2113,6 +2113,7 @@ fi
                         worker.error.connect(self.log)
                         worker.run()
                 self.show_message.emit("Update Complete", f"Successfully updated {sum(len(v) for v in packages_by_source.values())} package(s).")
+                QTimer.singleShot(0, self.refresh_packages)
             except Exception as e:
                 self.log(f"Error in update thread: {str(e)}")
         Thread(target=update, daemon=True).start()
@@ -2140,40 +2141,132 @@ fi
         ignored = sorted(self.load_ignored_updates())
         dlg = QDialog(self)
         dlg.setWindowTitle("Manage Ignored Updates")
-        lay = QVBoxLayout()
-        lst = QListWidget()
-        for name in ignored:
-            it = QListWidgetItem(name)
-            it.setCheckState(Qt.CheckState.Unchecked)
-            lst.addItem(it)
-        lay.addWidget(lst)
+        v = QVBoxLayout()
+        hdr = QLabel(f"Ignored packages: {len(ignored)}")
+        v.addWidget(hdr)
+        search = QLineEdit()
+        search.setPlaceholderText("Filter packages...")
+        v.addWidget(search)
+        tbl = QTableWidget()
+        tbl.setColumnCount(5)
+        tbl.setHorizontalHeaderLabels(["", "Package", "Source", "Installed", "Available"])
+        tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        tbl.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        tbl.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        tbl.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        tbl.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        tbl.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        v.addWidget(tbl)
         row = QWidget()
         h = QHBoxLayout(row)
-        btn_remove = QPushButton("Remove Selected")
+        btn_unignore = QPushButton("Unignore Selected")
+        btn_unall = QPushButton("Unignore All")
         btn_close = QPushButton("Close")
-        h.addWidget(btn_remove)
+        h.addWidget(btn_unignore)
+        h.addWidget(btn_unall)
+        h.addStretch()
         h.addWidget(btn_close)
-        lay.addWidget(row)
-        def remove_selected():
-            rem = []
-            for i in range(lst.count()):
-                it = lst.item(i)
-                if it.checkState() == Qt.CheckState.Checked:
-                    rem.append(it.text())
-            if rem:
+        v.addWidget(row)
+
+        installed = {}
+        try:
+            r = subprocess.run(["pacman", "-Q"], capture_output=True, text=True, timeout=20)
+            if r.returncode == 0 and r.stdout:
+                for ln in r.stdout.strip().split('\n'):
+                    ps = ln.split()
+                    if len(ps) >= 2:
+                        installed[ps[0]] = ps[1]
+        except Exception:
+            pass
+        aur_set = set()
+        try:
+            r = subprocess.run(["pacman", "-Qm"], capture_output=True, text=True, timeout=10)
+            if r.returncode == 0 and r.stdout:
+                for ln in r.stdout.strip().split('\n'):
+                    ps = ln.split()
+                    if ps:
+                        aur_set.add(ps[0])
+        except Exception:
+            pass
+        new_versions = {}
+        try:
+            r = subprocess.run(["pacman", "-Qu"], capture_output=True, text=True, timeout=20)
+            if r.returncode == 0 and r.stdout:
+                for ln in r.stdout.strip().split('\n'):
+                    if ' -> ' in ln:
+                        left, nv = ln.split(' -> ', 1)
+                        nm = left.split()[0]
+                        new_versions[nm] = nv.strip()
+        except Exception:
+            pass
+        try:
+            r = subprocess.run(["yay", "-Qua"], capture_output=True, text=True, timeout=20)
+            if r.returncode == 0 and r.stdout:
+                for ln in r.stdout.strip().split('\n'):
+                    if ' -> ' in ln:
+                        left, nv = ln.split(' -> ', 1)
+                        nm = left.split()[0]
+                        new_versions[nm] = nv.strip()
+        except Exception:
+            pass
+
+        tbl.setRowCount(len(ignored))
+        for i, name in enumerate(ignored):
+            cb = QCheckBox()
+            cb.setObjectName("tableCheckbox")
+            w = QWidget()
+            l = QHBoxLayout(w)
+            l.setContentsMargins(0,0,0,0)
+            l.addWidget(cb)
+            l.addStretch()
+            tbl.setCellWidget(i, 0, w)
+            tbl.setItem(i, 1, QTableWidgetItem(name))
+            src = "AUR" if name in aur_set else "pacman"
+            tbl.setItem(i, 2, QTableWidgetItem(src))
+            tbl.setItem(i, 3, QTableWidgetItem(installed.get(name, "")))
+            tbl.setItem(i, 4, QTableWidgetItem(new_versions.get(name, "")))
+
+        def apply_filter(text):
+            t = text.strip().lower()
+            for r in range(tbl.rowCount()):
+                nm = tbl.item(r,1).text().lower() if tbl.item(r,1) else ""
+                tbl.setRowHidden(r, t not in nm)
+        search.textChanged.connect(apply_filter)
+
+        def unignore_selected():
+            sel = []
+            for r in range(tbl.rowCount()):
+                w = tbl.cellWidget(r, 0)
+                if not w:
+                    continue
+                chks = w.findChildren(QCheckBox)
+                if chks and chks[0].isChecked():
+                    nm = tbl.item(r,1).text()
+                    sel.append(nm)
+            if sel:
                 s = self.load_ignored_updates()
-                for r in rem:
-                    s.discard(r)
+                for nm in sel:
+                    s.discard(nm)
                 self.save_ignored_updates(s)
-                for i in reversed(range(lst.count())):
-                    it = lst.item(i)
-                    if it.checkState() == Qt.CheckState.Checked:
-                        lst.takeItem(i)
-                if self.current_view == "updates":
-                    self.load_updates()
-        btn_remove.clicked.connect(remove_selected)
+                for r in reversed(range(tbl.rowCount())):
+                    w = tbl.cellWidget(r,0)
+                    if not w:
+                        continue
+                    chks = w.findChildren(QCheckBox)
+                    if chks and chks[0].isChecked():
+                        tbl.removeRow(r)
+                QTimer.singleShot(0, self.refresh_packages)
+        btn_unignore.clicked.connect(unignore_selected)
+
+        def unignore_all():
+            self.save_ignored_updates(set())
+            tbl.setRowCount(0)
+            QTimer.singleShot(0, self.refresh_packages)
+        btn_unall.clicked.connect(unignore_all)
+
         btn_close.clicked.connect(dlg.accept)
-        dlg.setLayout(lay)
+        dlg.setLayout(v)
+        dlg.resize(820, 520)
         dlg.exec()
     
     def install_selected(self):

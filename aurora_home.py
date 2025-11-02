@@ -1250,20 +1250,14 @@ fi
             )
             manage_btn.clicked.connect(self.manage_ignored)
             layout.addWidget(manage_btn)
-
-            add_bundle_btn = QPushButton("Add to Bundle")
-            add_bundle_btn.setMinimumHeight(36)
-            add_bundle_btn.setStyleSheet(update_btn.styleSheet())
-            add_bundle_btn.clicked.connect(self.add_selected_to_bundle)
-            layout.addWidget(add_bundle_btn)
             
             layout.addStretch()
             # Right-side action icons similar to Discover
             icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
             bundles_btn = self.create_toolbar_button(
                 os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
-                "Go to Package Bundles",
-                self.go_to_bundles
+                "Add selected to Bundle",
+                self.add_selected_to_bundle
             )
             layout.addWidget(bundles_btn)
 
@@ -1331,18 +1325,12 @@ fi
             uninstall_btn.clicked.connect(self.uninstall_selected)
             layout.addWidget(uninstall_btn)
 
-            add_bundle_btn = QPushButton("Add to Bundle")
-            add_bundle_btn.setMinimumHeight(36)
-            add_bundle_btn.setStyleSheet(update_btn.styleSheet())
-            add_bundle_btn.clicked.connect(self.add_selected_to_bundle)
-            layout.addWidget(add_bundle_btn)
-
             layout.addStretch()
             icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
             bundles_btn = self.create_toolbar_button(
                 os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
-                "Go to Package Bundles",
-                self.go_to_bundles
+                "Add selected to Bundle",
+                self.add_selected_to_bundle
             )
             layout.addWidget(bundles_btn)
             tools_btn = self.create_toolbar_button(
@@ -1371,13 +1359,6 @@ fi
             
             layout.addWidget(install_btn)
 
-            add_bundle_btn = self.create_toolbar_button(
-                os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
-                "Add selected to Bundle",
-                self.add_selected_to_bundle
-            )
-            layout.addWidget(add_bundle_btn)
-            
             # Git button on the left side
             git_btn = self.create_toolbar_button(
                 os.path.join(icon_dir, "git.svg"),
@@ -1399,8 +1380,8 @@ fi
             # Action buttons on the right side
             bundles_btn = self.create_toolbar_button(
                 os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
-                "Go to Package Bundles",
-                self.go_to_bundles
+                "Add selected to Bundle",
+                self.add_selected_to_bundle
             )
             layout.addWidget(bundles_btn)
             

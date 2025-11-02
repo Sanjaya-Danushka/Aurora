@@ -1169,22 +1169,51 @@ fi
             layout = QHBoxLayout()
             layout.setSpacing(12)
             
-            update_btn = QPushButton("⬇️  Update selected packages")
+            update_btn = QPushButton("⬇️  Update Selected")
             update_btn.setMinimumHeight(36)
             update_btn.clicked.connect(self.update_selected)
             layout.addWidget(update_btn)
             
-            ignore_btn = QPushButton("🚫  Ignore selected packages")
+            ignore_btn = QPushButton("🚫  Ignore Selected")
             ignore_btn.setMinimumHeight(36)
             ignore_btn.clicked.connect(self.ignore_selected)
             layout.addWidget(ignore_btn)
             
-            manage_btn = QPushButton("📋  Manage ignored updates")
+            manage_btn = QPushButton("📋  Manage Ignored")
             manage_btn.setMinimumHeight(36)
             manage_btn.clicked.connect(self.manage_ignored)
             layout.addWidget(manage_btn)
             
             layout.addStretch()
+            # Right-side action icons similar to Discover
+            icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+            bundles_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
+                "Go to Package Bundles",
+                self.go_to_bundles
+            )
+            layout.addWidget(bundles_btn)
+
+            sudo_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "sudo.svg"),
+                "Run Updates (sudo where needed)",
+                lambda: self.update_selected()
+            )
+            layout.addWidget(sudo_btn)
+
+            tools_btn = self.create_toolbar_button(
+                os.path.join(icon_dir, "download.svg"),
+                "Update Tools",
+                self.update_core_tools
+            )
+            help_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
+                "Help & Documentation",
+                self.show_help
+            )
+            layout.addWidget(tools_btn)
+            layout.addWidget(help_btn)
+
             self.toolbar_layout.addLayout(layout)
         elif self.current_view == "installed":
             layout = QHBoxLayout()

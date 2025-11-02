@@ -6,6 +6,8 @@ import json
 import re
 import shutil
 import tempfile
+import importlib.util
+import traceback
 from threading import Thread, Event
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
@@ -146,6 +148,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.bundle_items = []
         # Settings state
         self.settings = self.load_settings()
+        # Plugins runtime
+        self.plugins = []
+        self.plugin_timer = QTimer()
+        self.plugin_timer.setInterval(60000)
+        self.plugin_timer.timeout.connect(self.run_plugin_tick)
         self.packages_ready.connect(self.on_packages_loaded)
         self.discover_results_ready.connect(self.display_discover_results)
         self.show_message.connect(self._show_message)
@@ -169,6 +176,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Show welcome animation in console on first launch
         QTimer.singleShot(500, self.show_welcome_animation)
+        # Initialize plugins shortly after UI is ready
+        QTimer.singleShot(1000, self.initialize_plugins)
         
         # Debounce search input
         self.search_timer.setInterval(800)
@@ -1179,9 +1188,9 @@ fi
         layout.addWidget(self.load_more_btn)
         
         # Console Output
-        console_label = QLabel("Console Output")
-        console_label.setObjectName("sectionLabel")
-        layout.addWidget(console_label)
+        self.console_label = QLabel("Console Output")
+        self.console_label.setObjectName("sectionLabel")
+        layout.addWidget(self.console_label)
         
         self.console = QTextEdit()
         self.console.setReadOnly(True)
@@ -1573,6 +1582,12 @@ fi
             self.header_info.setText("Create, import, export, and install bundles of packages across sources")
             self.package_table.setVisible(True)
             self.load_more_btn.setVisible(False)
+            # Show console in non-settings views
+            try:
+                self.console_label.setVisible(True)
+                self.console.setVisible(True)
+            except Exception:
+                pass
             QTimer.singleShot(0, self.refresh_bundles_table)
         elif view_id == "settings":
             # Show settings panel, hide package table & search
@@ -1585,8 +1600,26 @@ fi
             self.package_table.setVisible(False)
             self.load_more_btn.setVisible(False)
             self.settings_container.setVisible(True)
+            # Hide console in Settings view
+            try:
+                self.console_label.setVisible(False)
+                self.console.setVisible(False)
+            except Exception:
+                pass
             self.header_info.setText("Configure NeoArch settings and plugins")
             QTimer.singleShot(0, self.build_settings_ui)
+        # Notify plugins about view change
+        try:
+            self.run_plugin_hook('on_view_changed', view_id)
+        except Exception:
+            pass
+        # Other views: ensure console visible
+        if view_id != "settings":
+            try:
+                self.console_label.setVisible(True)
+                self.console.setVisible(True)
+            except Exception:
+                pass
     
     def update_filters_panel(self, view_id):
         # Clear existing filters section
@@ -3833,7 +3866,10 @@ fi
                 'auto_check_updates': True,
                 'npm_user_mode': True,
                 'include_local_source': True,
-                'enabled_plugins': []
+                'enabled_plugins': [],
+                'bundle_autosave': True,
+                'bundle_autosave_path': os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json'),
+                'auto_refresh_updates_minutes': 0
             }
             default.update(data if isinstance(data, dict) else {})
             return default
@@ -3842,7 +3878,10 @@ fi
                 'auto_check_updates': True,
                 'npm_user_mode': True,
                 'include_local_source': True,
-                'enabled_plugins': []
+                'enabled_plugins': [],
+                'bundle_autosave': True,
+                'bundle_autosave_path': os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json'),
+                'auto_refresh_updates_minutes': 0
             }
     
     def save_settings(self):
@@ -3905,6 +3944,30 @@ fi
         cb_npm.toggled.connect(lambda v: self._update_setting('npm_user_mode', v))
         grid.addWidget(cb_npm, 2, 0, 1, 2)
         layout.addWidget(box)
+        
+        path_box = QGroupBox("Bundle Autosave")
+        pgrid = QGridLayout(path_box)
+        cb_bsave = QCheckBox("Autosave bundle to file")
+        cb_bsave.setChecked(bool(self.settings.get('bundle_autosave', True)))
+        cb_bsave.toggled.connect(lambda v: self._update_setting('bundle_autosave', v))
+        pgrid.addWidget(cb_bsave, 0, 0, 1, 3)
+        from_path = self.settings.get('bundle_autosave_path') or os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json')
+        try:
+            os.makedirs(os.path.dirname(from_path), exist_ok=True)
+        except Exception:
+            pass
+        path_edit = QLineEdit(from_path)
+        browse_btn = QPushButton("Browse…")
+        def on_browse():
+            path, _ = QFileDialog.getSaveFileName(self, "Select Bundle Autosave Path", from_path, "Bundle JSON (*.json)")
+            if path:
+                path_edit.setText(path)
+                self._update_setting('bundle_autosave_path', path)
+        browse_btn.clicked.connect(on_browse)
+        pgrid.addWidget(QLabel("Autosave path:"), 1, 0)
+        pgrid.addWidget(path_edit, 1, 1)
+        pgrid.addWidget(browse_btn, 1, 2)
+        layout.addWidget(path_box)
         btns = QHBoxLayout()
         btn_export = QPushButton("Export Settings")
         btn_export.clicked.connect(self.export_settings)
@@ -3951,8 +4014,14 @@ fi
         btn_add.clicked.connect(self.install_plugin)
         btn_remove = QPushButton("Remove Selected")
         btn_remove.clicked.connect(self.remove_selected_plugins)
+        btn_reload = QPushButton("Reload Plugins")
+        btn_reload.clicked.connect(self.reload_plugins_and_notify)
+        btn_defaults = QPushButton("Install Default Plugins")
+        btn_defaults.clicked.connect(self.install_default_plugins)
         actions.addWidget(btn_add)
         actions.addWidget(btn_remove)
+        actions.addWidget(btn_reload)
+        actions.addWidget(btn_defaults)
         actions.addStretch()
         layout.addLayout(actions)
         self.plugins_table = QTableWidget()
@@ -4036,6 +4105,263 @@ fi
                 pass
         self.save_settings()
         self.refresh_plugins_table()
+
+    # -------------------- Plugin runtime --------------------
+    def initialize_plugins(self):
+        try:
+            self.ensure_default_plugins(force_enable=True)
+            self.reload_plugins()
+            self.run_plugin_hook('on_startup')
+            try:
+                self.plugin_timer.start()
+            except Exception:
+                pass
+        except Exception as e:
+            self.log(f"Plugin init error: {e}")
+    
+    def ensure_default_plugins(self, force_enable=False):
+        user_dir = self.get_user_plugins_dir()
+        defaults = {
+            'auto_check_updates.py': (
+                """
+def on_startup(app):
+    try:
+        if app.settings.get('auto_check_updates', True):
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(800, lambda: app.switch_view("updates"))
+    except Exception as e:
+        try:
+            app.log(f"auto_check_updates plugin: {e}")
+        except Exception:
+            pass
+                """.strip()
+            ),
+            'flathub_remote.py': (
+                """
+def on_startup(app):
+    try:
+        app.ensure_flathub_user_remote()
+    except Exception as e:
+        try:
+            app.log(f"flathub_remote plugin: {e}")
+        except Exception:
+            pass
+                """.strip()
+            ),
+            'bundle_autoload.py': (
+                """
+from PyQt6.QtCore import QTimer
+import os, json
+
+def on_view_changed(app, view_id):
+    if view_id != "bundles":
+        return
+    try:
+        base = os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles')
+        path = os.path.join(base, 'default.json')
+        if not os.path.exists(path):
+            return
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        items = data.get('items') if isinstance(data, dict) else None
+        if not isinstance(items, list):
+            return
+        existing = {(i.get('source'), (i.get('id') or i.get('name'))) for i in app.bundle_items}
+        added = 0
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            src = (it.get('source') or '').strip()
+            nm = (it.get('name') or '').strip()
+            pid = (it.get('id') or nm).strip()
+            if not src or not nm:
+                continue
+            key = (src, pid or nm)
+            if key not in existing:
+                app.bundle_items.append({'name': nm, 'id': pid or nm, 'version': (it.get('version') or '').strip(), 'source': src})
+                existing.add(key)
+                added += 1
+        if added:
+            try:
+                app.refresh_bundles_table()
+            except Exception:
+                pass
+            try:
+                app._show_message("Bundle", f"Loaded {added} items from default bundle")
+            except Exception:
+                pass
+    except Exception as e:
+        try:
+            app.log(f"bundle_autoload plugin: {e}")
+        except Exception:
+            pass
+                """.strip()
+            ),
+            'notify_install.py': (
+                """
+from PyQt6.QtWidgets import QMessageBox
+
+def on_startup(app):
+    try:
+        app.installation_progress.connect(lambda status, can_cancel: _on_status(app, status))
+    except Exception:
+        pass
+
+def _on_status(app, status):
+    try:
+        if status == "success":
+            QMessageBox.information(app, "Install", "Installation complete.")
+        elif status == "failed":
+            QMessageBox.warning(app, "Install", "Installation failed. See console for details.")
+        elif status == "cancelled":
+            QMessageBox.information(app, "Install", "Installation cancelled.")
+    except Exception:
+        try:
+            app._show_message("Install", status)
+        except Exception:
+            pass
+                """.strip()
+            ),
+            'bundle_autosave.py': (
+                """
+import os, json, hashlib
+
+_last_hash = None
+
+def _hash_items(items):
+    try:
+        s = json.dumps(items or [], sort_keys=True)
+        return hashlib.sha256(s.encode('utf-8')).hexdigest()
+    except Exception:
+        return None
+
+def _save(app):
+    try:
+        if not app.settings.get('bundle_autosave', True):
+            return
+        path = app.settings.get('bundle_autosave_path')
+        if not path:
+            return
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        items = list(app.bundle_items)
+        global _last_hash
+        h = _hash_items(items)
+        if h and h == _last_hash:
+            return
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump({'app': 'NeoArch', 'items': items}, f, indent=2)
+        _last_hash = h
+        try:
+            app._show_message('Bundle', f'Autosaved bundle to {path}')
+        except Exception:
+            pass
+    except Exception as e:
+        try:
+            app.log(f"bundle_autosave plugin: {e}")
+        except Exception:
+            pass
+
+def on_view_changed(app, view_id):
+    if view_id == 'bundles':
+        _save(app)
+
+def on_tick(app):
+    _save(app)
+                """.strip()
+            ),
+            'auto_refresh_updates.py': (
+                """
+import time
+
+_last = 0
+
+def on_tick(app):
+    global _last
+    try:
+        minutes = int(app.settings.get('auto_refresh_updates_minutes') or 0)
+    except Exception:
+        minutes = 0
+    if minutes <= 0:
+        return
+    now = time.time()
+    if _last and now - _last < minutes * 60:
+        return
+    _last = now
+    try:
+        if app.current_view == 'updates':
+            app.load_updates()
+    except Exception as e:
+        try:
+            app.log(f"auto_refresh_updates: {e}")
+        except Exception:
+            pass
+                """.strip()
+            ),
+        }
+        for fname, code in defaults.items():
+            fpath = os.path.join(user_dir, fname)
+            if not os.path.exists(fpath):
+                try:
+                    with open(fpath, 'w', encoding='utf-8') as f:
+                        f.write(code + "\n")
+                except Exception as e:
+                    self.log(f"Default plugin write failed {fname}: {e}")
+            if force_enable:
+                name = os.path.splitext(fname)[0]
+                enabled = set(self.settings.get('enabled_plugins') or [])
+                if name not in enabled:
+                    enabled.add(name)
+                    self.settings['enabled_plugins'] = sorted(enabled)
+        if force_enable:
+            self.save_settings()
+    
+    def load_enabled_plugins(self):
+        loaded = []
+        plugs = {p['name']: p for p in self.scan_plugins()}
+        enabled = self.settings.get('enabled_plugins') or []
+        for name in enabled:
+            p = plugs.get(name)
+            if not p:
+                continue
+            path = p.get('path')
+            try:
+                spec = importlib.util.spec_from_file_location(name, path)
+                if not spec or not spec.loader:
+                    continue
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                loaded.append(mod)
+            except Exception as e:
+                self.log(f"Failed to load plugin {name}: {e}\n{traceback.format_exc()}")
+        return loaded
+    
+    def reload_plugins(self):
+        self.plugins = self.load_enabled_plugins()
+    
+    def reload_plugins_and_notify(self):
+        self.reload_plugins()
+        self._show_message("Plugins", f"Reloaded {len(self.plugins)} plugin(s)")
+    
+    def install_default_plugins(self):
+        self.ensure_default_plugins(force_enable=True)
+        self.refresh_plugins_table()
+        self.reload_plugins()
+        self._show_message("Plugins", "Default plugins installed and enabled")
+    
+    def run_plugin_hook(self, hook_name, *args, **kwargs):
+        for mod in self.plugins:
+            try:
+                func = getattr(mod, hook_name, None)
+                if callable(func):
+                    func(self, *args, **kwargs)
+            except Exception as e:
+                self.log(f"Plugin hook {hook_name} error: {e}\n{traceback.format_exc()}")
+    
+    def run_plugin_tick(self):
+        try:
+            self.run_plugin_hook('on_tick')
+        except Exception:
+            pass
     
     def _show_message(self, title, text):
         self.log(f"{title}: {text}")

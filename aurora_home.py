@@ -360,6 +360,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         except Exception:
             pass
 
+
         # Absolute children in container
         icon_label = QLabel(icon_container)
         icon_label.setObjectName("navIcon")

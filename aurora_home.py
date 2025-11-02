@@ -475,6 +475,19 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         except:
             return QIcon()
     
+    def ensure_flathub_user_remote(self):
+        try:
+            result = subprocess.run([
+                "flatpak", "--user", "remotes"
+            ], capture_output=True, text=True, timeout=10)
+            if result.returncode != 0 or "flathub" not in (result.stdout or ""):
+                subprocess.run([
+                    "flatpak", "--user", "remote-add", "--if-not-exists",
+                    "flathub", "https://flathub.org/repo/flathub.flatpakrepo"
+                ], capture_output=True, text=True, timeout=30)
+        except Exception:
+            pass
+    
     def get_sudo_askpass(self):
         candidates = [
             "ksshaskpass",
@@ -1713,19 +1726,28 @@ fi
                     except:
                         pass
                 
-                result_flatpak = subprocess.run(["flatpak", "search", query], capture_output=True, text=True, timeout=30)
+                try:
+                    self.ensure_flathub_user_remote()
+                except Exception:
+                    pass
+                result_flatpak = subprocess.run([
+                    "flatpak", "search", "--columns=application,name,description,version", query
+                ], capture_output=True, text=True, timeout=30)
                 if result_flatpak.returncode == 0 and result_flatpak.stdout:
-                    lines = result_flatpak.stdout.strip().split('\n')
+                    lines = [l for l in result_flatpak.stdout.strip().split('\n') if l.strip()]
                     for line in lines:
-                        parts = line.split()
-                        if len(parts) >= 2:
-                            name = parts[0]
-                            version = parts[1]
-                            description = ' '.join(parts[2:]) if len(parts) > 2 else ''
+                        cols = line.split('\t')
+                        if not cols:
+                            continue
+                        app_id = cols[0].strip() if len(cols) > 0 else ''
+                        app_name = cols[1].strip() if len(cols) > 1 and cols[1].strip() else app_id
+                        description = cols[2].strip() if len(cols) > 2 else ''
+                        version = cols[3].strip() if len(cols) > 3 else ''
+                        if app_id:
                             packages.append({
-                                'name': name,
+                                'name': app_name,
                                 'version': version,
-                                'id': name,
+                                'id': app_id,
                                 'source': 'Flatpak',
                                 'description': description,
                                 'has_update': False
@@ -1924,7 +1946,10 @@ fi
         for row in range(self.package_table.rowCount()):
             checkbox = self.get_row_checkbox(row)
             if checkbox is not None and checkbox.isChecked():
-                pkg_name = self.package_table.item(row, 1).text().lower()
+                name_item = self.package_table.item(row, 1)
+                id_item = self.package_table.item(row, 2)
+                pkg_name = name_item.text().strip() if name_item else ''
+                pkg_id = id_item.text().strip() if id_item else pkg_name
                 if self.current_view == "discover":
                     source = ""
                     chip = self.package_table.cellWidget(row, 4)
@@ -1937,7 +1962,8 @@ fi
                     source = source_item.text() if source_item else "pacman"
                 if source not in packages_by_source:
                     packages_by_source[source] = []
-                packages_by_source[source].append(pkg_name)
+                install_token = pkg_id if source == 'Flatpak' else pkg_name
+                packages_by_source[source].append(install_token)
         
         if not packages_by_source:
             self.log_signal.emit("No packages selected for installation")
@@ -2029,9 +2055,13 @@ fi
                             "--answeredit", "None"
                         ] + packages
                     elif source == 'Flatpak':
-                        cmd = ["flatpak", "install", "--noninteractive", "--or-update"] + packages
+                        try:
+                            self.ensure_flathub_user_remote()
+                        except Exception:
+                            pass
+                        cmd = ["flatpak", "--user", "install", "-y", "flathub"] + packages
                     elif source == 'npm':
-                        cmd = ["npm", "install", "-g"] + packages
+                        cmd = ["npm", "install", "--location=user"] + packages
                     else:
                         self.log_signal.emit(f"Unknown source {source} for packages {packages}")
                         continue

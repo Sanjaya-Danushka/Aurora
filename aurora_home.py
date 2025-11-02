@@ -152,6 +152,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.loading_context = None
         self.cancel_update_load = False
         self.cancel_discover_search = False
+        # Nav badges (e.g., updates count)
+        self.nav_badges = {}
         self.setup_ui()
         # Set initial nav button state
         for btn_id, btn in self.nav_buttons.items():
@@ -349,12 +351,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.setContentsMargins(12, 16, 12, 16)  # Balanced padding
         layout.setSpacing(6)  # Space between icon and text
         
-        # Icon label - large and prominent
-        icon_label = QLabel()
+        # Icon container to support badge overlay
+        icon_container = QWidget()
+        icon_container.setFixedSize(50, 50)
+        icon_container.setObjectName("navIconContainer")
+
+        # Absolute children in container
+        icon_label = QLabel(icon_container)
         icon_label.setObjectName("navIcon")
-        icon_label.setFixedSize(50, 50)  # Larger icon container
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
+        icon_label.setGeometry(0, 0, 50, 50)
+
         # Try to load and render SVG in white
         pixmap = self.get_svg_icon(icon_path, 50).pixmap(50, 50)
         if pixmap and not pixmap.isNull():
@@ -367,8 +374,33 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             else:
                 emoji = self.get_fallback_icon(icon_path)
                 icon_label.setText(emoji)
-        
-        layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Small badge for Updates
+        if view_id == "updates":
+            try:
+                badge = QLabel("", icon_container)
+                badge.setObjectName("navBadge")
+                badge.setFixedSize(18, 18)
+                badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                badge.setStyleSheet(
+                    """
+                    QLabel#navBadge {
+                        background-color: #E53935;
+                        color: white;
+                        border-radius: 9px;
+                        font-size: 10px;
+                        font-weight: 700;
+                    }
+                    """
+                )
+                # Position top-right over the icon (container is 50x50, badge 18x18)
+                badge.move(32, 0)
+                badge.setVisible(False)
+                self.nav_badges[view_id] = badge
+            except Exception:
+                pass
+
+        layout.addWidget(icon_container, alignment=Qt.AlignmentFlag.AlignCenter)
         
         # Text label - below icon
         text_label = QLabel(text)
@@ -381,6 +413,40 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         btn.clicked.connect(lambda checked, v=view_id: self.switch_view(v))
         
         return btn
+
+    def set_updates_count(self, count):
+        """Update the updates count in nav and header."""
+        # Update badge on nav button
+        badge = self.nav_badges.get("updates")
+        if badge is not None:
+            try:
+                if count and count > 0:
+                    badge.setText(str(min(99, int(count))))
+                    badge.setVisible(True)
+                else:
+                    badge.setVisible(False)
+            except Exception:
+                pass
+        # Optionally reflect in label text
+        btn = self.nav_buttons.get("updates") if hasattr(self, 'nav_buttons') else None
+        if btn:
+            label = btn.findChild(QLabel, "navText")
+            if label:
+                try:
+                    label.setText(f"Updates{f' ({int(count)})' if count and int(count) > 0 else ''}")
+                except Exception:
+                    label.setText("Updates")
+
+    def update_updates_header_counts(self):
+        """Update the header info subtitle for Updates with real counts."""
+        if self.current_view != "updates":
+            return
+        total = len(getattr(self, 'updates_all', []) or [])
+        matched = len(self.all_packages or [])
+        try:
+            self.header_info.setText(f"{total} packages were found, {matched} of which match the specified filters")
+        except Exception:
+            pass
     
     def create_bottom_card_button(self, icon_path, text, callback):
         btn = QPushButton()
@@ -1217,7 +1283,7 @@ fi
         
         # Update header
         headers = {
-            "updates": ("🔄 Software Updates", "24 packages were found, 24 of which match the specified filters"),
+            "updates": ("🔄 Software Updates", ""),
             "installed": ("📦 Installed Packages", "View all installed packages on your system"),
             "discover": ("/home/alexa/StudioProjects/Aurora/assets/icons/discover/search.svg", "Discover Packages", "Search and discover new packages to install"),
             "bundles": ("📋 Package Bundles", "Manage package bundles"),
@@ -1235,6 +1301,9 @@ fi
             self.header_icon.setVisible(False)
             self.header_label.setText(title)
             self.header_info.setText(subtitle)
+        # Update dynamic counts if on updates
+        if view_id == "updates":
+            QTimer.singleShot(0, self.update_updates_header_counts)
         
         self.update_table_columns(view_id)
         self.update_filters_panel(view_id)
@@ -1383,6 +1452,8 @@ fi
         self.package_table.setRowCount(0)
         self.display_page()
         self.update_load_more_visibility()
+        # Refresh counts after filtering
+        self.update_updates_header_counts()
         
         # Initialize Git Manager for sources panel
         if not hasattr(self, 'git_manager') or self.git_manager is None:
@@ -1776,6 +1847,13 @@ fi
         self.loading_widget.setVisible(False)
         self.loading_widget.stop_animation()
         self.package_table.setVisible(True)
+        # Update counts and nav badge
+        if self.current_view == "updates":
+            try:
+                self.set_updates_count(len(self.updates_all or []))
+            except Exception:
+                pass
+            self.update_updates_header_counts()
     
     def on_load_error(self):
         # Hide loading spinner, stop animation, and show packages table (empty)
@@ -1865,6 +1943,9 @@ fi
         if has_more:
             remaining = len(self.all_packages) - end
             self.load_more_btn.setText(f"Load More ({remaining} remaining)")
+        # Keep header subtitle accurate for Updates
+        if self.current_view == "updates":
+            self.update_updates_header_counts()
     
     def load_more_packages(self):
         self.current_page += 1
@@ -2007,6 +2088,8 @@ fi
             self.package_table.setRowCount(0)
             if self.current_view != "discover":
                 self.display_page()
+                if self.current_view == "updates":
+                    self.update_updates_header_counts()
             return
         
         if self.current_view == "discover":
@@ -2035,6 +2118,14 @@ fi
                 self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
             
             self.log(f"Found {len(self.search_results)} packages matching '{query}'. Showing first 10...")
+            if self.current_view == "updates":
+                # Use search result count for matched in header
+                try:
+                    total = len(getattr(self, 'updates_all', []) or [])
+                    matched = len(self.search_results or [])
+                    self.header_info.setText(f"{total} packages were found, {matched} of which match the specified filters")
+                except Exception:
+                    pass
     
     def search_discover_packages(self, query):
         # Removed verbose search message: self.log(f"Searching for '{query}' in AUR, official repositories, and Flatpak...")

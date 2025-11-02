@@ -142,6 +142,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.docker_manager = None  # Docker manager instance
         self.current_search_mode = 'both'
         self.filtered_results = []
+        # Working bundle state (list of {name,id,source,version?})
+        self.bundle_items = []
         self.packages_ready.connect(self.on_packages_loaded)
         self.discover_results_ready.connect(self.display_discover_results)
         self.show_message.connect(self._show_message)
@@ -1248,6 +1250,12 @@ fi
             )
             manage_btn.clicked.connect(self.manage_ignored)
             layout.addWidget(manage_btn)
+
+            add_bundle_btn = QPushButton("Add to Bundle")
+            add_bundle_btn.setMinimumHeight(36)
+            add_bundle_btn.setStyleSheet(update_btn.styleSheet())
+            add_bundle_btn.clicked.connect(self.add_selected_to_bundle)
+            layout.addWidget(add_bundle_btn)
             
             layout.addStretch()
             # Right-side action icons similar to Discover
@@ -1323,6 +1331,12 @@ fi
             uninstall_btn.clicked.connect(self.uninstall_selected)
             layout.addWidget(uninstall_btn)
 
+            add_bundle_btn = QPushButton("Add to Bundle")
+            add_bundle_btn.setMinimumHeight(36)
+            add_bundle_btn.setStyleSheet(update_btn.styleSheet())
+            add_bundle_btn.clicked.connect(self.add_selected_to_bundle)
+            layout.addWidget(add_bundle_btn)
+
             layout.addStretch()
             icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
             bundles_btn = self.create_toolbar_button(
@@ -1356,6 +1370,13 @@ fi
             install_btn.setIcon(self.get_svg_icon(os.path.join(icon_dir, "install-selected packge.svg"), 20))
             
             layout.addWidget(install_btn)
+
+            add_bundle_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
+                "Add selected to Bundle",
+                self.add_selected_to_bundle
+            )
+            layout.addWidget(add_bundle_btn)
             
             # Git button on the left side
             git_btn = self.create_toolbar_button(
@@ -1405,7 +1426,61 @@ fi
             layout.addWidget(help_btn)
             
             self.toolbar_layout.addLayout(layout)
-        # For bundles, no toolbar
+        elif self.current_view == "bundles":
+            layout = QHBoxLayout()
+            layout.setSpacing(12)
+            install_bundle_btn = QPushButton("Install Bundle")
+            install_bundle_btn.setMinimumHeight(36)
+            install_bundle_btn.setStyleSheet(
+                """
+                QPushButton {
+                    background-color: transparent;
+                    color: #F0F0F0;
+                    border: 1px solid rgba(0, 191, 174, 0.3);
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                QPushButton:hover { background-color: rgba(0, 191, 174, 0.15); border-color: rgba(0, 191, 174, 0.5); }
+                QPushButton:pressed { background-color: rgba(0, 191, 174, 0.25); }
+                """
+            )
+            install_bundle_btn.clicked.connect(self.install_bundle)
+            layout.addWidget(install_bundle_btn)
+
+            export_btn = QPushButton("Export Bundle")
+            export_btn.setMinimumHeight(36)
+            export_btn.setStyleSheet(install_bundle_btn.styleSheet())
+            export_btn.clicked.connect(self.export_bundle)
+            layout.addWidget(export_btn)
+
+            import_btn = QPushButton("Import Bundle")
+            import_btn.setMinimumHeight(36)
+            import_btn.setStyleSheet(install_bundle_btn.styleSheet())
+            import_btn.clicked.connect(self.import_bundle)
+            layout.addWidget(import_btn)
+
+            remove_sel_btn = QPushButton("Remove Selected")
+            remove_sel_btn.setMinimumHeight(36)
+            remove_sel_btn.setStyleSheet(install_bundle_btn.styleSheet())
+            remove_sel_btn.clicked.connect(self.remove_selected_from_bundle)
+            layout.addWidget(remove_sel_btn)
+
+            clear_btn = QPushButton("Clear Bundle")
+            clear_btn.setMinimumHeight(36)
+            clear_btn.setStyleSheet(install_bundle_btn.styleSheet())
+            clear_btn.clicked.connect(self.clear_bundle)
+            layout.addWidget(clear_btn)
+
+            layout.addStretch()
+            help_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
+                "Help & Documentation",
+                self.show_help
+            )
+            layout.addWidget(help_btn)
+            self.toolbar_layout.addLayout(layout)
     
     def show_welcome_animation(self):
         """Display a welcome animation in the console when the app first opens"""
@@ -1496,7 +1571,8 @@ fi
             # Removed verbose log: self.log("Type a package name to search in AUR and official repositories")
         elif view_id == "bundles":
             self.package_table.setRowCount(0)
-            # Removed verbose log: self.log("Package bundles feature")
+            self.header_info.setText("Create, import, export, and install bundles of packages across sources")
+            QTimer.singleShot(0, self.refresh_bundles_table)
     
     def update_filters_panel(self, view_id):
         # Clear existing filters section
@@ -1539,6 +1615,12 @@ fi
             if hasattr(self, 'sources_title_label'):
                 self.sources_title_label.setVisible(False)
             self.update_discover_sources()
+        elif view_id == "bundles":
+            # No source or status filters for bundles
+            self.sources_section.setVisible(False)
+            self.filters_section.setVisible(False)
+            if hasattr(self, 'sources_title_label'):
+                self.sources_title_label.setVisible(False)
         else:
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(True)
@@ -1693,6 +1775,25 @@ fi
             self.package_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
             self.package_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        elif view_id == "bundles":
+            self.package_table.setColumnCount(5)
+            self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Source"])
+            self.package_table.setObjectName("bundlesTable")
+            header = self.package_table.horizontalHeader()
+            header.setStretchLastSection(False)
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+            header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
+            header.setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)
+            self.package_table.setColumnWidth(0, 48)
+            self.package_table.setColumnWidth(2, 220)
+            self.package_table.setColumnWidth(3, 140)
+            self.package_table.setColumnWidth(4, 120)
+            self.package_table.setShowGrid(False)
+            self.package_table.setIconSize(QSize(20, 20))
+            self.package_table.setWordWrap(True)
+            self.package_table.verticalHeader().setDefaultSectionSize(56)
         elif view_id == "discover":
             self.package_table.setColumnCount(5)
             self.package_table.setHorizontalHeaderLabels(["", "Package Name", "Package ID", "Version", "Source"])
@@ -3038,6 +3139,231 @@ fi
         dlg.setLayout(v)
         dlg.resize(820, 520)
         dlg.exec()
+
+    def get_source_text(self, row, view_id=None):
+        vid = view_id or self.current_view
+        try:
+            if vid in ("discover", "bundles"):
+                cell = self.package_table.cellWidget(row, 4)
+                if cell:
+                    labels = cell.findChildren(QLabel)
+                    if labels:
+                        return labels[-1].text()
+                return ""
+            elif vid == "updates":
+                itm = self.package_table.item(row, 5)
+                return itm.text() if itm else ""
+            elif vid == "installed":
+                itm = self.package_table.item(row, 4)
+                return itm.text() if itm else ""
+        except Exception:
+            return ""
+        return ""
+
+    def get_row_info(self, row, view_id=None):
+        vid = view_id or self.current_view
+        name_item = self.package_table.item(row, 1)
+        id_item = self.package_table.item(row, 2)
+        version_item = self.package_table.item(row, 3)
+        name = name_item.text().strip() if name_item else ""
+        pkg_id = id_item.text().strip() if id_item else name
+        version = version_item.text().strip() if version_item else ""
+        source = self.get_source_text(row, vid)
+        return {"name": name, "id": pkg_id, "version": version, "source": source}
+
+    def add_selected_to_bundle(self):
+        items = []
+        for row in range(self.package_table.rowCount()):
+            checkbox = self.get_row_checkbox(row)
+            if checkbox is not None and checkbox.isChecked():
+                info = self.get_row_info(row)
+                if info.get("name") and info.get("source"):
+                    items.append(info)
+        if not items:
+            self.log("No selected rows to add to bundle")
+            return
+        # de-dupe by (source, id/name)
+        existing = {(i.get('source'), i.get('id') or i.get('name')) for i in self.bundle_items}
+        added = 0
+        for it in items:
+            key = (it.get('source'), it.get('id') or it.get('name'))
+            if key not in existing:
+                self.bundle_items.append(it)
+                existing.add(key)
+                added += 1
+        self.log(f"Added {added} item(s) to bundle")
+        if self.current_view == "bundles":
+            self.refresh_bundles_table()
+
+    def refresh_bundles_table(self):
+        if self.current_view != "bundles":
+            return
+        self.package_table.setRowCount(0)
+        self.package_table.setUpdatesEnabled(False)
+        for it in self.bundle_items:
+            # Reuse discover-like row rendering
+            pkg = {
+                'name': it.get('name', ''),
+                'id': it.get('id') or it.get('name', ''),
+                'version': it.get('version', ''),
+                'source': it.get('source', ''),
+            }
+            self.add_discover_row(pkg)
+        self.package_table.setUpdatesEnabled(True)
+        try:
+            self.package_table.clearSelection()
+        except Exception:
+            pass
+
+        self.load_more_btn.setVisible(False)
+
+    def export_bundle(self):
+        if not self.bundle_items:
+            self._show_message("Export Bundle", "Bundle is empty")
+            return
+        path, _ = QFileDialog.getSaveFileName(self, "Export Bundle", os.path.expanduser("~"), "Bundle JSON (*.json)")
+        if not path:
+            return
+        data = {"app": "NeoArch", "items": self.bundle_items}
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+            self._show_message("Export Bundle", f"Saved {len(self.bundle_items)} items to {path}")
+        except Exception as e:
+            self._show_message("Export Bundle", f"Failed: {e}")
+
+    def import_bundle(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Import Bundle", os.path.expanduser("~"), "Bundle JSON (*.json)")
+        if not path:
+            return
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            items = data.get('items') if isinstance(data, dict) else None
+            if not isinstance(items, list):
+                self._show_message("Import Bundle", "Invalid bundle file")
+                return
+            existing = {(i.get('source'), i.get('id') or i.get('name')) for i in self.bundle_items}
+            added = 0
+            for it in items:
+                if not isinstance(it, dict):
+                    continue
+                src = (it.get('source') or '').strip()
+                nm = (it.get('name') or '').strip()
+                pkg_id = (it.get('id') or nm).strip()
+                if not src or not nm:
+                    continue
+                key = (src, pkg_id or nm)
+                if key not in existing:
+                    self.bundle_items.append({
+                        'name': nm,
+                        'id': pkg_id or nm,
+                        'version': (it.get('version') or '').strip(),
+                        'source': src,
+                    })
+                    existing.add(key)
+                    added += 1
+            self._show_message("Import Bundle", f"Added {added} items")
+            if self.current_view == "bundles":
+                self.refresh_bundles_table()
+        except Exception as e:
+            self._show_message("Import Bundle", f"Failed: {e}")
+
+    def remove_selected_from_bundle(self):
+        if self.current_view != "bundles":
+            return
+        keys_to_remove = []
+        for row in range(self.package_table.rowCount()):
+            chk = self.get_row_checkbox(row)
+            if chk is not None and chk.isChecked():
+                info = self.get_row_info(row, view_id='bundles')
+                keys_to_remove.append((info.get('source'), info.get('id') or info.get('name')))
+        if not keys_to_remove:
+            self.log("No selected items to remove from bundle")
+            return
+        before = len(self.bundle_items)
+        self.bundle_items = [it for it in self.bundle_items if (it.get('source'), it.get('id') or it.get('name')) not in keys_to_remove]
+        removed = before - len(self.bundle_items)
+        self.log(f"Removed {removed} items from bundle")
+        self.refresh_bundles_table()
+
+    def clear_bundle(self):
+        if not self.bundle_items:
+            return
+        self.bundle_items = []
+        self.refresh_bundles_table()
+
+    def install_bundle(self):
+        if not self.bundle_items:
+            self._show_message("Install Bundle", "Bundle is empty")
+            return
+        items = list(self.bundle_items)
+        # install in thread
+        def run():
+            try:
+                by_src = {}
+                for it in items:
+                    src = it.get('source') or 'pacman'
+                    name = it.get('name') or ''
+                    pkg_id = it.get('id') or name
+                    if not name:
+                        continue
+                    by_src.setdefault(src, []).append(pkg_id if src == 'Flatpak' else name)
+                for src, lst in by_src.items():
+                    if not lst:
+                        continue
+                    if src == 'pacman':
+                        cmd = ["pacman", "-S", "--noconfirm"] + lst
+                        w = CommandWorker(cmd, sudo=True)
+                        w.output.connect(self.log); w.error.connect(self.log); w.run()
+                    elif src == 'AUR':
+                        env, _ = self.prepare_askpass_env()
+                        cmd = ["yay", "-S", "--noconfirm"] + lst
+                        w = CommandWorker(cmd, sudo=False, env=env)
+                        w.output.connect(self.log); w.error.connect(self.log); w.run()
+                    elif src == 'Flatpak':
+                        cmd = ["flatpak", "install", "-y", "--noninteractive"] + lst
+                        w = CommandWorker(cmd, sudo=False)
+                        w.output.connect(self.log); w.error.connect(self.log); w.run()
+                    elif src == 'npm':
+                        env = os.environ.copy()
+                        try:
+                            npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                            os.makedirs(npm_prefix, exist_ok=True)
+                            env['npm_config_prefix'] = npm_prefix
+                            env['NPM_CONFIG_PREFIX'] = npm_prefix
+                            env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
+                        except Exception:
+                            pass
+                        cmd = ["npm", "install", "-g"] + lst
+                        w = CommandWorker(cmd, sudo=False, env=env)
+                        w.output.connect(self.log); w.error.connect(self.log); w.run()
+                    elif src == 'Local':
+                        entries = { (e.get('id') or e.get('name')): e for e in self.load_local_update_entries() }
+                        for token in lst:
+                            e = entries.get(token) or entries.get(token.strip())
+                            if not e:
+                                continue
+                            cmd = e.get('install_cmd') or e.get('update_cmd')
+                            if not cmd:
+                                continue
+                            try:
+                                process = subprocess.Popen(["bash", "-lc", cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                                while True:
+                                    line = process.stdout.readline() if process.stdout else ""
+                                    if not line and process.poll() is not None:
+                                        break
+                                    if line:
+                                        self.log(line.strip())
+                                _, stderr = process.communicate()
+                                if process.returncode != 0 and stderr:
+                                    self.log(f"Error: {stderr}")
+                            except Exception as ex:
+                                self.log(str(ex))
+                self.show_message.emit("Install Bundle", f"Installed {sum(len(v) for v in by_src.values())} package(s)")
+            except Exception as e:
+                self.log(f"Bundle install error: {str(e)}")
+        Thread(target=run, daemon=True).start()
     
     def install_selected(self):
         packages_by_source = {}

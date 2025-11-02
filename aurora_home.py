@@ -2346,6 +2346,11 @@ fi
                 self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'))
         
         self.package_table.setUpdatesEnabled(True)
+        # Make sure nothing is selected by default
+        try:
+            self.package_table.clearSelection()
+        except Exception:
+            pass
         
         has_more = end < len(self.all_packages)
         self.load_more_btn.setVisible(has_more)
@@ -2446,7 +2451,8 @@ fi
         
         checkbox = QCheckBox()
         checkbox.setObjectName("tableCheckbox")
-        checkbox.setChecked(False if self.current_view == "updates" else True)
+        # Always start unchecked in all views
+        checkbox.setChecked(False)
         self.apply_checkbox_accent(checkbox, source if source else "")
         cb_container = QWidget()
         cb_container.setStyleSheet("background: transparent;")

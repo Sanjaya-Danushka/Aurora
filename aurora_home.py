@@ -1572,6 +1572,8 @@ fi
         elif view_id == "bundles":
             self.package_table.setRowCount(0)
             self.header_info.setText("Create, import, export, and install bundles of packages across sources")
+            self.package_table.setVisible(True)
+            self.load_more_btn.setVisible(False)
             QTimer.singleShot(0, self.refresh_bundles_table)
     
     def update_filters_panel(self, view_id):
@@ -3216,6 +3218,11 @@ fi
             pass
 
         self.load_more_btn.setVisible(False)
+        # Ensure table is visible in Bundles view
+        try:
+            self.package_table.setVisible(True)
+        except Exception:
+            pass
 
     def export_bundle(self):
         if not self.bundle_items:

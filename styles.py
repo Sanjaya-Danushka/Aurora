@@ -98,6 +98,20 @@ QLabel#navIcon {
     color: #e1e5e9;
 }
 
+/* Nav icon container and badge */
+QWidget#navIconContainer {
+    background-color: transparent;
+}
+
+QLabel#navBadge {
+    background-color: #E53935;
+    color: #FFFFFF;
+    border-radius: 9px; /* keep circular for 18px height, will expand width */
+    padding: 0px 4px; /* allow dynamic width for multi-digit counts */
+    min-width: 18px;
+    min-height: 18px;
+}
+
 QPushButton#navBtn:hover QLabel#navIcon {
     background-color: transparent;
     color: #ffffff;

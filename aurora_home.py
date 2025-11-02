@@ -355,6 +355,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         icon_container = QWidget()
         icon_container.setFixedSize(50, 50)
         icon_container.setObjectName("navIconContainer")
+        try:
+            icon_container.setStyleSheet("background-color: transparent;")
+        except Exception:
+            pass
 
         # Absolute children in container
         icon_label = QLabel(icon_container)
@@ -420,8 +424,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         badge = self.nav_badges.get("updates")
         if badge is not None:
             try:
-                if count and count > 0:
-                    badge.setText(str(min(99, int(count))))
+                n = int(count) if count is not None else 0
+                if n > 0:
+                    text = str(n)
+                    badge.setText(text)
+                    # Dynamically size the badge to fit the text
+                    fm = badge.fontMetrics()
+                    w = max(18, fm.horizontalAdvance(text) + 8)
+                    badge.setFixedSize(w, 18)
+                    # Anchor to top-right of icon container
+                    parent = badge.parentWidget()
+                    if parent is not None:
+                        badge.move(max(0, parent.width() - badge.width()), 0)
                     badge.setVisible(True)
                 else:
                     badge.setVisible(False)
@@ -433,7 +447,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             label = btn.findChild(QLabel, "navText")
             if label:
                 try:
-                    label.setText(f"Updates{f' ({int(count)})' if count and int(count) > 0 else ''}")
+                    n = int(count) if count is not None else 0
+                    label.setText(f"Updates{f' ({n})' if n > 0 else ''}")
                 except Exception:
                     label.setText("Updates")
 

@@ -912,12 +912,15 @@ fi
     
     def get_row_checkbox(self, row):
         cell = self.package_table.cellWidget(row, 0)
+        if not cell:
+            return None
         if isinstance(cell, QCheckBox):
             return cell
-        if cell is not None:
-            cb = cell.findChild(QCheckBox)
-            return cb
-        return None
+        try:
+            chks = cell.findChildren(QCheckBox)
+            return chks[0] if chks else None
+        except Exception:
+            return None
 
     def create_content_area(self):
         content = QWidget()
@@ -1280,6 +1283,26 @@ fi
         elif self.current_view == "installed":
             layout = QHBoxLayout()
             layout.setSpacing(12)
+            update_btn = QPushButton("Update Selected")
+            update_btn.setMinimumHeight(36)
+            update_btn.setStyleSheet(
+                """
+                QPushButton {
+                    background-color: transparent;
+                    color: #F0F0F0;
+                    border: 1px solid rgba(0, 191, 174, 0.3);
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                QPushButton:hover { background-color: rgba(0, 191, 174, 0.15); border-color: rgba(0, 191, 174, 0.5); }
+                QPushButton:pressed { background-color: rgba(0, 191, 174, 0.25); }
+                """
+            )
+            update_btn.clicked.connect(self.update_selected)
+            layout.addWidget(update_btn)
+
             uninstall_btn = QPushButton("Uninstall Selected")
             uninstall_btn.setMinimumHeight(36)
             uninstall_btn.setStyleSheet(
@@ -2035,8 +2058,9 @@ fi
                 except Exception:
                     pass
 
-                # Flatpak installed apps
+                # Flatpak installed apps (build installed map across scopes)
                 try:
+                    installed_map = {}
                     seen = set()
                     for scope in ([], ["--user"], ["--system"]):
                         cmd = ["flatpak"] + scope + ["list", "--app", "--columns=application,version"]
@@ -2046,6 +2070,8 @@ fi
                                 c = ln.split('\t')
                                 app_id = c[0].strip() if len(c) > 0 else ''
                                 ver = c[1].strip() if len(c) > 1 else ''
+                                if app_id:
+                                    installed_map[app_id] = ver
                                 if app_id and app_id not in seen:
                                     packages.append({
                                         'name': app_id,
@@ -2057,7 +2083,41 @@ fi
                                     seen.add(app_id)
                 except Exception:
                     pass
-
+                # Flatpak updates mark
+                try:
+                    update_ids = set()
+                    for scope in ([], ["--user"], ["--system"]):
+                        cmdu = ["flatpak"] + scope + ["list", "--app", "--updates", "--columns=application,version"]
+                        fu = subprocess.run(cmdu, capture_output=True, text=True, timeout=60)
+                        if fu.returncode == 0 and fu.stdout:
+                            for ln in [x for x in fu.stdout.strip().split('\n') if x.strip()]:
+                                cols = ln.split('\t')
+                                if cols:
+                                    update_ids.add(cols[0].strip())
+                    if not update_ids:
+                        # Fallback to remote-ls and intersect with installed_map
+                        try:
+                            rl = subprocess.run(["flatpak", "remote-ls", "--updates", "--columns=application,version"], capture_output=True, text=True, timeout=60)
+                            if rl.returncode == 0 and rl.stdout:
+                                for ln in [x for x in rl.stdout.strip().split('\n') if x.strip()]:
+                                    c = ln.split('\t')
+                                    app_id = c[0].strip() if len(c) > 0 else ''
+                                    latest = c[1].strip() if len(c) > 1 else ''
+                                    if app_id and app_id in installed_map:
+                                        update_ids.add(app_id)
+                                        # annotate new_version if we can
+                                        for pkg in packages:
+                                            if pkg.get('source') == 'Flatpak' and pkg.get('name') == app_id:
+                                                if latest:
+                                                    pkg['new_version'] = latest
+                        except Exception:
+                            pass
+                    if update_ids:
+                        for pkg in packages:
+                            if pkg.get('source') == 'Flatpak' and pkg.get('name') in update_ids:
+                                pkg['has_update'] = True
+                except Exception:
+                    pass
                 # npm global packages
                 try:
                     np = subprocess.run(["npm", "ls", "-g", "--depth=0", "--json"], capture_output=True, text=True, timeout=60)
@@ -2736,7 +2796,14 @@ fi
             if checkbox is not None and checkbox.isChecked():
                 name_item = self.package_table.item(row, 1)
                 id_item = self.package_table.item(row, 2)
-                source_item = self.package_table.item(row, 5)
+                # Source column differs by view: Updates has Source at col 5; Installed at col 4
+                source_col = 5 if self.current_view == "updates" else 4
+                source_item = self.package_table.item(row, source_col)
+                # On Installed view, only update rows that actually have an update available
+                if self.current_view == "installed":
+                    status_item = self.package_table.item(row, 5)
+                    if not status_item or "Update" not in (status_item.text() or ""):
+                        continue
                 if not name_item:
                     continue
                 pkg_name = name_item.text().strip()

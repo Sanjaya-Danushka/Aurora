@@ -1169,18 +1169,63 @@ fi
             layout = QHBoxLayout()
             layout.setSpacing(12)
             
-            update_btn = QPushButton("⬇️  Update Selected")
+            update_btn = QPushButton("Update Selected")
             update_btn.setMinimumHeight(36)
+            update_btn.setStyleSheet(
+                """
+                QPushButton {
+                    background-color: transparent;
+                    color: #F0F0F0;
+                    border: 1px solid rgba(0, 191, 174, 0.3);
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                QPushButton:hover { background-color: rgba(0, 191, 174, 0.15); border-color: rgba(0, 191, 174, 0.5); }
+                QPushButton:pressed { background-color: rgba(0, 191, 174, 0.25); }
+                """
+            )
             update_btn.clicked.connect(self.update_selected)
             layout.addWidget(update_btn)
             
-            ignore_btn = QPushButton("🚫  Ignore Selected")
+            ignore_btn = QPushButton("Ignore Selected")
             ignore_btn.setMinimumHeight(36)
+            ignore_btn.setStyleSheet(
+                """
+                QPushButton {
+                    background-color: transparent;
+                    color: #F0F0F0;
+                    border: 1px solid rgba(0, 191, 174, 0.3);
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                QPushButton:hover { background-color: rgba(0, 191, 174, 0.15); border-color: rgba(0, 191, 174, 0.5); }
+                QPushButton:pressed { background-color: rgba(0, 191, 174, 0.25); }
+                """
+            )
             ignore_btn.clicked.connect(self.ignore_selected)
             layout.addWidget(ignore_btn)
             
-            manage_btn = QPushButton("📋  Manage Ignored")
+            manage_btn = QPushButton("Manage Ignored")
             manage_btn.setMinimumHeight(36)
+            manage_btn.setStyleSheet(
+                """
+                QPushButton {
+                    background-color: transparent;
+                    color: #F0F0F0;
+                    border: 1px solid rgba(0, 191, 174, 0.3);
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                QPushButton:hover { background-color: rgba(0, 191, 174, 0.15); border-color: rgba(0, 191, 174, 0.5); }
+                QPushButton:pressed { background-color: rgba(0, 191, 174, 0.25); }
+                """
+            )
             manage_btn.clicked.connect(self.manage_ignored)
             layout.addWidget(manage_btn)
             
@@ -1471,6 +1516,9 @@ fi
         for source_name, icon_path in sources:
             self.source_card.add_source(source_name, icon_path)
         self.sources_layout.addWidget(self.source_card)
+        if not hasattr(self, 'git_manager') or self.git_manager is None:
+            from git_manager import GitManager
+            self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
 
     def on_updates_source_changed(self, source_states):
         base = getattr(self, 'updates_all', self.all_packages)

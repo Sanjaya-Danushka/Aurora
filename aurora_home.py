@@ -489,6 +489,33 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         except Exception:
             pass
 
+    def get_ignore_file_path(self):
+        cfg = os.path.join(os.path.expanduser('~'), '.config', 'neoarch')
+        try:
+            os.makedirs(cfg, exist_ok=True)
+        except Exception:
+            pass
+        return os.path.join(cfg, 'ignored_updates.json')
+
+    def load_ignored_updates(self):
+        p = self.get_ignore_file_path()
+        try:
+            with open(p, 'r') as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                return set(data)
+        except Exception:
+            pass
+        return set()
+
+    def save_ignored_updates(self, items):
+        p = self.get_ignore_file_path()
+        try:
+            with open(p, 'w') as f:
+                json.dump(sorted(list(items)), f)
+        except Exception:
+            pass
+
     def cmd_exists(self, cmd):
         return shutil.which(cmd) is not None
 
@@ -1457,7 +1484,12 @@ fi
                                 break  # Found a working AUR helper, stop trying others
                         except (subprocess.CalledProcessError, FileNotFoundError):
                             continue
-                
+                try:
+                    ignored = self.load_ignored_updates()
+                    if ignored:
+                        packages = [p for p in packages if p.get('name') not in ignored]
+                except Exception:
+                    pass
                 self.packages_ready.emit(packages)
             except Exception as e:
                 self.log(f"Error: {str(e)}")
@@ -1721,7 +1753,7 @@ fi
         
         checkbox = QCheckBox()
         checkbox.setObjectName("tableCheckbox")
-        checkbox.setChecked(True)
+        checkbox.setChecked(False if self.current_view == "updates" else True)
         self.apply_checkbox_accent(checkbox, source if source else "")
         cb_container = QWidget()
         cb_container.setStyleSheet("background: transparent;")
@@ -2047,58 +2079,102 @@ fi
                 # Removed verbose log: self.log("Type a package name to search in AUR and official repositories")
     
     def update_selected(self):
-        packages = []
+        packages_by_source = {}
         for row in range(self.package_table.rowCount()):
             checkbox = self.get_row_checkbox(row)
             if checkbox is not None and checkbox.isChecked():
-                pkg_name = self.package_table.item(row, 1).text()
-                packages.append(pkg_name.lower())
-        
-        if not packages:
+                name_item = self.package_table.item(row, 1)
+                source_item = self.package_table.item(row, 5)
+                if not name_item:
+                    continue
+                pkg_name = name_item.text().strip().lower()
+                source = source_item.text() if source_item else "pacman"
+                if source not in packages_by_source:
+                    packages_by_source[source] = []
+                packages_by_source[source].append(pkg_name)
+        if not packages_by_source:
             self.log("No packages selected for update")
-            # QMessageBox.warning(self, "No Selection", "Please select packages to update")
             return
-        
-        self.log(f"Selected packages for update: {', '.join(packages)}")
-        
-        # reply = QMessageBox.question(self, "Confirm Update", 
-        #                             f"Update {len(packages)} package(s)?")
-        # if reply != QMessageBox.StandardButton.Yes:
-        #     return
-        
-        self.log(f"Proceeding with update of {len(packages)} packages...")
-        
-        self.log(f"Starting update of {len(packages)} packages...")
-        
+        self.log(f"Selected packages for update: {', '.join([f'{pkg} ({source})' for source, pkgs in packages_by_source.items() for pkg in pkgs])}")
         def update():
-            self.log("Update thread started")
             try:
-                cmd = ["pacman", "-Syu", "--noconfirm"] + packages
-                self.log(f"Running command: {' '.join(cmd)}")
-                worker = CommandWorker(cmd, sudo=True)
-                worker.output.connect(self.log)
-                worker.error.connect(self.log)
-                def on_finished():
-                    self.log("Update completed")
-                    self.show_message.emit("Update Complete", f"Successfully updated {len(packages)} package(s).")
-                worker.finished.connect(on_finished)
-                worker.run()
+                for source, pkgs in packages_by_source.items():
+                    if source == 'pacman':
+                        cmd = ["pacman", "-S", "--noconfirm"] + pkgs
+                        worker = CommandWorker(cmd, sudo=True)
+                        worker.output.connect(self.log)
+                        worker.error.connect(self.log)
+                        worker.run()
+                    elif source == 'AUR':
+                        env, _ = self.prepare_askpass_env()
+                        cmd = ["yay", "-S", "--noconfirm"] + pkgs
+                        worker = CommandWorker(cmd, sudo=False, env=env)
+                        worker.output.connect(self.log)
+                        worker.error.connect(self.log)
+                        worker.run()
+                self.show_message.emit("Update Complete", f"Successfully updated {sum(len(v) for v in packages_by_source.values())} package(s).")
             except Exception as e:
                 self.log(f"Error in update thread: {str(e)}")
-        
         Thread(target=update, daemon=True).start()
     
     def ignore_selected(self):
-        selected_rows = self.package_table.selectionModel().selectedRows()
-        if not selected_rows:
+        items = []
+        for row in range(self.package_table.rowCount()):
+            checkbox = self.get_row_checkbox(row)
+            if checkbox is not None and checkbox.isChecked():
+                name_item = self.package_table.item(row, 1)
+                if name_item:
+                    items.append(name_item.text().strip())
+        if not items:
             self.log("No packages selected to ignore")
-            # QMessageBox.warning(self, "No Selection", "Please select packages to ignore")
             return
-        
-        self.log(f"Ignored {len(selected_rows)} package(s)")
+        ignored = self.load_ignored_updates()
+        for n in items:
+            ignored.add(n)
+        self.save_ignored_updates(ignored)
+        self.log(f"Ignored {len(items)} package(s)")
+        if self.current_view == "updates":
+            self.load_updates()
     
     def manage_ignored(self):
-        QMessageBox.information(self, "Manage Ignored", "Manage ignored updates here")
+        ignored = sorted(self.load_ignored_updates())
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Manage Ignored Updates")
+        lay = QVBoxLayout()
+        lst = QListWidget()
+        for name in ignored:
+            it = QListWidgetItem(name)
+            it.setCheckState(Qt.CheckState.Unchecked)
+            lst.addItem(it)
+        lay.addWidget(lst)
+        row = QWidget()
+        h = QHBoxLayout(row)
+        btn_remove = QPushButton("Remove Selected")
+        btn_close = QPushButton("Close")
+        h.addWidget(btn_remove)
+        h.addWidget(btn_close)
+        lay.addWidget(row)
+        def remove_selected():
+            rem = []
+            for i in range(lst.count()):
+                it = lst.item(i)
+                if it.checkState() == Qt.CheckState.Checked:
+                    rem.append(it.text())
+            if rem:
+                s = self.load_ignored_updates()
+                for r in rem:
+                    s.discard(r)
+                self.save_ignored_updates(s)
+                for i in reversed(range(lst.count())):
+                    it = lst.item(i)
+                    if it.checkState() == Qt.CheckState.Checked:
+                        lst.takeItem(i)
+                if self.current_view == "updates":
+                    self.load_updates()
+        btn_remove.clicked.connect(remove_selected)
+        btn_close.clicked.connect(dlg.accept)
+        dlg.setLayout(lay)
+        dlg.exec()
     
     def install_selected(self):
         packages_by_source = {}

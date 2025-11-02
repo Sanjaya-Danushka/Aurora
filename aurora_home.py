@@ -144,6 +144,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.filtered_results = []
         # Working bundle state (list of {name,id,source,version?})
         self.bundle_items = []
+        # Settings state
+        self.settings = self.load_settings()
         self.packages_ready.connect(self.on_packages_loaded)
         self.discover_results_ready.connect(self.display_discover_results)
         self.show_message.connect(self._show_message)
@@ -1025,6 +1027,9 @@ fi
         """Switch to bundles view"""
         self.switch_view("bundles")
     
+    def show_settings(self):
+        self.switch_view("settings")
+    
     def sudo_install_selected(self):
         """Install selected packages with sudo privileges"""
         selected_rows = []
@@ -1134,6 +1139,17 @@ fi
         self.large_search_box = LargeSearchBox()
         self.large_search_box.search_requested.connect(self.on_large_search_requested)
         layout.addWidget(self.large_search_box)
+        
+        # Settings container (hidden by default)
+        self.settings_container = QScrollArea()
+        self.settings_container.setWidgetResizable(True)
+        self.settings_container.setVisible(False)
+        self.settings_root = QWidget()
+        self.settings_layout = QVBoxLayout(self.settings_root)
+        self.settings_layout.setContentsMargins(12, 12, 12, 12)
+        self.settings_layout.setSpacing(12)
+        self.settings_container.setWidget(self.settings_root)
+        layout.addWidget(self.settings_container)
         
         # Packages Table
         self.package_table = QTableWidget()
@@ -1495,6 +1511,7 @@ fi
             self.loading_widget.stop_animation()
             self.loading_widget.setVisible(False)
             self.cancel_install_btn.setVisible(False)
+            self.settings_container.setVisible(False)
         except Exception:
             pass
         # Cancel ongoing non-install tasks
@@ -1513,6 +1530,7 @@ fi
             "installed": ("📦 Installed Packages", "View all installed packages on your system"),
             "discover": ("/home/alexa/StudioProjects/Aurora/assets/icons/discover/search.svg", "Discover Packages", "Search and discover new packages to install"),
             "bundles": ("📋 Package Bundles", "Manage package bundles"),
+            "settings": (os.path.join(os.path.dirname(__file__), "assets", "icons", "settings.svg"), "Settings", "Configure NeoArch settings and plugins"),
         }
         
         header_data = headers.get(view_id, ("NeoArch", ""))
@@ -1556,6 +1574,19 @@ fi
             self.package_table.setVisible(True)
             self.load_more_btn.setVisible(False)
             QTimer.singleShot(0, self.refresh_bundles_table)
+        elif view_id == "settings":
+            # Show settings panel, hide package table & search
+            try:
+                self.loading_widget.setVisible(False)
+                self.loading_widget.stop_animation()
+            except Exception:
+                pass
+            self.large_search_box.setVisible(False)
+            self.package_table.setVisible(False)
+            self.load_more_btn.setVisible(False)
+            self.settings_container.setVisible(True)
+            self.header_info.setText("Configure NeoArch settings and plugins")
+            QTimer.singleShot(0, self.build_settings_ui)
     
     def update_filters_panel(self, view_id):
         # Clear existing filters section
@@ -1600,6 +1631,11 @@ fi
             self.update_discover_sources()
         elif view_id == "bundles":
             # No source or status filters for bundles
+            self.sources_section.setVisible(False)
+            self.filters_section.setVisible(False)
+            if hasattr(self, 'sources_title_label'):
+                self.sources_title_label.setVisible(False)
+        elif view_id == "settings":
             self.sources_section.setVisible(False)
             self.filters_section.setVisible(False)
             if hasattr(self, 'sources_title_label'):
@@ -3783,8 +3819,223 @@ fi
         for checkbox in self.source_checkboxes.values():
             checkbox.setChecked(False)
     
-    def show_settings(self):
-        QMessageBox.information(self, "Settings", "Settings dialog coming soon")
+    def load_settings(self):
+        try:
+            base = os.path.join(os.path.expanduser('~'), '.config', 'aurora')
+            os.makedirs(base, exist_ok=True)
+            path = os.path.join(base, 'settings.json')
+            if os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            else:
+                data = {}
+            default = {
+                'auto_check_updates': True,
+                'npm_user_mode': True,
+                'include_local_source': True,
+                'enabled_plugins': []
+            }
+            default.update(data if isinstance(data, dict) else {})
+            return default
+        except Exception:
+            return {
+                'auto_check_updates': True,
+                'npm_user_mode': True,
+                'include_local_source': True,
+                'enabled_plugins': []
+            }
+    
+    def save_settings(self):
+        try:
+            base = os.path.join(os.path.expanduser('~'), '.config', 'aurora')
+            os.makedirs(base, exist_ok=True)
+            path = os.path.join(base, 'settings.json')
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(self.settings, f, indent=2)
+        except Exception as e:
+            self.log(f"Settings save error: {str(e)}")
+    
+    def get_user_plugins_dir(self):
+        p = os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'plugins')
+        try:
+            os.makedirs(p, exist_ok=True)
+        except Exception:
+            pass
+        return p
+    
+    def scan_plugins(self):
+        plugs = []
+        try:
+            user_dir = self.get_user_plugins_dir()
+            for fn in sorted(os.listdir(user_dir)):
+                if fn.endswith('.py'):
+                    plugs.append({'name': os.path.splitext(fn)[0], 'path': os.path.join(user_dir, fn), 'location': 'User'})
+        except Exception:
+            pass
+        return plugs
+    
+    def build_settings_ui(self):
+        while self.settings_layout.count():
+            item = self.settings_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        tabs = QTabWidget()
+        gen = QWidget(); gen_l = QVBoxLayout(gen); gen_l.setContentsMargins(8,8,8,8); gen_l.setSpacing(8)
+        self.build_general_settings(gen_l)
+        plugs = QWidget(); plugs_l = QVBoxLayout(plugs); plugs_l.setContentsMargins(8,8,8,8); plugs_l.setSpacing(8)
+        self.build_plugins_settings(plugs_l)
+        tabs.addTab(gen, "General")
+        tabs.addTab(plugs, "Plugins")
+        self.settings_layout.addWidget(tabs)
+        self.settings_layout.addStretch()
+    
+    def build_general_settings(self, layout):
+        box = QGroupBox("General Settings")
+        grid = QGridLayout(box)
+        cb_auto = QCheckBox("Auto check updates on launch")
+        cb_auto.setChecked(bool(self.settings.get('auto_check_updates')))
+        cb_auto.toggled.connect(lambda v: self._update_setting('auto_check_updates', v))
+        grid.addWidget(cb_auto, 0, 0, 1, 2)
+        cb_local = QCheckBox("Include Local source (custom scripts)")
+        cb_local.setChecked(bool(self.settings.get('include_local_source')))
+        cb_local.toggled.connect(lambda v: self._update_setting('include_local_source', v))
+        grid.addWidget(cb_local, 1, 0, 1, 2)
+        cb_npm = QCheckBox("Use npm user mode for global installs")
+        cb_npm.setChecked(bool(self.settings.get('npm_user_mode')))
+        cb_npm.toggled.connect(lambda v: self._update_setting('npm_user_mode', v))
+        grid.addWidget(cb_npm, 2, 0, 1, 2)
+        layout.addWidget(box)
+        btns = QHBoxLayout()
+        btn_export = QPushButton("Export Settings")
+        btn_export.clicked.connect(self.export_settings)
+        btn_import = QPushButton("Import Settings")
+        btn_import.clicked.connect(self.import_settings)
+        btns.addWidget(btn_export)
+        btns.addWidget(btn_import)
+        btns.addStretch()
+        layout.addLayout(btns)
+    
+    def _update_setting(self, key, value):
+        self.settings[key] = value
+        self.save_settings()
+    
+    def export_settings(self):
+        path, _ = QFileDialog.getSaveFileName(self, "Export Settings", os.path.expanduser('~'), "Settings JSON (*.json)")
+        if not path:
+            return
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(self.settings, f, indent=2)
+            self._show_message("Export Settings", f"Saved to {path}")
+        except Exception as e:
+            self._show_message("Export Settings", f"Failed: {e}")
+    
+    def import_settings(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Import Settings", os.path.expanduser('~'), "Settings JSON (*.json)")
+        if not path:
+            return
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                self.settings.update(data)
+                self.save_settings()
+                self.build_settings_ui()
+                self._show_message("Import Settings", "Imported")
+        except Exception as e:
+            self._show_message("Import Settings", f"Failed: {e}")
+    
+    def build_plugins_settings(self, layout):
+        actions = QHBoxLayout()
+        btn_add = QPushButton("Install Plugin")
+        btn_add.clicked.connect(self.install_plugin)
+        btn_remove = QPushButton("Remove Selected")
+        btn_remove.clicked.connect(self.remove_selected_plugins)
+        actions.addWidget(btn_add)
+        actions.addWidget(btn_remove)
+        actions.addStretch()
+        layout.addLayout(actions)
+        self.plugins_table = QTableWidget()
+        self.plugins_table.setColumnCount(3)
+        self.plugins_table.setHorizontalHeaderLabels(["Enabled", "Plugin", "Location"])
+        self.plugins_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self.plugins_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.plugins_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        layout.addWidget(self.plugins_table)
+        self.refresh_plugins_table()
+        self.plugins_table.itemChanged.connect(self.on_plugin_item_changed)
+    
+    def refresh_plugins_table(self):
+        self._plugins_populating = True
+        plugs = self.scan_plugins()
+        enabled = set(self.settings.get('enabled_plugins') or [])
+        self.plugins_table.setRowCount(0)
+        for p in plugs:
+            row = self.plugins_table.rowCount()
+            self.plugins_table.insertRow(row)
+            enabled_item = QTableWidgetItem()
+            enabled_item.setFlags(enabled_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            enabled_item.setCheckState(Qt.CheckState.Checked if p['name'] in enabled else Qt.CheckState.Unchecked)
+            name_item = QTableWidgetItem(p['name'])
+            loc_item = QTableWidgetItem(p.get('location', 'User'))
+            self.plugins_table.setItem(row, 0, enabled_item)
+            self.plugins_table.setItem(row, 1, name_item)
+            self.plugins_table.setItem(row, 2, loc_item)
+        self._plugins_populating = False
+    
+    def on_plugin_item_changed(self, item):
+        if getattr(self, '_plugins_populating', False):
+            return
+        if item.column() != 0:
+            return
+        row = item.row()
+        name_item = self.plugins_table.item(row, 1)
+        if not name_item:
+            return
+        name = name_item.text().strip()
+        enabled = set(self.settings.get('enabled_plugins') or [])
+        if item.checkState() == Qt.CheckState.Checked:
+            enabled.add(name)
+        else:
+            enabled.discard(name)
+        self.settings['enabled_plugins'] = sorted(enabled)
+        self.save_settings()
+    
+    def install_plugin(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Install Plugin", os.path.expanduser('~'), "Python Plugin (*.py)")
+        if not path:
+            return
+        try:
+            dst = os.path.join(self.get_user_plugins_dir(), os.path.basename(path))
+            shutil.copy2(path, dst)
+            self.refresh_plugins_table()
+            self._show_message("Install Plugin", f"Installed: {os.path.basename(path)}")
+        except Exception as e:
+            self._show_message("Install Plugin", f"Failed: {e}")
+    
+    def remove_selected_plugins(self):
+        rows = self.plugins_table.selectionModel().selectedRows()
+        if not rows:
+            return
+        removed = 0
+        for mi in rows:
+            r = mi.row()
+            name_item = self.plugins_table.item(r, 1)
+            if not name_item:
+                continue
+            name = name_item.text().strip()
+            path = os.path.join(self.get_user_plugins_dir(), name + '.py')
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+                    removed += 1
+                enabled = set(self.settings.get('enabled_plugins') or [])
+                enabled.discard(name)
+                self.settings['enabled_plugins'] = sorted(enabled)
+            except Exception:
+                pass
+        self.save_settings()
+        self.refresh_plugins_table()
     
     def _show_message(self, title, text):
         self.log(f"{title}: {text}")

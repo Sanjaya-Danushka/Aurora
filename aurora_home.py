@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF, QItemSelectionModel, qInstallMessageHandler, QtMsgType
 from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
 from PyQt6.QtSvg import QSvgRenderer
+from collections import Counter
 
 from git_manager import GitManager
 
@@ -1516,15 +1517,11 @@ fi
                                 break  # Found a working AUR helper, stop trying others
                         except (subprocess.CalledProcessError, FileNotFoundError):
                             continue
-                # Check for Flatpak updates (user scope)
+                # Check for Flatpak updates (installed apps with updates)
                 try:
-                    try:
-                        self.ensure_flathub_user_remote()
-                    except Exception:
-                        pass
                     fp = subprocess.run([
-                        "flatpak", "--user", "remote-ls", "--updates",
-                        "--columns=application,installed-version,latest-version", "flathub"
+                        "flatpak", "list", "--app", "--updates",
+                        "--columns=application,version,latest"
                     ], capture_output=True, text=True, timeout=60)
                     if fp.returncode == 0 and fp.stdout:
                         lines = [l for l in fp.stdout.strip().split('\n') if l.strip()]
@@ -1543,35 +1540,45 @@ fi
                                 })
                 except Exception:
                     pass
-                # Check for npm global user updates
+                # Check for npm global updates in both default and user-prefix envs, merge results
                 try:
-                    env = os.environ.copy()
+                    results = []
+                    # default env
+                    np_def = subprocess.run(["npm", "outdated", "-g", "--json"], capture_output=True, text=True, timeout=60)
+                    results.append((np_def.returncode, np_def.stdout))
+                    # user-prefix env
+                    env_user = os.environ.copy()
                     try:
                         npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
                         os.makedirs(npm_prefix, exist_ok=True)
-                        env['npm_config_prefix'] = npm_prefix
-                        env['NPM_CONFIG_PREFIX'] = npm_prefix
-                        env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
+                        env_user['npm_config_prefix'] = npm_prefix
+                        env_user['NPM_CONFIG_PREFIX'] = npm_prefix
+                        env_user['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env_user.get('PATH', '')
                     except Exception:
                         pass
-                    np = subprocess.run(["npm", "outdated", "-g", "--json"], capture_output=True, text=True, env=env, timeout=60)
-                    if np.returncode in (0, 1) and np.stdout and np.stdout.strip():
-                        try:
-                            data = json.loads(np.stdout)
-                            if isinstance(data, dict):
-                                for name, info in data.items():
-                                    cur = (info.get('current') or info.get('installed') or '').strip()
-                                    lat = (info.get('latest') or '').strip()
-                                    if name and cur and lat and cur != lat:
-                                        packages.append({
-                                            'name': name,
-                                            'version': cur,
-                                            'new_version': lat,
-                                            'id': name,
-                                            'source': 'npm'
-                                        })
-                        except Exception:
-                            pass
+                    np_user = subprocess.run(["npm", "outdated", "-g", "--json"], capture_output=True, text=True, env=env_user, timeout=60)
+                    results.append((np_user.returncode, np_user.stdout))
+                    seen = set()
+                    for code, out in results:
+                        if code in (0, 1) and out and out.strip():
+                            try:
+                                data = json.loads(out)
+                                if isinstance(data, dict):
+                                    for name, info in data.items():
+                                        cur = (info.get('current') or info.get('installed') or '').strip()
+                                        lat = (info.get('latest') or '').strip()
+                                        key = (name, cur, lat)
+                                        if name and cur and lat and cur != lat and key not in seen:
+                                            packages.append({
+                                                'name': name,
+                                                'version': cur,
+                                                'new_version': lat,
+                                                'id': name,
+                                                'source': 'npm'
+                                            })
+                                            seen.add(key)
+                            except Exception:
+                                pass
                 except Exception:
                     pass
                 # Check for Local updates via config
@@ -1690,6 +1697,12 @@ fi
         self.packages_per_page = 10
         self.package_table.setRowCount(0)
         self.display_page()
+        if self.current_view == "updates" and hasattr(self, 'source_card') and self.source_card:
+            try:
+                states = self.source_card.get_selected_sources()
+                self.on_updates_source_changed(states)
+            except Exception:
+                pass
         self.log(f"Loaded {len(packages)} packages total. Showing first 10...")
         
         # Hide loading spinner, stop animation, and show packages table

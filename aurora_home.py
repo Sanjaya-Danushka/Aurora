@@ -516,6 +516,25 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         except Exception:
             pass
 
+    def get_local_updates_file_path(self):
+        cfg = os.path.join(os.path.expanduser('~'), '.config', 'neoarch')
+        try:
+            os.makedirs(cfg, exist_ok=True)
+        except Exception:
+            pass
+        return os.path.join(cfg, 'local_updates.json')
+
+    def load_local_update_entries(self):
+        p = self.get_local_updates_file_path()
+        try:
+            with open(p, 'r') as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                return data
+        except Exception:
+            pass
+        return []
+
     def cmd_exists(self, cmd):
         return shutil.which(cmd) is not None
 
@@ -1313,7 +1332,10 @@ fi
         self.source_card.source_changed.connect(self.on_updates_source_changed)
         sources = [
             ("pacman", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "pacman.svg")),
-            ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg"))
+            ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg")),
+            ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
+            ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg")),
+            ("Local", os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"))
         ]
         for source_name, icon_path in sources:
             self.source_card.add_source(source_name, icon_path)
@@ -1323,11 +1345,21 @@ fi
         base = getattr(self, 'updates_all', self.all_packages)
         show_pacman = source_states.get("pacman", True)
         show_aur = source_states.get("AUR", True)
+        show_flatpak = source_states.get("Flatpak", True)
+        show_npm = source_states.get("npm", True)
+        show_local = source_states.get("Local", True)
         filtered = []
         for pkg in base:
-            if pkg.get('source') == 'pacman' and show_pacman:
+            s = pkg.get('source')
+            if s == 'pacman' and show_pacman:
                 filtered.append(pkg)
-            elif pkg.get('source') == 'AUR' and show_aur:
+            elif s == 'AUR' and show_aur:
+                filtered.append(pkg)
+            elif s == 'Flatpak' and show_flatpak:
+                filtered.append(pkg)
+            elif s == 'npm' and show_npm:
+                filtered.append(pkg)
+            elif s == 'Local' and show_local:
                 filtered.append(pkg)
         self.all_packages = filtered
         self.current_page = 0
@@ -1484,6 +1516,97 @@ fi
                                 break  # Found a working AUR helper, stop trying others
                         except (subprocess.CalledProcessError, FileNotFoundError):
                             continue
+                # Check for Flatpak updates (user scope)
+                try:
+                    try:
+                        self.ensure_flathub_user_remote()
+                    except Exception:
+                        pass
+                    fp = subprocess.run([
+                        "flatpak", "--user", "remote-ls", "--updates",
+                        "--columns=application,installed-version,latest-version", "flathub"
+                    ], capture_output=True, text=True, timeout=60)
+                    if fp.returncode == 0 and fp.stdout:
+                        lines = [l for l in fp.stdout.strip().split('\n') if l.strip()]
+                        for line in lines:
+                            cols = line.split('\t')
+                            app_id = cols[0].strip() if len(cols) > 0 else ''
+                            inst = cols[1].strip() if len(cols) > 1 else ''
+                            latest = cols[2].strip() if len(cols) > 2 else ''
+                            if app_id and inst and latest and inst != latest:
+                                packages.append({
+                                    'name': app_id,
+                                    'version': inst,
+                                    'new_version': latest,
+                                    'id': app_id,
+                                    'source': 'Flatpak'
+                                })
+                except Exception:
+                    pass
+                # Check for npm global user updates
+                try:
+                    env = os.environ.copy()
+                    try:
+                        npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                        os.makedirs(npm_prefix, exist_ok=True)
+                        env['npm_config_prefix'] = npm_prefix
+                        env['NPM_CONFIG_PREFIX'] = npm_prefix
+                        env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
+                    except Exception:
+                        pass
+                    np = subprocess.run(["npm", "outdated", "-g", "--json"], capture_output=True, text=True, env=env, timeout=60)
+                    if np.returncode in (0, 1) and np.stdout and np.stdout.strip():
+                        try:
+                            data = json.loads(np.stdout)
+                            if isinstance(data, dict):
+                                for name, info in data.items():
+                                    cur = (info.get('current') or info.get('installed') or '').strip()
+                                    lat = (info.get('latest') or '').strip()
+                                    if name and cur and lat and cur != lat:
+                                        packages.append({
+                                            'name': name,
+                                            'version': cur,
+                                            'new_version': lat,
+                                            'id': name,
+                                            'source': 'npm'
+                                        })
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                # Check for Local updates via config
+                try:
+                    entries = self.load_local_update_entries()
+                    for e in entries:
+                        name = (e.get('name') or '').strip()
+                        if not name:
+                            continue
+                        installed = (e.get('installed_version') or '').strip()
+                        if not installed and e.get('installed_version_cmd'):
+                            try:
+                                r = subprocess.run(["bash", "-lc", e['installed_version_cmd']], capture_output=True, text=True, timeout=30)
+                                if r.returncode == 0:
+                                    installed = (r.stdout or '').strip().splitlines()[0].strip()
+                            except Exception:
+                                installed = ''
+                        latest = (e.get('latest_version') or '').strip()
+                        if not latest and e.get('latest_version_cmd'):
+                            try:
+                                r = subprocess.run(["bash", "-lc", e['latest_version_cmd']], capture_output=True, text=True, timeout=30)
+                                if r.returncode == 0:
+                                    latest = (r.stdout or '').strip().splitlines()[0].strip()
+                            except Exception:
+                                latest = ''
+                        if installed and latest and installed != latest:
+                            packages.append({
+                                'name': name,
+                                'version': installed,
+                                'new_version': latest,
+                                'id': (e.get('id') or name),
+                                'source': 'Local'
+                            })
+                except Exception:
+                    pass
                 try:
                     ignored = self.load_ignored_updates()
                     if ignored:
@@ -2084,14 +2207,17 @@ fi
             checkbox = self.get_row_checkbox(row)
             if checkbox is not None and checkbox.isChecked():
                 name_item = self.package_table.item(row, 1)
+                id_item = self.package_table.item(row, 2)
                 source_item = self.package_table.item(row, 5)
                 if not name_item:
                     continue
-                pkg_name = name_item.text().strip().lower()
+                pkg_name = name_item.text().strip()
+                pkg_id = id_item.text().strip() if id_item else pkg_name
                 source = source_item.text() if source_item else "pacman"
                 if source not in packages_by_source:
                     packages_by_source[source] = []
-                packages_by_source[source].append(pkg_name)
+                token = pkg_id if source == 'Flatpak' else pkg_name
+                packages_by_source[source].append(token)
         if not packages_by_source:
             self.log("No packages selected for update")
             return
@@ -2112,6 +2238,49 @@ fi
                         worker.output.connect(self.log)
                         worker.error.connect(self.log)
                         worker.run()
+                    elif source == 'Flatpak':
+                        cmd = ["flatpak", "--user", "update", "-y"] + pkgs
+                        worker = CommandWorker(cmd, sudo=False)
+                        worker.output.connect(self.log)
+                        worker.error.connect(self.log)
+                        worker.run()
+                    elif source == 'npm':
+                        env = os.environ.copy()
+                        try:
+                            npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                            os.makedirs(npm_prefix, exist_ok=True)
+                            env['npm_config_prefix'] = npm_prefix
+                            env['NPM_CONFIG_PREFIX'] = npm_prefix
+                            env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
+                        except Exception:
+                            pass
+                        cmd = ["npm", "update", "-g"] + pkgs
+                        worker = CommandWorker(cmd, sudo=False, env=env)
+                        worker.output.connect(self.log)
+                        worker.error.connect(self.log)
+                        worker.run()
+                    elif source == 'Local':
+                        entries = { (e.get('id') or e.get('name')): e for e in self.load_local_update_entries() }
+                        for token in pkgs:
+                            e = entries.get(token) or entries.get(token.strip())
+                            if not e:
+                                continue
+                            upd = e.get('update_cmd')
+                            if not upd:
+                                continue
+                            try:
+                                process = subprocess.Popen(["bash", "-lc", upd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                                while True:
+                                    line = process.stdout.readline() if process.stdout else ""
+                                    if not line and process.poll() is not None:
+                                        break
+                                    if line:
+                                        self.log(line.strip())
+                                _, stderr = process.communicate()
+                                if process.returncode != 0 and stderr:
+                                    self.log(f"Error: {stderr}")
+                            except Exception as ex:
+                                self.log(str(ex))
                 self.show_message.emit("Update Complete", f"Successfully updated {sum(len(v) for v in packages_by_source.values())} package(s).")
                 QTimer.singleShot(0, self.refresh_packages)
             except Exception as e:

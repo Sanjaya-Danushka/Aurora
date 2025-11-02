@@ -164,6 +164,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.search_timer.setSingleShot(True)
         self.search_timer.timeout.connect(self.perform_search)
         self.search_input.textChanged.connect(self.on_search_text_changed)
+        QTimer.singleShot(1500, self.run_first_run_checks)
 
     def on_large_search_requested(self, query):
         """Handle search request from large search box"""
@@ -487,6 +488,126 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 ], capture_output=True, text=True, timeout=30)
         except Exception:
             pass
+
+    def cmd_exists(self, cmd):
+        return shutil.which(cmd) is not None
+
+    def get_missing_dependencies(self):
+        missing = []
+        if not self.cmd_exists("flatpak"):
+            missing.append("flatpak")
+        if not self.cmd_exists("git"):
+            missing.append("git")
+        if not self.cmd_exists("node"):
+            missing.append("nodejs")
+        if not self.cmd_exists("npm"):
+            missing.append("npm")
+        if not self.cmd_exists("docker"):
+            missing.append("docker")
+        if not self.cmd_exists("yay"):
+            missing.append("yay")
+        return missing
+
+    def run_first_run_checks(self):
+        missing = self.get_missing_dependencies()
+        if not missing:
+            return
+        text = "The following dependencies are missing and are required for best experience:\n\n" + "\n".join(f"• {m}" for m in missing) + "\n\nInstall now?"
+        reply = QMessageBox.question(self, "Setup Environment", text, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes)
+        if reply == QMessageBox.StandardButton.Yes:
+            Thread(target=lambda: self.install_dependencies(missing), daemon=True).start()
+
+    def install_dependencies(self, missing):
+        try:
+            pacman_pkgs = [p for p in missing if p != "yay"]
+            if pacman_pkgs:
+                cmd = ["pacman", "-S", "--needed", "--noconfirm"] + pacman_pkgs
+                worker = CommandWorker(cmd, sudo=True)
+                worker.output.connect(self.log)
+                worker.error.connect(self.log)
+                done_event = Event()
+                worker.finished.connect(lambda: done_event.set())
+                worker.run()
+                done_event.wait(timeout=1)
+            if "yay" in missing and self.cmd_exists("git"):
+                self.install_yay_helper()
+            self.show_message.emit("Environment", "Dependency setup completed")
+        except Exception as e:
+            self.show_message.emit("Environment", f"Setup failed: {str(e)}")
+
+    def install_yay_helper(self):
+        tmpdir = tempfile.mkdtemp(prefix="neoarch-yay-")
+        try:
+            clone = subprocess.run(["git", "clone", "https://aur.archlinux.org/yay-bin.git", tmpdir], capture_output=True, text=True, timeout=120)
+            if clone.returncode != 0:
+                self.log(f"Error: {clone.stderr}")
+                return
+            env, cleanup = self.prepare_askpass_env()
+            cmd = f"cd '{tmpdir}' && makepkg -si --noconfirm"
+            process = subprocess.Popen(["bash", "-lc", cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+            while True:
+                line = process.stdout.readline() if process.stdout else ""
+                if not line and process.poll() is not None:
+                    break
+                if line:
+                    self.log(line.strip())
+            _, stderr = process.communicate()
+            if process.returncode != 0 and stderr:
+                self.log(f"Error: {stderr}")
+        finally:
+            try:
+                shutil.rmtree(tmpdir, ignore_errors=True)
+            except Exception:
+                pass
+
+    def update_core_tools(self):
+        self.loading_widget.setVisible(True)
+        self.loading_widget.set_message("Updating tools...")
+        self.loading_widget.start_animation()
+        def do_update():
+            try:
+                deps = ["flatpak", "git", "nodejs", "npm", "docker"]
+                if self.cmd_exists("pacman"):
+                    w1 = CommandWorker(["pacman", "-Syu", "--noconfirm"] + deps, sudo=True)
+                    w1.output.connect(self.log)
+                    w1.error.connect(self.log)
+                    w1.run()
+                try:
+                    self.ensure_flathub_user_remote()
+                except Exception:
+                    pass
+                if self.cmd_exists("flatpak"):
+                    w2 = CommandWorker(["flatpak", "--user", "update", "-y"], sudo=False)
+                    w2.output.connect(self.log)
+                    w2.error.connect(self.log)
+                    w2.run()
+                if self.cmd_exists("npm"):
+                    env = os.environ.copy()
+                    try:
+                        npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                        os.makedirs(npm_prefix, exist_ok=True)
+                        env['npm_config_prefix'] = npm_prefix
+                        env['NPM_CONFIG_PREFIX'] = npm_prefix
+                        env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
+                    except Exception:
+                        pass
+                    w3 = CommandWorker(["npm", "update", "-g"], sudo=False, env=env)
+                    w3.output.connect(self.log)
+                    w3.error.connect(self.log)
+                    w3.run()
+                if self.cmd_exists("yay"):
+                    env, _ = self.prepare_askpass_env()
+                    w4 = CommandWorker(["yay", "-Syu", "--noconfirm"], sudo=False, env=env)
+                    w4.output.connect(self.log)
+                    w4.error.connect(self.log)
+                    w4.run()
+                self.show_message.emit("Environment", "Tools updated")
+            except Exception as e:
+                self.show_message.emit("Environment", f"Update failed: {str(e)}")
+            finally:
+                self.loading_widget.stop_animation()
+                self.loading_widget.setVisible(False)
+        Thread(target=do_update, daemon=True).start()
     
     def get_sudo_askpass(self):
         candidates = [
@@ -988,6 +1109,12 @@ fi
                 "Help & Documentation",
                 self.show_help
             )
+            tools_btn = self.create_toolbar_button(
+                os.path.join(icon_dir, "refresh.svg"),
+                "Update Tools",
+                self.update_core_tools
+            )
+            layout.addWidget(tools_btn)
             layout.addWidget(help_btn)
             
             self.toolbar_layout.addLayout(layout)

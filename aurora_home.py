@@ -709,6 +709,23 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     self.ensure_flathub_user_remote()
                 except Exception:
                     pass
+                # Flatpak updates mark
+                try:
+                    update_ids = set()
+                    for scope in ([], ["--user"], ["--system"]):
+                        cmdu = ["flatpak"] + scope + ["list", "--app", "--updates", "--columns=application,version"]
+                        fu = subprocess.run(cmdu, capture_output=True, text=True, timeout=60)
+                        if fu.returncode == 0 and fu.stdout:
+                            for ln in [x for x in fu.stdout.strip().split('\n') if x.strip()]:
+                                cols = ln.split('\t')
+                                if cols:
+                                    update_ids.add(cols[0].strip())
+                    if update_ids:
+                        for pkg in packages:
+                            if pkg.get('source') == 'Flatpak' and pkg.get('name') in update_ids:
+                                pkg['has_update'] = True
+                except Exception:
+                    pass
                 if self.cmd_exists("flatpak"):
                     w2 = CommandWorker(["flatpak", "--user", "update", "-y"], sudo=False)
                     w2.output.connect(self.log)
@@ -1532,7 +1549,8 @@ fi
             ("pacman", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "pacman.svg")),
             ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg")),
             ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
-            ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg"))
+            ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg")),
+            ("Local", os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg")),
         ]
         
         for source_name, icon_path in sources:
@@ -1588,26 +1606,8 @@ fi
         self.sources_layout.addWidget(self.source_card)
 
     def on_installed_source_changed(self, source_states):
-        base = getattr(self, 'installed_all', self.all_packages)
-        show_pacman = source_states.get("pacman", True)
-        show_aur = source_states.get("AUR", True)
-        show_flatpak = source_states.get("Flatpak", True)
-        show_npm = source_states.get("npm", True)
-        filtered = []
-        for pkg in base:
-            s = pkg.get('source')
-            if s == 'pacman' and show_pacman:
-                filtered.append(pkg)
-            elif s == 'AUR' and show_aur:
-                filtered.append(pkg)
-            elif s == 'Flatpak' and show_flatpak:
-                filtered.append(pkg)
-            elif s == 'npm' and show_npm:
-                filtered.append(pkg)
-        self.all_packages = filtered
-        self.current_page = 0
-        self.package_table.setRowCount(0)
-        self.display_page()
+        # Re-apply combined filters (source + status)
+        self.apply_filters()
 
     def on_updates_source_changed(self, source_states):
         base = getattr(self, 'updates_all', self.all_packages)
@@ -1998,6 +1998,42 @@ fi
                 for pkg in packages:
                     if pkg['name'] in aur_packages:
                         pkg['source'] = 'AUR'
+                # AUR updates using helper
+                try:
+                    aur_updates = {}
+                    helper = None
+                    # Prefer yay, fallback others
+                    for h in ['yay', 'paru', 'trizen', 'pikaur']:
+                        try:
+                            r = subprocess.run([h, "-Qua"], capture_output=True, text=True, timeout=60)
+                            if r.returncode in (0, 1):
+                                helper = h
+                                output = (r.stdout or '').strip()
+                                if output:
+                                    for ln in [x for x in output.split('\n') if x.strip()]:
+                                        # try to parse: name old -> new  OR name new
+                                        parts = ln.split()
+                                        if len(parts) >= 2:
+                                            name = parts[0]
+                                            # if contains '->', new version likely at end
+                                            if '->' in ln:
+                                                try:
+                                                    new_v = parts[-1]
+                                                except Exception:
+                                                    new_v = ''
+                                            else:
+                                                new_v = parts[1]
+                                            aur_updates[name] = new_v
+                                break
+                        except Exception:
+                            continue
+                    if aur_updates:
+                        for pkg in packages:
+                            if pkg.get('source') == 'AUR' and pkg['name'] in aur_updates:
+                                pkg['has_update'] = True
+                                pkg['new_version'] = aur_updates.get(pkg['name'], pkg.get('new_version', ''))
+                except Exception:
+                    pass
 
                 # Flatpak installed apps
                 try:
@@ -2038,6 +2074,87 @@ fi
                                     'source': 'npm',
                                     'has_update': False
                                 })
+                except Exception:
+                    pass
+                # npm outdated mark
+                try:
+                    results = []
+                    np_def = subprocess.run(["npm", "outdated", "-g", "--json"], capture_output=True, text=True, timeout=60)
+                    results.append((np_def.returncode, np_def.stdout))
+                    env_user = os.environ.copy()
+                    try:
+                        npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                        os.makedirs(npm_prefix, exist_ok=True)
+                        env_user['npm_config_prefix'] = npm_prefix
+                        env_user['NPM_CONFIG_PREFIX'] = npm_prefix
+                        env_user['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env_user.get('PATH', '')
+                    except Exception:
+                        pass
+                    np_user = subprocess.run(["npm", "outdated", "-g", "--json"], capture_output=True, text=True, env=env_user, timeout=60)
+                    results.append((np_user.returncode, np_user.stdout))
+                    outdated = {}
+                    for code, out in results:
+                        if code in (0, 1) and out and out.strip():
+                            try:
+                                data = json.loads(out)
+                                if isinstance(data, dict):
+                                    for name, info in data.items():
+                                        lat = (info.get('latest') or '').strip()
+                                        cur = (info.get('current') or info.get('installed') or '').strip()
+                                        if name and lat and cur and cur != lat:
+                                            outdated[name] = lat
+                            except Exception:
+                                pass
+                    if outdated:
+                        for pkg in packages:
+                            if pkg.get('source') == 'npm' and pkg.get('name') in outdated:
+                                pkg['has_update'] = True
+                                pkg['new_version'] = outdated[pkg['name']]
+                except Exception:
+                    pass
+                # Local entries and update mark
+                try:
+                    entries = self.load_local_update_entries()
+                    for e in entries:
+                        name = (e.get('name') or '').strip()
+                        if not name:
+                            continue
+                        installed = (e.get('installed_version') or '').strip()
+                        if not installed and e.get('installed_version_cmd'):
+                            try:
+                                r = subprocess.run(["bash", "-lc", e['installed_version_cmd']], capture_output=True, text=True, timeout=30)
+                                if r.returncode == 0 and r.stdout:
+                                    installed = (r.stdout or '').strip().splitlines()[0].strip()
+                            except Exception:
+                                installed = ''
+                        latest = (e.get('latest_version') or '').strip()
+                        if not latest and e.get('latest_version_cmd'):
+                            try:
+                                r = subprocess.run(["bash", "-lc", e['latest_version_cmd']], capture_output=True, text=True, timeout=30)
+                                if r.returncode == 0 and r.stdout:
+                                    latest = (r.stdout or '').strip().splitlines()[0].strip()
+                            except Exception:
+                                latest = ''
+                        if installed:
+                            pkg = {
+                                'name': name,
+                                'version': installed,
+                                'new_version': latest or installed,
+                                'id': (e.get('id') or name),
+                                'source': 'Local',
+                                'has_update': (bool(latest) and latest != installed)
+                            }
+                            packages.append(pkg)
+                except Exception:
+                    pass
+
+                # Apply ignored updates mask like Updates page
+                try:
+                    ignored = self.load_ignored_updates()
+                    if ignored:
+                        for pkg in packages:
+                            if pkg.get('name') in ignored and pkg.get('has_update'):
+                                pkg['has_update'] = False
                 except Exception:
                     pass
                 
@@ -3176,45 +3293,41 @@ fi
         Thread(target=uninstall, daemon=True).start()
     
     def apply_filters(self):
-        if self.current_view != "installed" or not self.all_packages:
+        if self.current_view != "installed":
             return
-        
-        # Get selected filters from the FilterCard component
-        selected_filters = {}
+        base = getattr(self, 'installed_all', []) or []
+        # Filter by SourceCard selection
+        selected_sources = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True, "Local": True}
+        if hasattr(self, 'source_card') and self.source_card:
+            try:
+                selected_sources.update(self.source_card.get_selected_sources())
+            except Exception:
+                pass
+        filtered_by_source = []
+        for pkg in base:
+            s = pkg.get('source')
+            if s in selected_sources and selected_sources.get(s, True):
+                filtered_by_source.append(pkg)
+        # Filter by status (Updates/Installed)
+        selected_filters = {"Updates available": True, "Installed": True}
         if hasattr(self, 'filter_card') and self.filter_card:
-            selected_filters = self.filter_card.get_selected_filters()
-        else:
-            # Fallback to showing all filters if component is not initialized
-            selected_filters = {"Updates available": True, "Installed": True}
-        
+            try:
+                selected_filters = self.filter_card.get_selected_filters()
+            except Exception:
+                pass
         show_updates = selected_filters.get("Updates available", True)
         show_installed = selected_filters.get("Installed", True)
-        
-        filtered = []
-        for pkg in self.all_packages:
+        final = []
+        for pkg in filtered_by_source:
             if pkg.get('has_update') and show_updates:
-                filtered.append(pkg)
+                final.append(pkg)
             elif not pkg.get('has_update') and show_installed:
-                filtered.append(pkg)
-        
-        self.package_table.setUpdatesEnabled(False)
+                final.append(pkg)
+        # Display via standard paginator
+        self.all_packages = final
+        self.current_page = 0
         self.package_table.setRowCount(0)
-        
-        for pkg in filtered[:10]:
-            if self.current_view == "installed":
-                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'), pkg)
-            else:
-                self.add_package_row(pkg['name'], pkg['id'], pkg['version'], pkg.get('new_version', pkg['version']), pkg.get('source', 'pacman'))
-        
-        self.package_table.setUpdatesEnabled(True)
-        
-        has_more = len(filtered) > 10
-        self.load_more_btn.setVisible(has_more)
-        if has_more:
-            remaining = len(filtered) - 10
-            self.load_more_btn.setText(f"Load More ({remaining} remaining)")
-        
-        self.log(f"Showing {len(filtered[:10])} of {len(filtered)} packages")
+        self.display_page()
 
     def apply_update_filters(self):
         if self.current_view != "updates" or not self.all_packages:

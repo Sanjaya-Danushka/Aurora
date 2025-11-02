@@ -1518,10 +1518,11 @@ fi
                         except (subprocess.CalledProcessError, FileNotFoundError):
                             continue
                 # Check for Flatpak updates (installed apps with updates)
+                added_flatpak = False
                 try:
                     fp = subprocess.run([
                         "flatpak", "list", "--app", "--updates",
-                        "--columns=application,version,latest"
+                        "--columns=application,version,latest-commit"
                     ], capture_output=True, text=True, timeout=60)
                     if fp.returncode == 0 and fp.stdout:
                         lines = [l for l in fp.stdout.strip().split('\n') if l.strip()]
@@ -1529,17 +1530,50 @@ fi
                             cols = line.split('\t')
                             app_id = cols[0].strip() if len(cols) > 0 else ''
                             inst = cols[1].strip() if len(cols) > 1 else ''
-                            latest = cols[2].strip() if len(cols) > 2 else ''
-                            if app_id and inst and latest and inst != latest:
+                            if app_id:
                                 packages.append({
                                     'name': app_id,
                                     'version': inst,
-                                    'new_version': latest,
+                                    'new_version': '',
                                     'id': app_id,
                                     'source': 'Flatpak'
                                 })
+                                added_flatpak = True
                 except Exception:
                     pass
+                if not added_flatpak:
+                    try:
+                        installed_map = {}
+                        li = subprocess.run(["flatpak", "list", "--app", "--columns=application,version"], capture_output=True, text=True, timeout=60)
+                        if li.returncode == 0 and li.stdout:
+                            for ln in [x for x in li.stdout.strip().split('\n') if x.strip()]:
+                                c = ln.split('\t')
+                                if c and c[0].strip():
+                                    installed_map[c[0].strip()] = (c[1].strip() if len(c) > 1 else '')
+                        rem = subprocess.run(["flatpak", "remotes", "--columns=name"], capture_output=True, text=True, timeout=30)
+                        remotes = []
+                        if rem.returncode == 0 and rem.stdout:
+                            remotes = [x.strip() for x in rem.stdout.strip().split('\n') if x.strip()]
+                        seen = set()
+                        for remote in remotes:
+                            rl = subprocess.run(["flatpak", "remote-ls", remote, "--updates", "--columns=application,version"], capture_output=True, text=True, timeout=60)
+                            if rl.returncode == 0 and rl.stdout:
+                                for ln in [x for x in rl.stdout.strip().split('\n') if x.strip()]:
+                                    c = ln.split('\t')
+                                    app_id = c[0].strip() if len(c) > 0 else ''
+                                    latest = c[1].strip() if len(c) > 1 else ''
+                                    if app_id and app_id not in seen:
+                                        packages.append({
+                                            'name': app_id,
+                                            'version': installed_map.get(app_id, ''),
+                                            'new_version': latest,
+                                            'id': app_id,
+                                            'source': 'Flatpak'
+                                        })
+                                        seen.add(app_id)
+                                        added_flatpak = True
+                    except Exception:
+                        pass
                 # Check for npm global updates in both default and user-prefix envs, merge results
                 try:
                     results = []
@@ -2252,7 +2286,7 @@ fi
                         worker.error.connect(self.log)
                         worker.run()
                     elif source == 'Flatpak':
-                        cmd = ["flatpak", "--user", "update", "-y"] + pkgs
+                        cmd = ["flatpak", "update", "-y", "--noninteractive"] + pkgs
                         worker = CommandWorker(cmd, sudo=False)
                         worker.output.connect(self.log)
                         worker.error.connect(self.log)

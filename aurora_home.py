@@ -148,6 +148,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.log_signal.connect(self.log)
         self.load_error.connect(self.on_load_error)
         self.installation_progress.connect(self.on_installation_progress)
+        # Background loading coordination
+        self.loading_context = None
+        self.cancel_update_load = False
+        self.cancel_discover_search = False
         self.setup_ui()
         # Set initial nav button state
         for btn_id, btn in self.nav_buttons.items():
@@ -1194,6 +1198,18 @@ fi
     def switch_view(self, view_id):
         self.current_view = view_id
         self.console.clear()
+        # Stop any spinners and cancel background loads when switching views
+        try:
+            self.loading_widget.stop_animation()
+            self.loading_widget.setVisible(False)
+            self.cancel_install_btn.setVisible(False)
+        except Exception:
+            pass
+        # Cancel ongoing non-install tasks
+        self.cancel_update_load = True
+        self.cancel_discover_search = True
+        # Tag the current view as the active loading context
+        self.loading_context = view_id
         
         # Update button states
         for btn_id, btn in self.nav_buttons.items():
@@ -1436,6 +1452,9 @@ fi
         self.package_table.setRowCount(0)
         self.all_packages = []
         self.current_page = 0
+        # Prepare updates loading context
+        self.cancel_update_load = False
+        self.loading_context = "updates"
         
         # Show loading spinner and start animation
         self.loading_widget.setVisible(True)
@@ -1661,7 +1680,9 @@ fi
                         packages = [p for p in packages if p.get('name') not in ignored]
                 except Exception:
                     pass
-                self.packages_ready.emit(packages)
+                # Only deliver results if still on Updates and not cancelled
+                if not self.cancel_update_load and self.loading_context == 'updates' and self.current_view == 'updates':
+                    self.packages_ready.emit(packages)
             except Exception as e:
                 self.log(f"Error: {str(e)}")
                 self.load_error.emit()
@@ -1673,6 +1694,8 @@ fi
         self.package_table.setRowCount(0)
         self.all_packages = []
         self.current_page = 0
+        # Mark context to avoid cross-view UI updates
+        self.loading_context = "installed"
         
         def load_in_thread():
             try:
@@ -1731,6 +1754,9 @@ fi
         Thread(target=load_in_thread, daemon=True).start()
     
     def on_packages_loaded(self, packages):
+        # Ignore results if user has navigated away from the originating view
+        if self.loading_context != self.current_view or self.current_view not in ("updates", "installed"):
+            return
         self.all_packages = packages
         if self.current_view == "updates":
             self.updates_all = packages
@@ -2014,6 +2040,9 @@ fi
         # Removed verbose search message: self.log(f"Searching for '{query}' in AUR, official repositories, and Flatpak...")
         self.package_table.setRowCount(0)
         self.search_results = []
+        # Prepare discover loading context
+        self.cancel_discover_search = False
+        self.loading_context = "discover"
         
         # Show loading spinner
         self.loading_widget.setVisible(True)
@@ -2139,7 +2168,9 @@ fi
                     # npm not available, try alternative method
                     pass
                 
-                self.discover_results_ready.emit(packages)
+                # Only deliver results if still on Discover and not cancelled
+                if not self.cancel_discover_search and self.loading_context == 'discover' and self.current_view == 'discover':
+                    self.discover_results_ready.emit(packages)
             except Exception as e:
                 self.log(f"Search error: {str(e)}")
         
@@ -2192,6 +2223,9 @@ fi
         return filtered
 
     def display_discover_results(self, packages=None, selected_sources=None):
+        # Safety: do nothing if the user is no longer on Discover
+        if self.current_view != "discover" or self.loading_context != "discover":
+            return
         if packages is not None:
             self.search_results = packages
         

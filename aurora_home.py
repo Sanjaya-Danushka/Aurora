@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
                              QLabel, QFileDialog, QMessageBox, QHeaderView, QFrame, QSplitter,
                              QScrollArea, QCheckBox, QListWidget, QListWidgetItem, QSizePolicy,
-                             QDialog, QTabWidget, QGroupBox, QGridLayout)
+                             QDialog, QTabWidget, QGroupBox, QGridLayout, QRadioButton)
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF, QItemSelectionModel, qInstallMessageHandler, QtMsgType
 from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
 from PyQt6.QtSvg import QSvgRenderer
@@ -1262,7 +1262,47 @@ fi
             self.toolbar_layout.addLayout(layout)
         elif self.current_view == "installed":
             layout = QHBoxLayout()
+            layout.setSpacing(12)
+            uninstall_btn = QPushButton("Uninstall Selected")
+            uninstall_btn.setMinimumHeight(36)
+            uninstall_btn.setStyleSheet(
+                """
+                QPushButton {
+                    background-color: transparent;
+                    color: #F0F0F0;
+                    border: 1px solid rgba(0, 191, 174, 0.3);
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                QPushButton:hover { background-color: rgba(0, 191, 174, 0.15); border-color: rgba(0, 191, 174, 0.5); }
+                QPushButton:pressed { background-color: rgba(0, 191, 174, 0.25); }
+                """
+            )
+            uninstall_btn.clicked.connect(self.uninstall_selected)
+            layout.addWidget(uninstall_btn)
+
             layout.addStretch()
+            icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+            bundles_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
+                "Go to Package Bundles",
+                self.go_to_bundles
+            )
+            layout.addWidget(bundles_btn)
+            tools_btn = self.create_toolbar_button(
+                os.path.join(icon_dir, "download.svg"),
+                "Update Tools",
+                self.update_core_tools
+            )
+            help_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
+                "Help & Documentation",
+                self.show_help
+            )
+            layout.addWidget(tools_btn)
+            layout.addWidget(help_btn)
             self.toolbar_layout.addLayout(layout)
         elif self.current_view == "discover":
             layout = QHBoxLayout()
@@ -1443,10 +1483,11 @@ fi
         
         # Update visibility
         if view_id == "installed":
-            self.sources_section.setVisible(False)
+            self.sources_section.setVisible(True)
             self.filters_section.setVisible(True)
             if hasattr(self, 'sources_title_label'):
                 self.sources_title_label.setVisible(True)
+            self.update_installed_sources()
         elif view_id == "updates":
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(False)
@@ -1519,6 +1560,54 @@ fi
         if not hasattr(self, 'git_manager') or self.git_manager is None:
             from git_manager import GitManager
             self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
+
+    def update_installed_sources(self):
+        while self.sources_layout.count() > 1:
+            item = self.sources_layout.takeAt(1)
+            if item.widget():
+                item.widget().deleteLater()
+        self.source_card = SourceCard(self)
+        self.source_card.source_changed.connect(self.on_installed_source_changed)
+        sources = [
+            ("pacman", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "pacman.svg")),
+            ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg")),
+            ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
+            ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg"))
+        ]
+        for source_name, icon_path in sources:
+            self.source_card.add_source(source_name, icon_path)
+        try:
+            for obj_name in ("searchModeTitle",):
+                w = self.source_card.findChild(QLabel, obj_name)
+                if w:
+                    w.setVisible(False)
+            for rb in self.source_card.findChildren(QRadioButton, "searchModeRadio"):
+                rb.setVisible(False)
+        except Exception:
+            pass
+        self.sources_layout.addWidget(self.source_card)
+
+    def on_installed_source_changed(self, source_states):
+        base = getattr(self, 'installed_all', self.all_packages)
+        show_pacman = source_states.get("pacman", True)
+        show_aur = source_states.get("AUR", True)
+        show_flatpak = source_states.get("Flatpak", True)
+        show_npm = source_states.get("npm", True)
+        filtered = []
+        for pkg in base:
+            s = pkg.get('source')
+            if s == 'pacman' and show_pacman:
+                filtered.append(pkg)
+            elif s == 'AUR' and show_aur:
+                filtered.append(pkg)
+            elif s == 'Flatpak' and show_flatpak:
+                filtered.append(pkg)
+            elif s == 'npm' and show_npm:
+                filtered.append(pkg)
+        self.all_packages = filtered
+        self.current_page = 0
+        self.package_table.setRowCount(0)
+        self.display_page()
 
     def on_updates_source_changed(self, source_states):
         base = getattr(self, 'updates_all', self.all_packages)
@@ -1909,6 +1998,48 @@ fi
                 for pkg in packages:
                     if pkg['name'] in aur_packages:
                         pkg['source'] = 'AUR'
+
+                # Flatpak installed apps
+                try:
+                    seen = set()
+                    for scope in ([], ["--user"], ["--system"]):
+                        cmd = ["flatpak"] + scope + ["list", "--app", "--columns=application,version"]
+                        fp = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                        if fp.returncode == 0 and fp.stdout:
+                            for ln in [x for x in fp.stdout.strip().split('\n') if x.strip()]:
+                                c = ln.split('\t')
+                                app_id = c[0].strip() if len(c) > 0 else ''
+                                ver = c[1].strip() if len(c) > 1 else ''
+                                if app_id and app_id not in seen:
+                                    packages.append({
+                                        'name': app_id,
+                                        'version': ver,
+                                        'id': app_id,
+                                        'source': 'Flatpak',
+                                        'has_update': False
+                                    })
+                                    seen.add(app_id)
+                except Exception:
+                    pass
+
+                # npm global packages
+                try:
+                    np = subprocess.run(["npm", "ls", "-g", "--depth=0", "--json"], capture_output=True, text=True, timeout=60)
+                    if np.returncode == 0 and np.stdout:
+                        data = json.loads(np.stdout)
+                        deps = (data.get('dependencies') or {}) if isinstance(data, dict) else {}
+                        for name, info in deps.items():
+                            ver = (info.get('version') or '').strip()
+                            if name and ver:
+                                packages.append({
+                                    'name': name,
+                                    'version': ver,
+                                    'id': name,
+                                    'source': 'npm',
+                                    'has_update': False
+                                })
+                except Exception:
+                    pass
                 
                 self.packages_ready.emit(packages)
             except Exception as e:
@@ -1924,6 +2055,8 @@ fi
         self.all_packages = packages
         if self.current_view == "updates":
             self.updates_all = packages
+        elif self.current_view == "installed":
+            self.installed_all = packages
         self.current_page = 0
         self.packages_per_page = 10
         self.package_table.setRowCount(0)
@@ -1932,6 +2065,12 @@ fi
             try:
                 states = self.source_card.get_selected_sources()
                 self.on_updates_source_changed(states)
+            except Exception:
+                pass
+        elif self.current_view == "installed" and hasattr(self, 'source_card') and self.source_card:
+            try:
+                states = self.source_card.get_selected_sources()
+                self.on_installed_source_changed(states)
             except Exception:
                 pass
         self.log(f"Loaded {len(packages)} packages total. Showing first 10...")
@@ -2971,38 +3110,66 @@ fi
         selected_rows = self.package_table.selectionModel().selectedRows()
         if not selected_rows:
             self.log("No packages selected for uninstallation")
-            # QMessageBox.warning(self, "No Selection", "Please select packages to uninstall")
             return
         
-        packages = []
-        for row in selected_rows:
-            pkg_name = self.package_table.item(row.row(), 1).text()
-            packages.append(pkg_name.lower())
+        # Group selections by source
+        packages_by_source = {}
+        for model_index in selected_rows:
+            row = model_index.row()
+            name_item = self.package_table.item(row, 1)
+            id_item = self.package_table.item(row, 2)
+            source_item = self.package_table.item(row, 4)
+            if not name_item or not source_item:
+                continue
+            name = (name_item.text() or "").strip()
+            pkg_id = (id_item.text() or name).strip() if id_item else name
+            source = (source_item.text() or "pacman").strip()
+            if source not in packages_by_source:
+                packages_by_source[source] = []
+            token = pkg_id if source == 'Flatpak' else name
+            packages_by_source[source].append(token)
         
-        self.log(f"Selected packages for uninstallation: {', '.join(packages)}")
-        
-        # reply = QMessageBox.question(self, "Confirm Uninstall", 
-        #                             f"Uninstall {len(packages)} package(s)?")
-        # if reply != QMessageBox.StandardButton.Yes:
-        #     self.log("Uninstallation cancelled by user")
-        #     return
-        self.log(f"Proceeding with uninstallation of {len(packages)} packages...")
-        
-        self.log(f"Starting uninstallation of {len(packages)} packages...")
+        flat_summary = ', '.join([f"{pkg} ({src})" for src, pkgs in packages_by_source.items() for pkg in pkgs])
+        self.log(f"Selected for uninstallation: {flat_summary}")
         
         def uninstall():
             self.log("Uninstallation thread started")
             try:
-                cmd = ["pacman", "-R", "--noconfirm"] + packages
-                self.log(f"Running command: {' '.join(cmd)}")
-                worker = CommandWorker(cmd, sudo=True)
-                worker.output.connect(self.log)
-                worker.error.connect(self.log)
-                def on_finished():
-                    self.log("Uninstall completed")
-                    self.show_message.emit("Uninstallation Complete", f"Successfully uninstalled {len(packages)} package(s).")
-                worker.finished.connect(on_finished)
-                worker.run()
+                for source, pkgs in packages_by_source.items():
+                    if not pkgs:
+                        continue
+                    if source in ('pacman', 'AUR'):
+                        cmd = ["pacman", "-R", "--noconfirm"] + pkgs
+                        self.log(f"Running: {' '.join(cmd)}")
+                        worker = CommandWorker(cmd, sudo=True)
+                        worker.output.connect(self.log)
+                        worker.error.connect(self.log)
+                        worker.run()
+                    elif source == 'Flatpak':
+                        cmd = ["flatpak", "uninstall", "-y", "--noninteractive"] + pkgs
+                        self.log(f"Running: {' '.join(cmd)}")
+                        worker = CommandWorker(cmd, sudo=False)
+                        worker.output.connect(self.log)
+                        worker.error.connect(self.log)
+                        worker.run()
+                    elif source == 'npm':
+                        env = os.environ.copy()
+                        try:
+                            npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                            os.makedirs(npm_prefix, exist_ok=True)
+                            env['npm_config_prefix'] = npm_prefix
+                            env['NPM_CONFIG_PREFIX'] = npm_prefix
+                            env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
+                        except Exception:
+                            pass
+                        cmd = ["npm", "uninstall", "-g"] + pkgs
+                        self.log(f"Running: {' '.join(cmd)}")
+                        worker = CommandWorker(cmd, sudo=False, env=env)
+                        worker.output.connect(self.log)
+                        worker.error.connect(self.log)
+                        worker.run()
+                self.show_message.emit("Uninstallation Complete", f"Successfully processed {sum(len(v) for v in packages_by_source.values())} package(s).")
+                QTimer.singleShot(0, self.load_installed_packages)
             except Exception as e:
                 self.log(f"Error in uninstallation thread: {str(e)}")
         

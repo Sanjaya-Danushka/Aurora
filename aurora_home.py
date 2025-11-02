@@ -1110,7 +1110,7 @@ fi
                 self.show_help
             )
             tools_btn = self.create_toolbar_button(
-                os.path.join(icon_dir, "refresh.svg"),
+                os.path.join(icon_dir, "download.svg"),
                 "Update Tools",
                 self.update_core_tools
             )

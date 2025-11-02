@@ -1177,6 +1177,8 @@ fi
         self.update_filters_panel(view_id)
         self.update_toolbar()
         self.search_input.clear()
+        if view_id != "discover":
+            self.large_search_box.setVisible(False)
         
         # Load data for view
         if view_id == "updates":
@@ -1203,15 +1205,7 @@ fi
         
         # Recreate filters based on view
         if view_id == "updates":
-            # For updates view, filter by source
-            self.filter_card = FilterCard(self)
-            self.filter_card.filter_changed.connect(self.on_filter_selection_changed)
-            
-            # Add source filters
-            self.filter_card.add_filter("pacman")
-            self.filter_card.add_filter("AUR")
-            
-            self.filters_layout.addWidget(self.filter_card)
+            self.update_updates_sources()
         elif view_id == "installed":
             # For installed view, filter by update status
             self.filter_card = FilterCard(self)
@@ -1226,9 +1220,14 @@ fi
             filter_options = []
         
         # Update visibility
-        if view_id in ["installed", "updates"]:
+        if view_id == "installed":
             self.sources_section.setVisible(False)
             self.filters_section.setVisible(True)
+            if hasattr(self, 'sources_title_label'):
+                self.sources_title_label.setVisible(True)
+        elif view_id == "updates":
+            self.sources_section.setVisible(True)
+            self.filters_section.setVisible(False)
             if hasattr(self, 'sources_title_label'):
                 self.sources_title_label.setVisible(True)
         elif view_id == "discover":
@@ -1277,6 +1276,37 @@ fi
             self.source_card.add_source(source_name, icon_path)
         
         self.sources_layout.addWidget(self.source_card)
+
+    def update_updates_sources(self):
+        while self.sources_layout.count() > 1:
+            item = self.sources_layout.takeAt(1)
+            if item.widget():
+                item.widget().deleteLater()
+        self.source_card = SourceCard(self)
+        self.source_card.source_changed.connect(self.on_updates_source_changed)
+        sources = [
+            ("pacman", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "pacman.svg")),
+            ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg"))
+        ]
+        for source_name, icon_path in sources:
+            self.source_card.add_source(source_name, icon_path)
+        self.sources_layout.addWidget(self.source_card)
+
+    def on_updates_source_changed(self, source_states):
+        base = getattr(self, 'updates_all', self.all_packages)
+        show_pacman = source_states.get("pacman", True)
+        show_aur = source_states.get("AUR", True)
+        filtered = []
+        for pkg in base:
+            if pkg.get('source') == 'pacman' and show_pacman:
+                filtered.append(pkg)
+            elif pkg.get('source') == 'AUR' and show_aur:
+                filtered.append(pkg)
+        self.all_packages = filtered
+        self.current_page = 0
+        self.package_table.setRowCount(0)
+        self.display_page()
+        self.update_load_more_visibility()
         
         # Initialize Git Manager for sources panel
         if not hasattr(self, 'git_manager') or self.git_manager is None:
@@ -1499,6 +1529,8 @@ fi
     
     def on_packages_loaded(self, packages):
         self.all_packages = packages
+        if self.current_view == "updates":
+            self.updates_all = packages
         self.current_page = 0
         self.packages_per_page = 10
         self.package_table.setRowCount(0)

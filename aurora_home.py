@@ -1520,49 +1520,54 @@ fi
                 # Check for Flatpak updates (installed apps with updates)
                 added_flatpak = False
                 try:
-                    fp = subprocess.run([
-                        "flatpak", "list", "--app", "--updates",
-                        "--columns=application,version,latest-commit"
-                    ], capture_output=True, text=True, timeout=60)
-                    if fp.returncode == 0 and fp.stdout:
-                        lines = [l for l in fp.stdout.strip().split('\n') if l.strip()]
-                        for line in lines:
-                            cols = line.split('\t')
-                            app_id = cols[0].strip() if len(cols) > 0 else ''
-                            inst = cols[1].strip() if len(cols) > 1 else ''
-                            if app_id:
-                                packages.append({
-                                    'name': app_id,
-                                    'version': inst,
-                                    'new_version': '',
-                                    'id': app_id,
-                                    'source': 'Flatpak'
-                                })
-                                added_flatpak = True
-                except Exception:
-                    pass
-                if not added_flatpak:
-                    try:
-                        installed_map = {}
-                        li = subprocess.run(["flatpak", "list", "--app", "--columns=application,version"], capture_output=True, text=True, timeout=60)
-                        if li.returncode == 0 and li.stdout:
-                            for ln in [x for x in li.stdout.strip().split('\n') if x.strip()]:
-                                c = ln.split('\t')
-                                if c and c[0].strip():
-                                    installed_map[c[0].strip()] = (c[1].strip() if len(c) > 1 else '')
-                        rem = subprocess.run(["flatpak", "remotes", "--columns=name"], capture_output=True, text=True, timeout=30)
-                        remotes = []
-                        if rem.returncode == 0 and rem.stdout:
-                            remotes = [x.strip() for x in rem.stdout.strip().split('\n') if x.strip()]
-                        seen = set()
-                        for remote in remotes:
-                            rl = subprocess.run(["flatpak", "remote-ls", remote, "--updates", "--columns=application,version"], capture_output=True, text=True, timeout=60)
+                    # Build installed app -> installed version map (cover both user and system scopes)
+                    installed_map = {}
+                    for scope in ([], ["--user"], ["--system"]):
+                        try:
+                            cmd = ["flatpak"] + scope + ["list", "--app", "--columns=application,version"]
+                            li = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                            if li.returncode == 0 and li.stdout:
+                                for ln in [x for x in li.stdout.strip().split('\n') if x.strip()]:
+                                    c = ln.split('\t')
+                                    if c and c[0].strip():
+                                        installed_map[c[0].strip()] = (c[1].strip() if len(c) > 1 else '')
+                        except Exception:
+                            continue
+
+                    seen_apps = set()
+                    # Prefer direct list of installed updates across scopes
+                    for scope in ([], ["--user"], ["--system"]):
+                        try:
+                            cmd = ["flatpak"] + scope + ["list", "--app", "--updates", "--columns=application,version"]
+                            fp = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                            if fp.returncode == 0 and fp.stdout:
+                                for line in [l for l in fp.stdout.strip().split('\n') if l.strip()]:
+                                    cols = line.split('\t')
+                                    app_id = cols[0].strip() if len(cols) > 0 else ''
+                                    inst = cols[1].strip() if len(cols) > 1 else ''
+                                    if app_id and app_id not in seen_apps:
+                                        packages.append({
+                                            'name': app_id,
+                                            'version': inst or installed_map.get(app_id, ''),
+                                            'new_version': '',
+                                            'id': app_id,
+                                            'source': 'Flatpak'
+                                        })
+                                        seen_apps.add(app_id)
+                                        added_flatpak = True
+                        except Exception:
+                            continue
+
+                    # Fallback: query remotes for updates and intersect with installed apps
+                    if not added_flatpak:
+                        try:
+                            rl = subprocess.run(["flatpak", "remote-ls", "--updates", "--columns=application,version"], capture_output=True, text=True, timeout=60)
                             if rl.returncode == 0 and rl.stdout:
                                 for ln in [x for x in rl.stdout.strip().split('\n') if x.strip()]:
                                     c = ln.split('\t')
                                     app_id = c[0].strip() if len(c) > 0 else ''
                                     latest = c[1].strip() if len(c) > 1 else ''
-                                    if app_id and app_id not in seen:
+                                    if app_id and app_id in installed_map and app_id not in seen_apps:
                                         packages.append({
                                             'name': app_id,
                                             'version': installed_map.get(app_id, ''),
@@ -1570,10 +1575,12 @@ fi
                                             'id': app_id,
                                             'source': 'Flatpak'
                                         })
-                                        seen.add(app_id)
+                                        seen_apps.add(app_id)
                                         added_flatpak = True
-                    except Exception:
-                        pass
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
                 # Check for npm global updates in both default and user-prefix envs, merge results
                 try:
                     results = []
@@ -2828,30 +2835,46 @@ fi
         if self.current_view != "updates" or not self.all_packages:
             return
         
-        # Get selected filters from the FilterCard component
-        selected_filters = {}
-        if hasattr(self, 'filter_card') and self.filter_card:
-            selected_filters = self.filter_card.get_selected_filters()
-        else:
-            # Fallback to showing all filters if component not initialized
-            selected_filters = {"pacman": True, "AUR": True}
-        
-        show_pacman = selected_filters.get("pacman", True)
-        show_aur = selected_filters.get("AUR", True)
-        
+        # Use SourceCard selection (available in Updates view) to filter sources
+        selected_sources = {}
+        if hasattr(self, 'source_card') and self.source_card:
+            try:
+                selected_sources = self.source_card.get_selected_sources()
+            except Exception:
+                selected_sources = {}
+        # Fallback to enabling all known sources in Updates view
+        if not selected_sources:
+            selected_sources = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True, "Local": True}
+
+        show_pacman = selected_sources.get("pacman", True)
+        show_aur = selected_sources.get("AUR", True)
+        show_flatpak = selected_sources.get("Flatpak", True)
+        show_npm = selected_sources.get("npm", True)
+        show_local = selected_sources.get("Local", True)
+
         filtered = []
         for pkg in self.all_packages:
-            if pkg.get('source') == 'pacman' and show_pacman:
+            src = pkg.get('source')
+            if src == 'pacman' and show_pacman:
                 filtered.append(pkg)
-            elif pkg.get('source') == 'AUR' and show_aur:
+            elif src == 'AUR' and show_aur:
                 filtered.append(pkg)
-        
+            elif src == 'Flatpak' and show_flatpak:
+                filtered.append(pkg)
+            elif src == 'npm' and show_npm:
+                filtered.append(pkg)
+            elif src == 'Local' and show_local:
+                filtered.append(pkg)
+
         # Update the all_packages to show filtered results
         self.all_packages = filtered
         self.current_page = 0
         self.package_table.setRowCount(0)
         self.display_page()
-        self.log(f"Filtered to {len(filtered)} packages (pacman: {show_pacman}, AUR: {show_aur})")
+        self.log(
+            f"Filtered to {len(filtered)} packages "
+            f"(pacman: {show_pacman}, AUR: {show_aur}, Flatpak: {show_flatpak}, npm: {show_npm}, Local: {show_local})"
+        )
 
     def on_selection_changed(self):
         selected_rows = set(index.row() for index in self.package_table.selectionModel().selectedRows())

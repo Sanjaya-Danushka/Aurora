@@ -22,7 +22,7 @@ from collections import Counter
 from git_manager import GitManager
 
 from styles import Styles
-from components import SourceCard, FilterCard, LargeSearchBox, LoadingSpinner
+from components import SourceCard, FilterCard, LargeSearchBox, LoadingSpinner, PluginsView
 
 def _qt_msg_handler(mode, context, message):
     s = str(message)
@@ -324,6 +324,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover.svg"), "Discover", "discover"),
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "updates.svg"), "Updates", "updates"), 
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "installed.svg"), "Installed", "installed"),
+            (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins", "plugins.svg"), "Plugins", "plugins"),
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"), "Bundles", "bundles")
         ]
         
@@ -1014,6 +1015,73 @@ fi
         
         self.docker_manager.install_from_docker()
     
+    def on_plugin_install_requested(self, plugin_id):
+        try:
+            if not hasattr(self, 'plugins_view') or not self.plugins_view:
+                return
+            spec = self.plugins_view.get_plugin(plugin_id)
+            if not spec:
+                return
+            # If already installed, just refresh
+            if self.plugins_view.is_installed(spec):
+                self._show_message("Plugins", f"{spec.get('name')} is already installed")
+                self.plugins_view.refresh_all()
+                return
+            pkg = spec.get('pkg')
+            if not pkg:
+                self._show_message("Plugins", "No package specified for installation")
+                return
+            cmd = ["pacman", "-S", "--noconfirm", pkg]
+            self.log(f"Installing plugin package: {' '.join(cmd)}")
+            worker = CommandWorker(cmd, sudo=True)
+            worker.output.connect(self.log)
+            worker.error.connect(self.log)
+            def _done():
+                try:
+                    self.plugins_view.refresh_all()
+                    self._show_message("Plugins", f"Installed {spec.get('name')}")
+                except Exception:
+                    pass
+            worker.finished.connect(_done)
+            Thread(target=worker.run, daemon=True).start()
+        except Exception as e:
+            self._show_message("Plugins", f"Install failed: {e}")
+    
+    def on_plugin_launch_requested(self, plugin_id):
+        try:
+            if not hasattr(self, 'plugins_view') or not self.plugins_view:
+                return
+            spec = self.plugins_view.get_plugin(plugin_id)
+            if not spec:
+                return
+            cmd = spec.get('cmd')
+            if not cmd:
+                self._show_message("Plugins", "No launch command defined")
+                return
+            # Some tools may require root (e.g., timeshift). Use pkexec for timeshift.
+            use_pkexec = plugin_id in ("timeshift",)
+            argv = [cmd]
+            if use_pkexec:
+                argv = ["pkexec", "--disable-internal-agent"] + argv
+            self.log(f"Launching: {' '.join(argv)}")
+            try:
+                subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True)
+            except Exception as e:
+                self._show_message("Plugins", f"Launch failed: {e}")
+        except Exception as e:
+            self._show_message("Plugins", f"Launch error: {e}")
+    
+    def open_plugins_folder(self):
+        try:
+            folder = self.get_user_plugins_dir()
+            try:
+                os.makedirs(folder, exist_ok=True)
+            except Exception:
+                pass
+            subprocess.Popen(["xdg-open", folder], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            self._show_message("Plugins", f"Cannot open folder: {e}")
+    
     def show_git_install_dialog(self):
         """Show Git repository installation dialog"""
         if not self.git_manager:
@@ -1159,6 +1227,13 @@ fi
         self.settings_layout.setSpacing(12)
         self.settings_container.setWidget(self.settings_root)
         layout.addWidget(self.settings_container)
+        
+        # Plugins view (hidden by default)
+        self.plugins_view = PluginsView(self, self.get_svg_icon)
+        self.plugins_view.install_requested.connect(self.on_plugin_install_requested)
+        self.plugins_view.launch_requested.connect(self.on_plugin_launch_requested)
+        self.plugins_view.setVisible(False)
+        layout.addWidget(self.plugins_view)
         
         # Packages Table
         self.package_table = QTableWidget()
@@ -1432,6 +1507,25 @@ fi
             layout.addWidget(help_btn)
             
             self.toolbar_layout.addLayout(layout)
+        elif self.current_view == "plugins":
+            layout = QHBoxLayout()
+            layout.setSpacing(12)
+            refresh_btn = QPushButton("Refresh")
+            refresh_btn.setMinimumHeight(36)
+            refresh_btn.clicked.connect(lambda: self.plugins_view.refresh_all())
+            layout.addWidget(refresh_btn)
+            open_folder_btn = QPushButton("Open Plugins Folder")
+            open_folder_btn.setMinimumHeight(36)
+            open_folder_btn.clicked.connect(self.open_plugins_folder)
+            layout.addWidget(open_folder_btn)
+            layout.addStretch()
+            help_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
+                "Help & Documentation",
+                self.show_help
+            )
+            layout.addWidget(help_btn)
+            self.toolbar_layout.addLayout(layout)
         elif self.current_view == "bundles":
             layout = QHBoxLayout()
             layout.setSpacing(12)
@@ -1521,6 +1615,8 @@ fi
             self.loading_widget.setVisible(False)
             self.cancel_install_btn.setVisible(False)
             self.settings_container.setVisible(False)
+            if hasattr(self, 'plugins_view') and self.plugins_view:
+                self.plugins_view.setVisible(False)
         except Exception:
             pass
         # Cancel ongoing non-install tasks
@@ -1539,6 +1635,7 @@ fi
             "installed": ("📦 Installed Packages", "View all installed packages on your system"),
             "discover": ("/home/alexa/StudioProjects/Aurora/assets/icons/discover/search.svg", "Discover Packages", "Search and discover new packages to install"),
             "bundles": ("📋 Package Bundles", "Manage package bundles"),
+            "plugins": (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins", "plugins.svg"), "Plugins", "Extensions and system tools"),
             "settings": (os.path.join(os.path.dirname(__file__), "assets", "icons", "settings.svg"), "Settings", "Configure NeoArch settings and plugins"),
         }
         
@@ -1589,6 +1686,20 @@ fi
             except Exception:
                 pass
             QTimer.singleShot(0, self.refresh_bundles_table)
+        elif view_id == "plugins":
+            # Show plugins view, hide others
+            try:
+                self.loading_widget.setVisible(False)
+                self.loading_widget.stop_animation()
+            except Exception:
+                pass
+            self.large_search_box.setVisible(False)
+            self.settings_container.setVisible(False)
+            self.package_table.setVisible(False)
+            self.load_more_btn.setVisible(False)
+            self.plugins_view.setVisible(True)
+            self.plugins_view.refresh_all()
+            self.header_info.setText("Install and launch extensions like BleachBit and Timeshift")
         elif view_id == "settings":
             # Show settings panel, hide package table & search
             try:
@@ -1664,6 +1775,11 @@ fi
             self.update_discover_sources()
         elif view_id == "bundles":
             # No source or status filters for bundles
+            self.sources_section.setVisible(False)
+            self.filters_section.setVisible(False)
+            if hasattr(self, 'sources_title_label'):
+                self.sources_title_label.setVisible(False)
+        elif view_id == "plugins":
             self.sources_section.setVisible(False)
             self.filters_section.setVisible(False)
             if hasattr(self, 'sources_title_label'):

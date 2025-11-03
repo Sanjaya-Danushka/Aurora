@@ -7,5 +7,6 @@ from .source_card import SourceCard
 from .filter_card import FilterCard
 from .large_search_box import LargeSearchBox
 from .loading_spinner import LoadingSpinner
+from .plugins_view import PluginsView
 
-__all__ = ['SourceItem', 'SourceCard', 'FilterCard', 'LargeSearchBox', 'LoadingSpinner']
+__all__ = ['SourceItem', 'SourceCard', 'FilterCard', 'LargeSearchBox', 'LoadingSpinner', 'PluginsView']

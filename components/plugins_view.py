@@ -15,8 +15,10 @@ class PluginCard(QFrame):
         self.setObjectName("pluginCard")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet(self._style())
+        self.setMinimumHeight(120)
 
         layout = QHBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(8)
 

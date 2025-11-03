@@ -1684,6 +1684,11 @@ fi
             self.plugins_view.setVisible(True)
             self.plugins_view.refresh_all()
             self.header_info.setText("Install and launch extensions like BleachBit and Timeshift")
+            try:
+                self.console_label.setVisible(False)
+                self.console.setVisible(False)
+            except Exception:
+                pass
         elif view_id == "settings":
             # Show settings panel, hide package table & search
             try:
@@ -1709,7 +1714,7 @@ fi
         except Exception:
             pass
         # Other views: ensure console visible
-        if view_id != "settings":
+        if view_id not in ("settings", "plugins"):
             try:
                 self.console_label.setVisible(True)
                 self.console.setVisible(True)

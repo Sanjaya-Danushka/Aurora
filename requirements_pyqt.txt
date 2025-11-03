@@ -3,3 +3,4 @@ PyQt6==6.6.1
 
 #your system have not docker git support please install error -done
 # searchbox refresh and hint error
+# plugins page souce card resizebug

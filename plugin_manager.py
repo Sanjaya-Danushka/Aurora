@@ -28,6 +28,7 @@ class PluginsManager:
 
             def _run():
                 try:
+                    QTimer.singleShot(0, lambda: plugins_view.set_installing(plugin_id, True))
                     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
                     for line in proc.stdout:  # type: ignore
                         if line:
@@ -40,6 +41,7 @@ class PluginsManager:
                 except Exception as e:
                     self._message("Plugins", f"Install failed: {e}")
                 finally:
+                    QTimer.singleShot(0, lambda: plugins_view.set_installing(plugin_id, False))
                     QTimer.singleShot(0, plugins_view.refresh_all)
 
             Thread(target=_run, daemon=True).start()
@@ -66,6 +68,44 @@ class PluginsManager:
                 self._message("Plugins", f"Launch failed: {e}")
         except Exception as e:
             self._message("Plugins", f"Launch error: {e}")
+
+    def uninstall_by_id(self, plugins_view, plugin_id):
+        try:
+            spec = plugins_view.get_plugin(plugin_id)
+            if not spec:
+                return
+            pkg = spec.get('pkg')
+            if not pkg:
+                self._message("Plugins", "No package specified for uninstall")
+                return
+            # If not installed, just refresh UI
+            if not plugins_view.is_installed(spec):
+                QTimer.singleShot(0, plugins_view.refresh_all)
+                return
+            cmd = ["pkexec", "--disable-internal-agent", "pacman", "-R", "--noconfirm", pkg]
+            self._log(f"Uninstalling plugin package: {' '.join(cmd)}")
+
+            def _run():
+                try:
+                    QTimer.singleShot(0, lambda: plugins_view.set_installing(plugin_id, True))
+                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                    for line in proc.stdout:  # type: ignore
+                        if line:
+                            self._log(line.rstrip())
+                    rc = proc.wait()
+                    if rc == 0:
+                        self._message("Plugins", f"Uninstalled {spec.get('name')}")
+                    else:
+                        self._message("Plugins", f"Uninstall failed (code {rc})")
+                except Exception as e:
+                    self._message("Plugins", f"Uninstall failed: {e}")
+                finally:
+                    QTimer.singleShot(0, lambda: plugins_view.set_installing(plugin_id, False))
+                    QTimer.singleShot(0, plugins_view.refresh_all)
+
+            Thread(target=_run, daemon=True).start()
+        except Exception as e:
+            self._message("Plugins", f"Uninstall error: {e}")
 
     def open_plugins_folder(self):
         try:

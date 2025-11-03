@@ -1031,6 +1031,13 @@ fi
         except Exception as e:
             self._show_message("Plugins", f"Launch error: {e}")
     
+    def on_plugin_uninstall_requested(self, plugin_id):
+        try:
+            if hasattr(self, 'plugins_view') and self.plugins_view:
+                self.plugins_manager.uninstall_by_id(self.plugins_view, plugin_id)
+        except Exception as e:
+            self._show_message("Plugins", f"Uninstall error: {e}")
+    
     def open_plugins_folder(self):
         try:
             folder = self.get_user_plugins_dir()
@@ -1070,7 +1077,13 @@ fi
     def on_plugins_filter_changed(self, text, installed_only):
         try:
             if hasattr(self, 'plugins_view') and self.plugins_view:
-                self.plugins_view.set_filter(text, installed_only)
+                cats = []
+                try:
+                    if hasattr(self, 'plugins_sidebar') and self.plugins_sidebar:
+                        cats = self.plugins_sidebar.get_selected_categories()
+                except Exception:
+                    cats = []
+                self.plugins_view.set_filter(text, installed_only, cats)
         except Exception:
             pass
     
@@ -1199,6 +1212,10 @@ fi
         self.plugins_view = PluginsView(self, self.get_svg_icon)
         self.plugins_view.install_requested.connect(self.on_plugin_install_requested)
         self.plugins_view.launch_requested.connect(self.on_plugin_launch_requested)
+        try:
+            self.plugins_view.uninstall_requested.connect(self.on_plugin_uninstall_requested)
+        except Exception:
+            pass
         self.plugins_view.setVisible(False)
         layout.addWidget(self.plugins_view)
         
@@ -1764,11 +1781,17 @@ fi
                 try:
                     if hasattr(self, 'plugins_view') and self.plugins_view:
                         self.plugins_sidebar.set_plugins(self.plugins_view.plugins)
+                        cats = sorted({(p.get('category') or '') for p in self.plugins_view.plugins if p.get('category')})
+                        try:
+                            self.plugins_sidebar.set_categories(cats)
+                        except Exception:
+                            pass
                 except Exception:
                     pass
                 # Allow install from sidebar
                 try:
                     self.plugins_sidebar.install_requested.connect(self.on_plugin_install_requested)
+                    self.plugins_sidebar.uninstall_requested.connect(self.on_plugin_uninstall_requested)
                 except Exception:
                     pass
                 self.filters_layout.addWidget(self.plugins_sidebar)

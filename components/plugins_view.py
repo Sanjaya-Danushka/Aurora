@@ -6,11 +6,12 @@ import shutil
 
 
 class PluginCard(QFrame):
-    def __init__(self, spec: dict, icon: QIcon, installed: bool, on_install, on_open, parent=None):
+    def __init__(self, spec: dict, icon: QIcon, installed: bool, on_install, on_open, on_uninstall, parent=None):
         super().__init__(parent)
         self.spec = spec
         self.on_install = on_install
         self.on_open = on_open
+        self.on_uninstall = on_uninstall
         self.setObjectName("pluginCard")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet(self._style())
@@ -42,8 +43,11 @@ class PluginCard(QFrame):
         self.action_btn = QPushButton()
         self.status_label = QLabel()
         self.status_label.setObjectName("pluginStatus")
+        self.uninstall_btn = QPushButton("Uninstall")
+        self.uninstall_btn.setVisible(False)
         btn_col = QVBoxLayout()
         btn_col.addWidget(self.action_btn)
+        btn_col.addWidget(self.uninstall_btn)
         btn_col.addWidget(self.status_label)
         btn_col.addStretch()
         layout.addLayout(btn_col)
@@ -56,10 +60,29 @@ class PluginCard(QFrame):
             self.action_btn.setText("Open")
             self.action_btn.clicked.disconnect() if self.action_btn.receivers(self.action_btn.clicked) else None
             self.action_btn.clicked.connect(lambda: self.on_open(self.spec))
+            self.uninstall_btn.setVisible(True)
+            self.uninstall_btn.clicked.disconnect() if self.uninstall_btn.receivers(self.uninstall_btn.clicked) else None
+            self.uninstall_btn.clicked.connect(lambda: self.on_uninstall(self.spec))
         else:
             self.action_btn.setText("Install")
             self.action_btn.clicked.disconnect() if self.action_btn.receivers(self.action_btn.clicked) else None
             self.action_btn.clicked.connect(lambda: self.on_install(self.spec))
+            self.uninstall_btn.setVisible(False)
+
+    def set_installing(self, installing: bool):
+        try:
+            if installing:
+                self.action_btn.setEnabled(False)
+                self.uninstall_btn.setEnabled(False)
+                self.action_btn.setText("Installing…")
+                self.status_label.setText("Installing…")
+            else:
+                self.action_btn.setEnabled(True)
+                self.uninstall_btn.setEnabled(True)
+                # Restore text based on state
+                self.update_state(self.status_label.text().lower().startswith("installed"))
+        except Exception:
+            pass
 
     def _style(self):
         return """
@@ -85,8 +108,9 @@ class PluginCard(QFrame):
 
 
 class PluginsView(QWidget):
-    install_requested = pyqtSignal(str)  # plugin id
-    launch_requested = pyqtSignal(str)   # plugin id
+    install_requested = pyqtSignal(str)   # plugin id
+    launch_requested = pyqtSignal(str)    # plugin id
+    uninstall_requested = pyqtSignal(str) # plugin id
 
     def __init__(self, main_app, get_icon_callback, parent=None):
         super().__init__(parent)
@@ -95,12 +119,15 @@ class PluginsView(QWidget):
         self.cards = {}
         self._filter_text = ""
         self._installed_only = False
+        self._categories = set()
         self._init_specs()
         self._init_ui()
 
     def _init_specs(self):
-        base_icon = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins", "plugins.svg")
-        base_icon = os.path.normpath(base_icon)
+        icons_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins"))
+        base_icon = os.path.join(icons_dir, "plugins.svg")
+        bb_icon = os.path.join(icons_dir, "bleachbit.svg")
+        ts_icon = os.path.join(icons_dir, "timeshift.svg")
         self.plugins = [
             {
                 'id': 'bleachbit',
@@ -108,7 +135,8 @@ class PluginsView(QWidget):
                 'desc': 'System cleaner to free disk space and guard your privacy.',
                 'pkg': 'bleachbit',
                 'cmd': 'bleachbit',
-                'icon': base_icon,
+                'icon': bb_icon if os.path.exists(bb_icon) else base_icon,
+                'category': 'Cleaner',
             },
             {
                 'id': 'timeshift',
@@ -116,7 +144,8 @@ class PluginsView(QWidget):
                 'desc': 'System restore utility for Linux.',
                 'pkg': 'timeshift',
                 'cmd': 'timeshift-gtk',
-                'icon': base_icon,
+                'icon': ts_icon if os.path.exists(ts_icon) else base_icon,
+                'category': 'Backup',
             },
         ]
 
@@ -145,6 +174,7 @@ class PluginsView(QWidget):
                 installed,
                 on_install=lambda s, self=self: self.install_requested.emit(s['id']),
                 on_open=lambda s, self=self: self.launch_requested.emit(s['id']),
+                on_uninstall=lambda s, self=self: self.uninstall_requested.emit(s['id']),
                 parent=self,
             )
             row = idx // col_count
@@ -157,7 +187,10 @@ class PluginsView(QWidget):
 
     def _icon_for(self, spec):
         try:
-            return self.get_icon_callback(spec.get('icon'), 24)
+            path = spec.get('icon')
+            if not path or not os.path.exists(path):
+                path = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins", "plugins.svg")
+            return self.get_icon_callback(os.path.normpath(path), 24)
         except Exception:
             return QIcon()
 
@@ -191,9 +224,10 @@ class PluginsView(QWidget):
                 return spec
         return None
 
-    def set_filter(self, text: str, installed_only: bool):
+    def set_filter(self, text: str, installed_only: bool, categories=None):
         self._filter_text = (text or "").strip().lower()
         self._installed_only = bool(installed_only)
+        self._categories = set((categories or []))
         self.apply_filter()
 
     def apply_filter(self):
@@ -205,9 +239,16 @@ class PluginsView(QWidget):
                 continue
             name = (spec.get('name') or spec.get('id') or "").lower()
             desc = (spec.get('desc') or "").lower()
+            cat = (spec.get('category') or "").lower()
             matches_txt = (not txt) or (txt in name) or (txt in desc)
             if only:
                 is_inst = self.is_installed(spec)
             else:
                 is_inst = True
-            card.setVisible(matches_txt and is_inst)
+            matches_cat = (not self._categories) or (cat in {c.lower() for c in self._categories})
+            card.setVisible(matches_txt and is_inst and matches_cat)
+
+    def set_installing(self, plugin_id: str, installing: bool):
+        card = self.cards.get(plugin_id)
+        if card:
+            card.set_installing(installing)

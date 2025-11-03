@@ -22,7 +22,8 @@ from collections import Counter
 from git_manager import GitManager
 
 from styles import Styles
-from components import SourceCard, FilterCard, LargeSearchBox, LoadingSpinner, PluginsView
+from components import SourceCard, FilterCard, LargeSearchBox, LoadingSpinner, PluginsView, PluginsSidebar
+from plugin_manager import PluginsManager
 
 def _qt_msg_handler(mode, context, message):
     s = str(message)
@@ -153,6 +154,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.plugin_timer = QTimer()
         self.plugin_timer.setInterval(60000)
         self.plugin_timer.timeout.connect(self.run_plugin_tick)
+        self.plugins_manager = PluginsManager(self)
         self.packages_ready.connect(self.on_packages_loaded)
         self.discover_results_ready.connect(self.display_discover_results)
         self.show_message.connect(self._show_message)
@@ -1017,57 +1019,15 @@ fi
     
     def on_plugin_install_requested(self, plugin_id):
         try:
-            if not hasattr(self, 'plugins_view') or not self.plugins_view:
-                return
-            spec = self.plugins_view.get_plugin(plugin_id)
-            if not spec:
-                return
-            # If already installed, just refresh
-            if self.plugins_view.is_installed(spec):
-                self._show_message("Plugins", f"{spec.get('name')} is already installed")
-                self.plugins_view.refresh_all()
-                return
-            pkg = spec.get('pkg')
-            if not pkg:
-                self._show_message("Plugins", "No package specified for installation")
-                return
-            cmd = ["pacman", "-S", "--noconfirm", pkg]
-            self.log(f"Installing plugin package: {' '.join(cmd)}")
-            worker = CommandWorker(cmd, sudo=True)
-            worker.output.connect(self.log)
-            worker.error.connect(self.log)
-            def _done():
-                try:
-                    self.plugins_view.refresh_all()
-                    self._show_message("Plugins", f"Installed {spec.get('name')}")
-                except Exception:
-                    pass
-            worker.finished.connect(_done)
-            Thread(target=worker.run, daemon=True).start()
+            if hasattr(self, 'plugins_view') and self.plugins_view:
+                self.plugins_manager.install_by_id(self.plugins_view, plugin_id)
         except Exception as e:
-            self._show_message("Plugins", f"Install failed: {e}")
+            self._show_message("Plugins", f"Install error: {e}")
     
     def on_plugin_launch_requested(self, plugin_id):
         try:
-            if not hasattr(self, 'plugins_view') or not self.plugins_view:
-                return
-            spec = self.plugins_view.get_plugin(plugin_id)
-            if not spec:
-                return
-            cmd = spec.get('cmd')
-            if not cmd:
-                self._show_message("Plugins", "No launch command defined")
-                return
-            # Some tools may require root (e.g., timeshift). Use pkexec for timeshift.
-            use_pkexec = plugin_id in ("timeshift",)
-            argv = [cmd]
-            if use_pkexec:
-                argv = ["pkexec", "--disable-internal-agent"] + argv
-            self.log(f"Launching: {' '.join(argv)}")
-            try:
-                subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True)
-            except Exception as e:
-                self._show_message("Plugins", f"Launch failed: {e}")
+            if hasattr(self, 'plugins_view') and self.plugins_view:
+                self.plugins_manager.launch_by_id(self.plugins_view, plugin_id)
         except Exception as e:
             self._show_message("Plugins", f"Launch error: {e}")
     
@@ -1106,6 +1066,13 @@ fi
     
     def show_settings(self):
         self.switch_view("settings")
+
+    def on_plugins_filter_changed(self, text, installed_only):
+        try:
+            if hasattr(self, 'plugins_view') and self.plugins_view:
+                self.plugins_view.set_filter(text, installed_only)
+        except Exception:
+            pass
     
     def sudo_install_selected(self):
         """Install selected packages with sudo privileges"""
@@ -1780,10 +1747,33 @@ fi
             if hasattr(self, 'sources_title_label'):
                 self.sources_title_label.setVisible(False)
         elif view_id == "plugins":
+            # Show a VS Code-like extensions sidebar in filters_section
             self.sources_section.setVisible(False)
-            self.filters_section.setVisible(False)
+            self.filters_section.setVisible(True)
             if hasattr(self, 'sources_title_label'):
                 self.sources_title_label.setVisible(False)
+            # Clear and add PluginsSidebar
+            while self.filters_layout.count():
+                item = self.filters_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            try:
+                self.plugins_sidebar = PluginsSidebar(self)
+                self.plugins_sidebar.filter_changed.connect(self.on_plugins_filter_changed)
+                # Populate sidebar with the same list as cards
+                try:
+                    if hasattr(self, 'plugins_view') and self.plugins_view:
+                        self.plugins_sidebar.set_plugins(self.plugins_view.plugins)
+                except Exception:
+                    pass
+                # Allow install from sidebar
+                try:
+                    self.plugins_sidebar.install_requested.connect(self.on_plugin_install_requested)
+                except Exception:
+                    pass
+                self.filters_layout.addWidget(self.plugins_sidebar)
+            except Exception:
+                pass
         elif view_id == "settings":
             self.sources_section.setVisible(False)
             self.filters_section.setVisible(False)

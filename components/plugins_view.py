@@ -16,13 +16,13 @@ class PluginCard(QFrame):
         self.setStyleSheet(self._style())
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(12)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
 
         icon_label = QLabel()
         try:
             if icon and not icon.isNull():
-                icon_label.setPixmap(icon.pixmap(36, 36))
+                icon_label.setPixmap(icon.pixmap(28, 28))
             else:
                 icon_label.setText("🧩")
         except Exception:
@@ -70,16 +70,16 @@ class PluginCard(QFrame):
         }
         QLabel#pluginTitle {
             color: #F0F0F0;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
         }
         QLabel#pluginDesc {
             color: #A0A0A0;
-            font-size: 12px;
+            font-size: 11px;
         }
         QLabel#pluginStatus {
             color: #00BFAE;
-            font-size: 11px;
+            font-size: 10px;
         }
         """
 
@@ -93,6 +93,8 @@ class PluginsView(QWidget):
         self.main_app = main_app
         self.get_icon_callback = get_icon_callback
         self.cards = {}
+        self._filter_text = ""
+        self._installed_only = False
         self._init_specs()
         self._init_ui()
 
@@ -128,11 +130,12 @@ class PluginsView(QWidget):
         layout.addWidget(title)
 
         grid_container = QWidget()
-        grid = QGridLayout(grid_container)
-        grid.setContentsMargins(0, 0, 0, 0)
-        grid.setHorizontalSpacing(12)
-        grid.setVerticalSpacing(12)
+        self.grid = QGridLayout(grid_container)
+        self.grid.setContentsMargins(0, 0, 0, 0)
+        self.grid.setHorizontalSpacing(10)
+        self.grid.setVerticalSpacing(10)
 
+        col_count = 3
         for idx, spec in enumerate(self.plugins):
             installed = self.is_installed(spec)
             icon = self._icon_for(spec)
@@ -144,9 +147,9 @@ class PluginsView(QWidget):
                 on_open=lambda s, self=self: self.launch_requested.emit(s['id']),
                 parent=self,
             )
-            row = idx // 2
-            col = idx % 2
-            grid.addWidget(card, row, col)
+            row = idx // col_count
+            col = idx % col_count
+            self.grid.addWidget(card, row, col)
             self.cards[spec['id']] = card
 
         layout.addWidget(grid_container)
@@ -180,9 +183,31 @@ class PluginsView(QWidget):
             if not card:
                 continue
             card.update_state(self.is_installed(spec))
+        self.apply_filter()
 
     def get_plugin(self, plugin_id):
         for spec in self.plugins:
             if spec['id'] == plugin_id:
                 return spec
         return None
+
+    def set_filter(self, text: str, installed_only: bool):
+        self._filter_text = (text or "").strip().lower()
+        self._installed_only = bool(installed_only)
+        self.apply_filter()
+
+    def apply_filter(self):
+        txt = self._filter_text
+        only = self._installed_only
+        for spec in self.plugins:
+            card = self.cards.get(spec['id'])
+            if not card:
+                continue
+            name = (spec.get('name') or spec.get('id') or "").lower()
+            desc = (spec.get('desc') or "").lower()
+            matches_txt = (not txt) or (txt in name) or (txt in desc)
+            if only:
+                is_inst = self.is_installed(spec)
+            else:
+                is_inst = True
+            card.setVisible(matches_txt and is_inst)

@@ -1,5 +1,6 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QButtonGroup, QListWidget, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QButtonGroup, QListWidget, QPushButton, QMenu
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QAction
 
 
 class PluginsSidebar(QWidget):
@@ -10,7 +11,9 @@ class PluginsSidebar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.plugins = []
-        self._category_buttons = []
+        self._selected_cats = set()
+        self._category_menu = None
+        self.category_btn = None
         self._build()
 
     def _build(self):
@@ -41,10 +44,11 @@ class PluginsSidebar(QWidget):
         row.addStretch()
         layout.addLayout(row)
         
-        # Category chips row
-        self.cat_row = QHBoxLayout()
-        self.cat_row.setSpacing(6)
-        layout.addLayout(self.cat_row)
+        # Categories dropdown (saves horizontal space)
+        self.category_btn = QPushButton("Categories: All")
+        self.category_menu = QMenu(self)
+        self.category_btn.setMenu(self.category_menu)
+        layout.addWidget(self.category_btn)
 
         self.list = QListWidget()
         self.list.currentTextChanged.connect(self._on_select)
@@ -70,29 +74,56 @@ class PluginsSidebar(QWidget):
             self.list.blockSignals(False)
     
     def set_categories(self, categories):
-        # Clear existing buttons
-        for i in reversed(range(self.cat_row.count())):
-            item = self.cat_row.takeAt(i)
-            if item and item.widget():
-                item.widget().deleteLater()
-        self._category_buttons = []
+        # Build dropdown menu with checkable actions
+        if self.category_menu is None:
+            self.category_menu = QMenu(self)
+            self.category_btn.setMenu(self.category_menu)
+        self.category_menu.clear()
+        self._selected_cats = set()
         if not categories:
+            self._update_category_btn()
             return
+        # Optional helper actions
+        act_all = QAction("All Categories", self)
+        act_all.triggered.connect(self._clear_categories)
+        self.category_menu.addAction(act_all)
+        self.category_menu.addSeparator()
         for cat in categories:
-            btn = QPushButton(cat)
-            btn.setCheckable(True)
-            btn.setObjectName("chip")
-            btn.toggled.connect(lambda _v, self=self: self._emit())
-            self.cat_row.addWidget(btn)
-            self._category_buttons.append(btn)
-        self.cat_row.addStretch()
+            action = QAction(cat, self)
+            action.setCheckable(True)
+            action.toggled.connect(lambda checked, c=cat: self._on_category_toggled(c, checked))
+            self.category_menu.addAction(action)
+        self._update_category_btn()
     
     def get_selected_categories(self):
-        selected = []
-        for btn in self._category_buttons:
-            if btn.isChecked():
-                selected.append(btn.text())
-        return selected
+        return list(self._selected_cats)
+
+    def _on_category_toggled(self, cat, checked):
+        if checked:
+            self._selected_cats.add(cat)
+        else:
+            self._selected_cats.discard(cat)
+        self._update_category_btn()
+        self._emit()
+
+    def _clear_categories(self):
+        self._selected_cats.clear()
+        # Uncheck all actions
+        if self.category_menu:
+            for act in self.category_menu.actions():
+                if act.isCheckable():
+                    act.setChecked(False)
+        self._update_category_btn()
+        self._emit()
+
+    def _update_category_btn(self):
+        if not self._selected_cats:
+            self.category_btn.setText("Categories: All")
+        else:
+            # Show up to 2 names, then count
+            cats = sorted(self._selected_cats)
+            label = ", ".join(cats[:2]) + ("…" if len(cats) > 2 else "")
+            self.category_btn.setText(f"Categories: {label}")
 
     def _emit(self):
         text = self.search.text().strip()

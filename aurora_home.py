@@ -4005,7 +4005,7 @@ fi
                 'bundle_autosave_path': os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json'),
                 'auto_refresh_updates_minutes': 0,
                 'auto_update_enabled': False,
-                'auto_update_interval_hours': 24,
+                'auto_update_interval_days': 1,
                 'snapshot_before_update': False
             }
             default.update(data if isinstance(data, dict) else {})

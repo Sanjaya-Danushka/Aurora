@@ -5,6 +5,7 @@ PyQt6==6.6.1
 # searchbox refresh and hint error
 # plugins page souce card resizebug
 # have some bug update 
+# aur percentage bug
 
 supabase
 requests

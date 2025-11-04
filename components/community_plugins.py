@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushBut
                              QScrollArea, QFrame, QGridLayout, QTextEdit, QLineEdit,
                              QMessageBox, QProgressBar, QGroupBox, QListWidget, QFileDialog)
 from PyQt6.QtCore import pyqtSignal, Qt, QThread, QTimer
-from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtGui import QIcon, QPixmap, QGuiApplication
 import os
 
 from plugin_store import PluginStore
@@ -436,6 +436,7 @@ class CommunityPluginsTab(QWidget):
         self.creator_dialog = None
         self.my_plugins = []
         self._selected_my_id = None
+        self._setup_status = None
 
         self._init_ui()
         self.refresh_plugins()
@@ -470,6 +471,22 @@ class CommunityPluginsTab(QWidget):
         layout.addLayout(header)
 
         if self._is_supabase:
+            self.onboarding_group = QGroupBox("Supabase Setup Required")
+            ob_layout = QVBoxLayout(self.onboarding_group)
+            self.ob_text = QLabel("Your Supabase project is missing required objects. Use the buttons below to copy SQL and run it in the Supabase SQL editor, and create two storage buckets: plugin-icons and plugin-files.")
+            self.ob_text.setWordWrap(True)
+            ob_layout.addWidget(self.ob_text)
+            btns = QHBoxLayout()
+            self.btn_copy_sql = QPushButton("Copy Table + RLS SQL")
+            self.btn_copy_sql.clicked.connect(self._copy_sql_setup)
+            self.btn_copy_storage = QPushButton("Copy Storage Policies SQL")
+            self.btn_copy_storage.clicked.connect(self._copy_storage_policies)
+            btns.addWidget(self.btn_copy_sql)
+            btns.addWidget(self.btn_copy_storage)
+            btns.addStretch()
+            ob_layout.addLayout(btns)
+            layout.addWidget(self.onboarding_group)
+            self.onboarding_group.setVisible(False)
             auth_row = QHBoxLayout()
             self.email_input = QLineEdit()
             self.email_input.setPlaceholderText("Email")
@@ -574,6 +591,7 @@ class CommunityPluginsTab(QWidget):
             my_layout.addLayout(form_col, 2)
             layout.addWidget(self.my_group)
             self._update_auth_ui()
+            self._update_onboarding_panel()
 
     def refresh_plugins(self):
         """Refresh the list of community plugins"""
@@ -596,6 +614,7 @@ class CommunityPluginsTab(QWidget):
 
         if self._is_supabase:
             QTimer.singleShot(150, self._load_my_plugins)
+            QTimer.singleShot(50, self._update_onboarding_panel)
 
     def _load_plugins_async(self):
         """Load plugins asynchronously"""
@@ -623,6 +642,91 @@ class CommunityPluginsTab(QWidget):
         self.password_input.setVisible(not logged_in)
         if hasattr(self, "my_group"):
             self.my_group.setVisible(logged_in)
+
+    def _update_onboarding_panel(self):
+        if not self._is_supabase:
+            return
+        try:
+            status = self.plugin_store.get_setup_status()
+        except Exception:
+            status = None
+        self._setup_status = status
+        if not status:
+            if hasattr(self, 'onboarding_group'):
+                self.onboarding_group.setVisible(False)
+            return
+        missing = (not status.get('has_plugins_table')) or (not status.get('has_increment_fn'))
+        if hasattr(self, 'onboarding_group'):
+            self.onboarding_group.setVisible(bool(missing))
+            if missing:
+                parts = []
+                if not status.get('has_plugins_table'):
+                    parts.append("plugins table")
+                if not status.get('has_increment_fn'):
+                    parts.append("increment_downloads function")
+                self.ob_text.setText("Missing: " + ", ".join(parts) + ". Copy SQL and run in Supabase SQL editor, and create buckets plugin-icons and plugin-files.")
+
+    def _copy_sql_setup(self):
+        try:
+            QGuiApplication.clipboard().setText(self._get_sql_setup())
+            QMessageBox.information(self, "Copied", "SQL copied to clipboard.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+    def _copy_storage_policies(self):
+        try:
+            QGuiApplication.clipboard().setText(self._get_sql_storage())
+            QMessageBox.information(self, "Copied", "Storage SQL copied to clipboard.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+    def _get_sql_setup(self) -> str:
+        return (
+            "create table if not exists public.plugins (\n"
+            "  id text primary key,\n"
+            "  name text not null,\n"
+            "  description text,\n"
+            "  version text default '1.0.0' not null,\n"
+            "  author text not null,\n"
+            "  categories text[] default '{}',\n"
+            "  icon_url text,\n"
+            "  file_url text not null,\n"
+            "  downloads bigint default 0 not null,\n"
+            "  created_by uuid not null references auth.users(id) on delete cascade,\n"
+            "  created_at timestamptz not null default now(),\n"
+            "  updated_at timestamptz not null default now(),\n"
+            "  constraint id_slug check (id ~ '^[a-z0-9_]+$')\n"
+            ");\n\n"
+            "create or replace function public.set_updated_at() returns trigger language plpgsql as $$\n"
+            "begin new.updated_at = now(); return new; end; $$;\n"
+            "drop trigger if exists trg_plugins_set_updated_at on public.plugins;\n"
+            "create trigger trg_plugins_set_updated_at before update on public.plugins for each row execute function public.set_updated_at();\n\n"
+            "alter table public.plugins enable row level security;\n"
+            "drop policy if exists \"plugins_select_all\" on public.plugins;\n"
+            "create policy \"plugins_select_all\" on public.plugins for select to public using (true);\n"
+            "drop policy if exists \"plugins_insert_owner\" on public.plugins;\n"
+            "create policy \"plugins_insert_owner\" on public.plugins for insert to authenticated with check (created_by = auth.uid());\n"
+            "drop policy if exists \"plugins_update_owner\" on public.plugins;\n"
+            "create policy \"plugins_update_owner\" on public.plugins for update to authenticated using (created_by = auth.uid()) with check (created_by = auth.uid());\n"
+            "drop policy if exists \"plugins_delete_owner\" on public.plugins;\n"
+            "create policy \"plugins_delete_owner\" on public.plugins for delete to authenticated using (created_by = auth.uid());\n\n"
+            "create or replace function public.increment_downloads(p_id text) returns void language plpgsql security definer as $$\n"
+            "begin update public.plugins set downloads = downloads + 1, updated_at = now() where id = p_id; end; $$;\n"
+            "revoke all on function public.increment_downloads(text) from public;\n"
+            "grant execute on function public.increment_downloads(text) to anon, authenticated;\n"
+        )
+
+    def _get_sql_storage(self) -> str:
+        return (
+            "create policy if not exists \"icons_read_public\" on storage.objects for select to public using (bucket_id = 'plugin-icons');\n"
+            "create policy if not exists \"files_read_public\" on storage.objects for select to public using (bucket_id = 'plugin-files');\n"
+            "create policy if not exists \"icons_insert_auth\" on storage.objects for insert to authenticated with check (bucket_id = 'plugin-icons');\n"
+            "create policy if not exists \"files_insert_auth\" on storage.objects for insert to authenticated with check (bucket_id = 'plugin-files');\n"
+            "create policy if not exists \"icons_update_owner\" on storage.objects for update to authenticated using (bucket_id = 'plugin-icons' and owner = auth.uid()) with check (bucket_id = 'plugin-icons' and owner = auth.uid());\n"
+            "create policy if not exists \"icons_delete_owner\" on storage.objects for delete to authenticated using (bucket_id = 'plugin-icons' and owner = auth.uid());\n"
+            "create policy if not exists \"files_update_owner\" on storage.objects for update to authenticated using (bucket_id = 'plugin-files' and owner = auth.uid()) with check (bucket_id = 'plugin-files' and owner = auth.uid());\n"
+            "create policy if not exists \"files_delete_owner\" on storage.objects for delete to authenticated using (bucket_id = 'plugin-files' and owner = auth.uid());\n"
+        )
 
     def _display_plugins(self):
         """Display the loaded plugins"""

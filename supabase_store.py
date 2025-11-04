@@ -330,3 +330,36 @@ class SupabasePluginStore:
             return {"ok": True}
         except Exception as e:
             return {"ok": False, "error": str(e)}
+
+    # ---------------- Diagnostics ----------------
+    def get_setup_status(self) -> Dict:
+        """
+        Return diagnostics about required Supabase objects.
+        Keys:
+          - has_plugins_table: bool
+          - has_increment_fn: bool
+          - plugins_error: optional str
+          - increment_error: optional str
+        """
+        status = {
+            "has_plugins_table": False,
+            "has_increment_fn": False,
+        }
+        if not self._client:
+            status["plugins_error"] = "Client not configured"
+            status["increment_error"] = "Client not configured"
+            return status
+        # Check table
+        try:
+            self._client.table("plugins").select("id").limit(1).execute()
+            status["has_plugins_table"] = True
+        except Exception as e:
+            status["plugins_error"] = str(e)
+        # Check function
+        try:
+            # Safe call; will no-op if id doesn't exist
+            self._client.rpc("increment_downloads", {"p_id": "__noop__"}).execute()
+            status["has_increment_fn"] = True
+        except Exception as e:
+            status["increment_error"] = str(e)
+        return status

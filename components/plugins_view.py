@@ -15,17 +15,17 @@ class PluginCard(QFrame):
         self.setObjectName("pluginCard")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet(self._style())
-        self.setMinimumHeight(92)
+        self.setMinimumHeight(128)
 
         layout = QHBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
+        layout.setSpacing(10)
 
         icon_label = QLabel()
         try:
             if icon and not icon.isNull():
-                icon_label.setPixmap(icon.pixmap(28, 28))
+                icon_label.setPixmap(icon.pixmap(36, 36))
             else:
                 icon_label.setText("🧩")
         except Exception:
@@ -95,12 +95,12 @@ class PluginCard(QFrame):
         }
         QLabel#pluginTitle {
             color: #F0F0F0;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
         }
         QLabel#pluginDesc {
             color: #A0A0A0;
-            font-size: 10px;
+            font-size: 11px;
         }
         QLabel#pluginStatus {
             color: #00BFAE;
@@ -286,10 +286,10 @@ class PluginsView(QWidget):
         grid_container = QWidget()
         self.grid = QGridLayout(grid_container)
         self.grid.setContentsMargins(0, 0, 0, 0)
-        self.grid.setHorizontalSpacing(8)
-        self.grid.setVerticalSpacing(8)
+        self.grid.setHorizontalSpacing(10)
+        self.grid.setVerticalSpacing(10)
 
-        col_count = 4
+        col_count = 3
         for idx, spec in enumerate(self.plugins):
             installed = self.is_installed(spec)
             icon = self._icon_for(spec)

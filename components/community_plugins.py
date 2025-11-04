@@ -32,16 +32,16 @@ class CommunityPluginCard(QFrame):
         self.setObjectName("communityPluginCard")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet(self._style())
-        self.setMinimumHeight(84)
+        self.setMinimumHeight(64)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(6)
 
         # Header with optional icon, title and author
         header = QHBoxLayout()
         self.icon_label = QLabel()
-        self.icon_label.setFixedSize(32, 32)
+        self.icon_label.setFixedSize(24, 24)
         self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         has_icon = False
         try:
@@ -52,7 +52,7 @@ class CommunityPluginCard(QFrame):
                     if rr.status_code == 200:
                         pm = QPixmap()
                         if pm.loadFromData(rr.content):
-                            self.icon_label.setPixmap(pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                            self.icon_label.setPixmap(pm.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
                             has_icon = True
                 except Exception:
                     pass
@@ -77,7 +77,7 @@ class CommunityPluginCard(QFrame):
         desc = QLabel(plugin_info.get('description', ''))
         desc.setObjectName("pluginDesc")
         desc.setWordWrap(True)
-        desc.setMaximumHeight(40)
+        desc.setMaximumHeight(32)
         layout.addWidget(desc)
 
         # Footer with version, downloads, and buttons
@@ -95,12 +95,12 @@ class CommunityPluginCard(QFrame):
 
         # Buttons
         details_btn = QPushButton("Details")
-        details_btn.setFixedWidth(70)
+        details_btn.setFixedWidth(54)
         details_btn.clicked.connect(lambda: self.on_view_details(self.plugin_info))
         footer.addWidget(details_btn)
 
         install_btn = QPushButton("Install")
-        install_btn.setFixedWidth(70)
+        install_btn.setFixedWidth(54)
         install_btn.clicked.connect(lambda: self.on_install(self.plugin_info))
         footer.addWidget(install_btn)
 
@@ -115,12 +115,12 @@ class CommunityPluginCard(QFrame):
         }
         QLabel#pluginTitle {
             color: #F0F0F0;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 600;
         }
         QLabel#pluginDesc {
             color: #A0A0A0;
-            font-size: 11px;
+            font-size: 9px;
             line-height: 1.3;
         }
         QPushButton {
@@ -128,8 +128,8 @@ class CommunityPluginCard(QFrame):
             color: #00BFAE;
             border: 1px solid #00BFAE;
             border-radius: 4px;
-            padding: 3px 8px;
-            font-size: 10px;
+            padding: 2px 8px;
+            font-size: 9px;
         }
         QPushButton:hover {
             background-color: rgba(0, 191, 174, 0.1);
@@ -502,8 +502,8 @@ class CommunityPluginsTab(QWidget):
 
         self.content_widget = QWidget()
         self.grid_layout = QGridLayout(self.content_widget)
-        self.grid_layout.setContentsMargins(8, 8, 8, 8)
-        self.grid_layout.setSpacing(8)
+        self.grid_layout.setContentsMargins(6, 6, 6, 6)
+        self.grid_layout.setSpacing(6)
 
         scroll_area.setWidget(self.content_widget)
         layout.addWidget(scroll_area)
@@ -589,7 +589,7 @@ class CommunityPluginsTab(QWidget):
         # Add loading message
         loading_label = QLabel("Loading community plugins...")
         loading_label.setStyleSheet("color: #AAA; font-style: italic;")
-        self.grid_layout.addWidget(loading_label, 0, 0, 1, 3, Qt.AlignmentFlag.AlignCenter)
+        self.grid_layout.addWidget(loading_label, 0, 0, 1, 5, Qt.AlignmentFlag.AlignCenter)
 
         # Load plugins in background
         QTimer.singleShot(100, self._load_plugins_async)
@@ -636,11 +636,11 @@ class CommunityPluginsTab(QWidget):
             no_plugins_label = QLabel("No community plugins found.\n\nBe the first to share a plugin!")
             no_plugins_label.setStyleSheet("color: #AAA; text-align: center;")
             no_plugins_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.grid_layout.addWidget(no_plugins_label, 0, 0, 1, 3, Qt.AlignmentFlag.AlignCenter)
+            self.grid_layout.addWidget(no_plugins_label, 0, 0, 1, 5, Qt.AlignmentFlag.AlignCenter)
             return
 
         # Display plugins in grid (denser layout)
-        col_count = 4
+        col_count = 5
         for idx, plugin_info in enumerate(self.community_plugins):
             card = CommunityPluginCard(
                 plugin_info,

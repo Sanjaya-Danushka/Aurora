@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QGridLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QGridLayout, QSizePolicy
 from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QIcon
 import os
@@ -16,6 +16,8 @@ class PluginCard(QFrame):
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet(self._style())
         self.setMinimumHeight(128)
+        # Prevent vertical stretch so grid vertical spacing is visible
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
 
         layout = QHBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
@@ -38,6 +40,10 @@ class PluginCard(QFrame):
         desc = QLabel(spec.get('desc', ""))
         desc.setObjectName("pluginDesc")
         desc.setWordWrap(True)
+        try:
+            desc.setMaximumHeight(48)
+        except Exception:
+            pass
         text_col.addWidget(title)
         text_col.addWidget(desc)
         layout.addLayout(text_col, 1)
@@ -92,6 +98,7 @@ class PluginCard(QFrame):
             background-color: #0f0f0f;
             border-radius: 12px;
             border: 1px solid rgba(255,255,255,0.06);
+            margin: 10px;
         }
         QLabel#pluginTitle {
             color: #F0F0F0;
@@ -285,9 +292,13 @@ class PluginsView(QWidget):
 
         grid_container = QWidget()
         self.grid = QGridLayout(grid_container)
-        self.grid.setContentsMargins(0, 0, 0, 0)
-        self.grid.setHorizontalSpacing(10)
-        self.grid.setVerticalSpacing(10)
+        self.grid.setContentsMargins(12, 12, 12, 12)
+        self.grid.setHorizontalSpacing(12)
+        self.grid.setVerticalSpacing(48)
+        try:
+            grid_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        except Exception:
+            pass
 
         col_count = 3
         for idx, spec in enumerate(self.plugins):

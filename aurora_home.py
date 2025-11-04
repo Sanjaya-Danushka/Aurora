@@ -22,7 +22,8 @@ from collections import Counter
 from git_manager import GitManager
 
 from styles import Styles
-from components import SourceCard, FilterCard, LargeSearchBox, LoadingSpinner, PluginsView, PluginsSidebar
+from components import (SourceCard, FilterCard, LargeSearchBox, LoadingSpinner, PluginsView, PluginsSidebar,
+                       GeneralSettingsWidget, AutoUpdateSettingsWidget, PluginsSettingsWidget)
 from plugin_manager import PluginsManager
 
 def _qt_msg_handler(mode, context, message):
@@ -4020,7 +4021,7 @@ fi
                 'bundle_autosave_path': os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json'),
                 'auto_refresh_updates_minutes': 0,
                 'auto_update_enabled': False,
-                'auto_update_interval_hours': 24,
+                'auto_update_interval_days': 1,
                 'snapshot_before_update': False
             }
     
@@ -4059,11 +4060,11 @@ fi
             if item.widget():
                 item.widget().deleteLater()
         tabs = QTabWidget()
-        gen = QWidget(); gen_l = QVBoxLayout(gen); gen_l.setContentsMargins(8,8,8,8); gen_l.setSpacing(8)
-        self.build_general_settings(gen_l)
-        plugs = QWidget(); plugs_l = QVBoxLayout(plugs); plugs_l.setContentsMargins(8,8,8,8); plugs_l.setSpacing(8)
-        self.build_plugins_settings(plugs_l)
+        gen = GeneralSettingsWidget(self)
+        auto_update = AutoUpdateSettingsWidget(self)
+        plugs = PluginsSettingsWidget(self)
         tabs.addTab(gen, "General")
+        tabs.addTab(auto_update, "Auto Update")
         tabs.addTab(plugs, "Plugins")
         self.settings_layout.addWidget(tabs)
         self.settings_layout.addStretch()
@@ -4160,136 +4161,12 @@ fi
         btns.addWidget(btn_export)
         btns.addWidget(btn_import)
         btns.addStretch()
-        layout.addLayout(btns)
     
     def _update_setting(self, key, value):
         self.settings[key] = value
         self.save_settings()
     
     def export_settings(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Export Settings", os.path.expanduser('~'), "Settings JSON (*.json)")
-        if not path:
-            return
-        try:
-            with open(path, 'w', encoding='utf-8') as f:
-                json.dump(self.settings, f, indent=2)
-            self._show_message("Export Settings", f"Saved to {path}")
-        except Exception as e:
-            self._show_message("Export Settings", f"Failed: {e}")
-    
-    def import_settings(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Import Settings", os.path.expanduser('~'), "Settings JSON (*.json)")
-        if not path:
-            return
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            if isinstance(data, dict):
-                self.settings.update(data)
-                self.save_settings()
-                self.build_settings_ui()
-                self._show_message("Import Settings", "Imported")
-        except Exception as e:
-            self._show_message("Import Settings", f"Failed: {e}")
-    
-    def build_plugins_settings(self, layout):
-        actions = QHBoxLayout()
-        btn_add = QPushButton("Install Plugin")
-        btn_add.clicked.connect(self.install_plugin)
-        btn_remove = QPushButton("Remove Selected")
-        btn_remove.clicked.connect(self.remove_selected_plugins)
-        btn_reload = QPushButton("Reload Plugins")
-        btn_reload.clicked.connect(self.reload_plugins_and_notify)
-        btn_defaults = QPushButton("Install Default Plugins")
-        btn_defaults.clicked.connect(self.install_default_plugins)
-        actions.addWidget(btn_add)
-        actions.addWidget(btn_remove)
-        actions.addWidget(btn_reload)
-        actions.addWidget(btn_defaults)
-        actions.addStretch()
-        layout.addLayout(actions)
-        self.plugins_table = QTableWidget()
-        self.plugins_table.setColumnCount(3)
-        self.plugins_table.setHorizontalHeaderLabels(["Enabled", "Plugin", "Location"])
-        self.plugins_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self.plugins_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        self.plugins_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        layout.addWidget(self.plugins_table)
-        self.refresh_plugins_table()
-        self.plugins_table.itemChanged.connect(self.on_plugin_item_changed)
-    
-    def refresh_plugins_table(self):
-        self._plugins_populating = True
-        plugs = self.scan_plugins()
-        enabled = set(self.settings.get('enabled_plugins') or [])
-        self.plugins_table.setRowCount(0)
-        for p in plugs:
-            row = self.plugins_table.rowCount()
-            self.plugins_table.insertRow(row)
-            enabled_item = QTableWidgetItem()
-            enabled_item.setFlags(enabled_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            enabled_item.setCheckState(Qt.CheckState.Checked if p['name'] in enabled else Qt.CheckState.Unchecked)
-            name_item = QTableWidgetItem(p['name'])
-            loc_item = QTableWidgetItem(p.get('location', 'User'))
-            self.plugins_table.setItem(row, 0, enabled_item)
-            self.plugins_table.setItem(row, 1, name_item)
-            self.plugins_table.setItem(row, 2, loc_item)
-        self._plugins_populating = False
-    
-    def on_plugin_item_changed(self, item):
-        if getattr(self, '_plugins_populating', False):
-            return
-        if item.column() != 0:
-            return
-        row = item.row()
-        name_item = self.plugins_table.item(row, 1)
-        if not name_item:
-            return
-        name = name_item.text().strip()
-        enabled = set(self.settings.get('enabled_plugins') or [])
-        if item.checkState() == Qt.CheckState.Checked:
-            enabled.add(name)
-        else:
-            enabled.discard(name)
-        self.settings['enabled_plugins'] = sorted(enabled)
-        self.save_settings()
-    
-    def install_plugin(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Install Plugin", os.path.expanduser('~'), "Python Plugin (*.py)")
-        if not path:
-            return
-        try:
-            dst = os.path.join(self.get_user_plugins_dir(), os.path.basename(path))
-            shutil.copy2(path, dst)
-            self.refresh_plugins_table()
-            self._show_message("Install Plugin", f"Installed: {os.path.basename(path)}")
-        except Exception as e:
-            self._show_message("Install Plugin", f"Failed: {e}")
-    
-    def remove_selected_plugins(self):
-        rows = self.plugins_table.selectionModel().selectedRows()
-        if not rows:
-            return
-        removed = 0
-        for mi in rows:
-            r = mi.row()
-            name_item = self.plugins_table.item(r, 1)
-            if not name_item:
-                continue
-            name = name_item.text().strip()
-            path = os.path.join(self.get_user_plugins_dir(), name + '.py')
-            try:
-                if os.path.exists(path):
-                    os.remove(path)
-                    removed += 1
-                enabled = set(self.settings.get('enabled_plugins') or [])
-                enabled.discard(name)
-                self.settings['enabled_plugins'] = sorted(enabled)
-            except Exception:
-                pass
-        self.save_settings()
-        self.refresh_plugins_table()
-
     # -------------------- Plugin runtime --------------------
     def initialize_plugins(self):
         try:
@@ -4496,8 +4373,8 @@ def on_tick(app):
         if not app.settings.get('auto_update_enabled', False):
             return
         
-        hours = int(app.settings.get('auto_update_interval_hours', 24))
-        interval_seconds = hours * 3600
+        days = int(app.settings.get('auto_update_interval_days', 1))
+        interval_seconds = days * 24 * 3600
         
         now = time.time()
         if _last_update and now - _last_update < interval_seconds:

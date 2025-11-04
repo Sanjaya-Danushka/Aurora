@@ -1,6 +1,6 @@
 import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QGridLayout,
-                             QLabel, QCheckBox, QSpinBox)
+                             QLabel, QCheckBox, QSpinBox, QPushButton)
 from PyQt6.QtCore import Qt
 
 class AutoUpdateSettingsWidget(QWidget):

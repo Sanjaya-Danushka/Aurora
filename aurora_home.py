@@ -4167,6 +4167,31 @@ fi
         self.save_settings()
     
     def export_settings(self):
+        path, _ = QFileDialog.getSaveFileName(self, "Export Settings", os.path.expanduser('~'), "Settings JSON (*.json)")
+        if not path:
+            return
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(self.settings, f, indent=2)
+            self._show_message("Export Settings", f"Saved to {path}")
+        except Exception as e:
+            self._show_message("Export Settings", f"Failed: {e}")
+    
+    def import_settings(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Import Settings", os.path.expanduser('~'), "Settings JSON (*.json)")
+        if not path:
+            return
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                self.settings.update(data)
+                self.save_settings()
+                self.build_settings_ui()
+                self._show_message("Import Settings", "Imported")
+        except Exception as e:
+            self._show_message("Import Settings", f"Failed: {e}")
+    
     # -------------------- Plugin runtime --------------------
     def initialize_plugins(self):
         try:
@@ -4714,6 +4739,72 @@ def on_tick(app):
                 self.loading_widget.setVisible(False)
         
         Thread(target=do_delete, daemon=True).start()
+
+    def install_plugin(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Install Plugin", os.path.expanduser('~'), "Python Plugin (*.py)")
+        if not path:
+            return
+        try:
+            dst = os.path.join(self.get_user_plugins_dir(), os.path.basename(path))
+            shutil.copy2(path, dst)
+            self._show_message("Install Plugin", f"Installed: {os.path.basename(path)}")
+            # Refresh plugins table if it exists
+            try:
+                # Find the plugins widget and refresh it
+                if hasattr(self, 'settings_container'):
+                    tabs = self.settings_container.widget().findChild(QTabWidget)
+                    if tabs:
+                        for i in range(tabs.count()):
+                            widget = tabs.widget(i)
+                            if hasattr(widget, 'refresh_plugins_table'):
+                                widget.refresh_plugins_table()
+                                break
+            except:
+                pass
+        except Exception as e:
+            self._show_message("Install Plugin", f"Failed: {e}")
+    
+    def remove_selected_plugins(self):
+        # This method needs to be called from the plugins settings widget
+        # We'll implement it to work with the current table selection
+        try:
+            # Find the plugins widget and call its remove method
+            if hasattr(self, 'settings_container'):
+                tabs = self.settings_container.widget().findChild(QTabWidget)
+                if tabs:
+                    for i in range(tabs.count()):
+                        widget = tabs.widget(i)
+                        if hasattr(widget, 'remove_selected_plugins'):
+                            widget.remove_selected_plugins()
+                            break
+        except Exception as e:
+            self._show_message("Remove Plugins", f"Error: {e}")
+    
+    def reload_plugins_and_notify(self):
+        self.reload_plugins()
+        self._show_message("Plugins", f"Reloaded {len(self.plugins)} plugin(s)")
+    
+    def install_default_plugins(self):
+        self.ensure_default_plugins(force_enable=True)
+        self.refresh_plugins_table()
+        self.reload_plugins()
+        self._show_message("Plugins", "Default plugins installed and enabled")
+    
+    def scan_plugins(self):
+        plugs = []
+        try:
+            user_dir = self.get_user_plugins_dir()
+            for fn in sorted(os.listdir(user_dir)):
+                if fn.endswith('.py'):
+                    plugs.append({'name': os.path.splitext(fn)[0], 'path': os.path.join(user_dir, fn), 'location': 'User'})
+        except Exception:
+            pass
+        return plugs
+    
+    def refresh_plugins_table(self):
+        # This method is used internally by the main class
+        # The component will call this if needed
+        pass
 
 def main():
     if len(sys.argv) > 1:

@@ -23,7 +23,7 @@ class PluginsSettingsWidget(QWidget):
         btn_reload = QPushButton("Reload Plugins")
         btn_reload.clicked.connect(self.app.reload_plugins_and_notify)
         btn_defaults = QPushButton("Install Default Plugins")
-        btn_defaults.clicked.connect(self.app.install_default_plugins)
+        btn_defaults.clicked.connect(self.install_default_plugins)
 
         actions.addWidget(btn_add)
         actions.addWidget(btn_remove)
@@ -87,3 +87,37 @@ class PluginsSettingsWidget(QWidget):
 
         self.app.settings['enabled_plugins'] = sorted(enabled)
         self.app.save_settings()
+
+    def remove_selected_plugins(self):
+        """Remove selected plugins from the table and filesystem"""
+        rows = self.plugins_table.selectionModel().selectedRows()
+        if not rows:
+            return
+        
+        removed = 0
+        for mi in rows:
+            r = mi.row()
+            name_item = self.plugins_table.item(r, 1)
+            if not name_item:
+                continue
+            name = name_item.text().strip()
+            path = os.path.join(self.app.get_user_plugins_dir(), name + '.py')
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+                    removed += 1
+                enabled = set(self.app.settings.get('enabled_plugins') or [])
+                enabled.discard(name)
+                self.app.settings['enabled_plugins'] = sorted(enabled)
+            except Exception:
+                pass
+        
+        self.app.save_settings()
+        self.refresh_plugins_table()
+        if removed > 0:
+            self.app._show_message("Remove Plugins", f"Removed {removed} plugin(s)")
+
+    def install_default_plugins(self):
+        """Install default plugins and refresh the table"""
+        self.app.install_default_plugins()
+        self.refresh_plugins_table()

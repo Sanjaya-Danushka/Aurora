@@ -53,4 +53,4 @@ Contributions are welcome! Please ensure all changes maintain the security and s
 
 ## License
 
-This project does not use the MIT license. All rights reserved. No copying, modification, distribution, or redistribution is permitted for security reasons. This software is proprietary and intended solely for authorized use within the Aurora package manager project.
+This project does not use the MIT license. All rights reserved. No copying, modification, distribution, or redistribution is permitted for security reasons. This software is proprietary and intended solely for authorized use within the whale lab.

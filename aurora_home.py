@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QTextEdit,
                              QLabel, QFileDialog, QMessageBox, QHeaderView, QFrame, QSplitter,
                              QScrollArea, QCheckBox, QListWidget, QListWidgetItem, QSizePolicy,
-                             QDialog, QTabWidget, QGroupBox, QGridLayout, QRadioButton)
+                             QDialog, QTabWidget, QGroupBox, QGridLayout, QRadioButton, QSpinBox)
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF, QItemSelectionModel, qInstallMessageHandler, QtMsgType
 from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
 from PyQt6.QtSvg import QSvgRenderer
@@ -4003,7 +4003,10 @@ fi
                 'enabled_plugins': [],
                 'bundle_autosave': True,
                 'bundle_autosave_path': os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json'),
-                'auto_refresh_updates_minutes': 0
+                'auto_refresh_updates_minutes': 0,
+                'auto_update_enabled': False,
+                'auto_update_interval_hours': 24,
+                'snapshot_before_update': False
             }
             default.update(data if isinstance(data, dict) else {})
             return default
@@ -4015,7 +4018,10 @@ fi
                 'enabled_plugins': [],
                 'bundle_autosave': True,
                 'bundle_autosave_path': os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json'),
-                'auto_refresh_updates_minutes': 0
+                'auto_refresh_updates_minutes': 0,
+                'auto_update_enabled': False,
+                'auto_update_interval_hours': 24,
+                'snapshot_before_update': False
             }
     
     def save_settings(self):
@@ -4102,6 +4108,50 @@ fi
         pgrid.addWidget(path_edit, 1, 1)
         pgrid.addWidget(browse_btn, 1, 2)
         layout.addWidget(path_box)
+        
+        # Auto Update Settings
+        auto_update_box = QGroupBox("Auto Update")
+        auto_grid = QGridLayout(auto_update_box)
+        cb_auto_update = QCheckBox("Enable automatic updates")
+        cb_auto_update.setChecked(bool(self.settings.get('auto_update_enabled')))
+        cb_auto_update.toggled.connect(lambda v: self._update_setting('auto_update_enabled', v))
+        auto_grid.addWidget(cb_auto_update, 0, 0, 1, 2)
+        
+        auto_grid.addWidget(QLabel("Update interval (hours):"), 1, 0)
+        interval_spin = QSpinBox()
+        interval_spin.setRange(1, 168)  # 1 hour to 1 week
+        interval_spin.setValue(int(self.settings.get('auto_update_interval_hours', 24)))
+        interval_spin.valueChanged.connect(lambda v: self._update_setting('auto_update_interval_hours', v))
+        auto_grid.addWidget(interval_spin, 1, 1)
+        
+        layout.addWidget(auto_update_box)
+        
+        # Snapshot Settings
+        snapshot_box = QGroupBox("Snapshots")
+        snap_grid = QGridLayout(snapshot_box)
+        cb_snapshot = QCheckBox("Create snapshot before updates")
+        cb_snapshot.setChecked(bool(self.settings.get('snapshot_before_update')))
+        cb_snapshot.toggled.connect(lambda v: self._update_setting('snapshot_before_update', v))
+        snap_grid.addWidget(cb_snapshot, 0, 0, 1, 2)
+        
+        snap_btns = QHBoxLayout()
+        create_snap_btn = QPushButton("Create Snapshot")
+        create_snap_btn.clicked.connect(self.create_snapshot)
+        snap_btns.addWidget(create_snap_btn)
+        
+        revert_snap_btn = QPushButton("Revert to Snapshot")
+        revert_snap_btn.clicked.connect(self.revert_to_snapshot)
+        snap_btns.addWidget(revert_snap_btn)
+        
+        delete_snap_btn = QPushButton("Delete Snapshots")
+        delete_snap_btn.clicked.connect(self.delete_snapshots)
+        snap_btns.addWidget(delete_snap_btn)
+        
+        snap_btns.addStretch()
+        snap_grid.addLayout(snap_btns, 1, 0, 1, 2)
+        
+        layout.addWidget(snapshot_box)
+        
         btns = QHBoxLayout()
         btn_export = QPushButton("Export Settings")
         btn_export.clicked.connect(self.export_settings)
@@ -4431,6 +4481,111 @@ def on_tick(app):
             pass
                 """.strip()
             ),
+            'auto_update.py': (
+                """
+import time
+import subprocess
+import os
+from PyQt6.QtCore import QTimer
+
+_last_update = 0
+
+def on_tick(app):
+    global _last_update
+    try:
+        if not app.settings.get('auto_update_enabled', False):
+            return
+        
+        hours = int(app.settings.get('auto_update_interval_hours', 24))
+        interval_seconds = hours * 3600
+        
+        now = time.time()
+        if _last_update and now - _last_update < interval_seconds:
+            return
+        
+        _last_update = now
+        
+        # Check if we should create snapshot first
+        if app.settings.get('snapshot_before_update', False):
+            try:
+                if app.cmd_exists("timeshift"):
+                    # Create snapshot automatically
+                    timestamp = subprocess.run(["date", "+%Y-%m-%d_%H-%M-%S"], capture_output=True, text=True).stdout.strip()
+                    comment = f"NeoArch auto-update snapshot {timestamp}"
+                    result = subprocess.run(["pkexec", "timeshift", "--create", "--comments", comment], 
+                                          capture_output=True, text=True, timeout=300)
+                    if result.returncode == 0:
+                        app.log(f"Auto-update: Snapshot created: {comment}")
+                    else:
+                        app.log(f"Auto-update: Failed to create snapshot: {result.stderr}")
+            except Exception as e:
+                app.log(f"Auto-update: Snapshot creation failed: {e}")
+        
+        # Perform updates
+        try:
+            app.log("Auto-update: Starting automatic system updates...")
+            
+            # Update pacman packages
+            if app.cmd_exists("pacman"):
+                result = subprocess.run(["pkexec", "pacman", "-Syu", "--noconfirm"], 
+                                      capture_output=True, text=True, timeout=1800)
+                if result.returncode == 0:
+                    app.log("Auto-update: Pacman updates completed successfully")
+                    app.show_message.emit("Auto Update", "System packages updated successfully")
+                else:
+                    app.log(f"Auto-update: Pacman update failed: {result.stderr}")
+                    app.show_message.emit("Auto Update", f"Pacman update failed: {result.stderr}")
+            
+            # Update AUR packages if yay is available
+            if app.cmd_exists("yay"):
+                try:
+                    env, _ = app.prepare_askpass_env()
+                    result = subprocess.run(["yay", "-Syu", "--noconfirm"], 
+                                          capture_output=True, text=True, timeout=1800, env=env)
+                    if result.returncode == 0:
+                        app.log("Auto-update: AUR updates completed successfully")
+                    else:
+                        app.log(f"Auto-update: AUR update failed: {result.stderr}")
+                except Exception as e:
+                    app.log(f"Auto-update: AUR update error: {e}")
+            
+            # Update Flatpak
+            if app.cmd_exists("flatpak"):
+                scopes = [["--user"], ["--system"]] if app.cmd_exists("sudo") else [["--user"]]
+                for scope in scopes:
+                    try:
+                        result = subprocess.run(["flatpak"] + scope + ["update", "-y"], 
+                                              capture_output=True, text=True, timeout=900)
+                        if result.returncode == 0:
+                            app.log(f"Auto-update: Flatpak {scope[0]} updates completed")
+                        else:
+                            app.log(f"Auto-update: Flatpak {scope[0]} update failed: {result.stderr}")
+                    except Exception as e:
+                        app.log(f"Auto-update: Flatpak {scope[0]} update error: {e}")
+            
+            # Update npm global packages
+            if app.cmd_exists("npm"):
+                try:
+                    env = os.environ.copy()
+                    npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                    os.makedirs(npm_prefix, exist_ok=True)
+                    env['npm_config_prefix'] = npm_prefix
+                    env['NPM_CONFIG_PREFIX'] = npm_prefix
+                    env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
+                    
+                    result = subprocess.run(["npm", "update", "-g"], 
+                                          capture_output=True, text=True, timeout=600, env=env)
+                    if result.returncode == 0:
+                        app.log("Auto-update: NPM global packages updated")
+                    else:
+                        app.log(f"Auto-update: NPM update failed: {result.stderr}")
+                except Exception as e:
+                    app.log(f"Auto-update: NPM update error: {e}")
+                    
+        except Exception as e:
+            app.log(f"Auto-update: General error: {e}")
+                """.strip()
+            ),
         }
         for fname, code in defaults.items():
             fpath = os.path.join(user_dir, fname)
@@ -4506,6 +4661,182 @@ def on_tick(app):
     def show_about(self):
         QMessageBox.information(self, "About NeoArch", 
                               "NeoArch - Elevate Your \nArch Experience\nVersion 1.0\n\nBuilt with PyQt6")
+
+    def create_snapshot(self):
+        """Create a system snapshot before updates"""
+        if not self.cmd_exists("timeshift"):
+            QMessageBox.warning(self, "Timeshift Not Found", 
+                              "Timeshift is not installed. Please install Timeshift to use snapshot functionality.\n\nInstall with: sudo pacman -S timeshift")
+            return
+        
+        reply = QMessageBox.question(self, "Create Snapshot", 
+                                   "Create a system snapshot before proceeding with updates?\n\nThis will take some time.",
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                   QMessageBox.StandardButton.Yes)
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        self.loading_widget.setVisible(True)
+        self.loading_widget.set_message("Creating snapshot...")
+        self.loading_widget.start_animation()
+        
+        def do_create():
+            try:
+                # Create snapshot with timestamp
+                timestamp = subprocess.run(["date", "+%Y-%m-%d_%H-%M-%S"], capture_output=True, text=True).stdout.strip()
+                comment = f"NeoArch pre-update snapshot {timestamp}"
+                
+                result = subprocess.run(["pkexec", "timeshift", "--create", "--comments", comment], 
+                                      capture_output=True, text=True, timeout=300)
+                
+                if result.returncode == 0:
+                    self.show_message.emit("Snapshot", f"Snapshot created successfully: {comment}")
+                else:
+                    self.show_message.emit("Snapshot", f"Failed to create snapshot: {result.stderr}")
+                    
+            except Exception as e:
+                self.show_message.emit("Snapshot", f"Error creating snapshot: {str(e)}")
+            finally:
+                self.loading_widget.stop_animation()
+                self.loading_widget.setVisible(False)
+        
+        Thread(target=do_create, daemon=True).start()
+
+    def revert_to_snapshot(self):
+        """Revert system to a previous snapshot"""
+        if not self.cmd_exists("timeshift"):
+            QMessageBox.warning(self, "Timeshift Not Found", 
+                              "Timeshift is not installed. Please install Timeshift to use snapshot functionality.")
+            return
+        
+        # Get available snapshots
+        try:
+            result = subprocess.run(["timeshift", "--list"], capture_output=True, text=True, timeout=30)
+            if result.returncode != 0:
+                QMessageBox.warning(self, "No Snapshots", "No snapshots found or Timeshift error.")
+                return
+            
+            snapshots = []
+            lines = result.stdout.strip().split('\n')
+            for line in lines:
+                if line.strip() and not line.startswith('Num') and not line.startswith('---'):
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        snapshots.append({
+                            'num': parts[0],
+                            'date': parts[1],
+                            'time': parts[2],
+                            'comment': ' '.join(parts[3:])
+                        })
+            
+            if not snapshots:
+                QMessageBox.information(self, "No Snapshots", "No snapshots available for restoration.")
+                return
+            
+            # Show snapshot selection dialog
+            from PyQt6.QtWidgets import QComboBox, QVBoxLayout, QDialog, QDialogButtonBox
+            
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Select Snapshot to Restore")
+            dialog.setModal(True)
+            
+            layout = QVBoxLayout(dialog)
+            layout.addWidget(QLabel("Select a snapshot to restore the system to:"))
+            
+            combo = QComboBox()
+            for snap in snapshots:
+                combo.addItem(f"{snap['date']} {snap['time']} - {snap['comment']}", snap['num'])
+            layout.addWidget(combo)
+            
+            buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+            buttons.accepted.connect(dialog.accept)
+            buttons.rejected.connect(dialog.reject)
+            layout.addWidget(buttons)
+            
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                selected_num = combo.currentData()
+                if selected_num:
+                    self._restore_snapshot(selected_num)
+                    
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to list snapshots: {str(e)}")
+
+    def _restore_snapshot(self, snapshot_num):
+        """Restore to the specified snapshot"""
+        reply = QMessageBox.warning(self, "Confirm Restoration", 
+                                  f"This will restore your system to snapshot #{snapshot_num}.\n\n"
+                                  "The system will reboot after restoration.\n\n"
+                                  "Are you sure you want to proceed?",
+                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                  QMessageBox.StandardButton.No)
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        self.loading_widget.setVisible(True)
+        self.loading_widget.set_message("Restoring snapshot...")
+        self.loading_widget.start_animation()
+        
+        def do_restore():
+            try:
+                result = subprocess.run(["pkexec", "timeshift", "--restore", "--snapshot", snapshot_num], 
+                                      capture_output=True, text=True, timeout=600)
+                
+                if result.returncode == 0:
+                    self.show_message.emit("Snapshot", "Snapshot restoration initiated. System will reboot.")
+                    # Schedule reboot after a short delay
+                    QTimer.singleShot(3000, lambda: subprocess.run(["pkexec", "reboot"]))
+                else:
+                    self.show_message.emit("Snapshot", f"Failed to restore snapshot: {result.stderr}")
+                    
+            except Exception as e:
+                self.show_message.emit("Snapshot", f"Error restoring snapshot: {str(e)}")
+            finally:
+                self.loading_widget.stop_animation()
+                self.loading_widget.setVisible(False)
+        
+        Thread(target=do_restore, daemon=True).start()
+
+    def delete_snapshots(self):
+        """Delete old snapshots"""
+        if not self.cmd_exists("timeshift"):
+            QMessageBox.warning(self, "Timeshift Not Found", 
+                              "Timeshift is not installed.")
+            return
+        
+        reply = QMessageBox.question(self, "Delete Snapshots", 
+                                   "This will delete old snapshots to free up disk space.\n\n"
+                                   "Keep only the most recent snapshot?\n\n"
+                                   "This action cannot be undone.",
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                   QMessageBox.StandardButton.No)
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        self.loading_widget.setVisible(True)
+        self.loading_widget.set_message("Deleting old snapshots...")
+        self.loading_widget.start_animation()
+        
+        def do_delete():
+            try:
+                # Delete all but the most recent snapshot
+                result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "1"], 
+                                      capture_output=True, text=True, timeout=300)
+                
+                if result.returncode == 0:
+                    self.show_message.emit("Snapshot", "Old snapshots deleted successfully")
+                else:
+                    self.show_message.emit("Snapshot", f"Failed to delete snapshots: {result.stderr}")
+                    
+            except Exception as e:
+                self.show_message.emit("Snapshot", f"Error deleting snapshots: {str(e)}")
+            finally:
+                self.loading_widget.stop_animation()
+                self.loading_widget.setVisible(False)
+        
+        Thread(target=do_delete, daemon=True).start()
 
 def main():
     if len(sys.argv) > 1:

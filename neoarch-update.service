@@ -1,0 +1,14 @@
+[Unit]
+Description=NeoArch Scheduled Update Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/alexa/StudioProjects/Aurora/scheduled_update.py
+User=alexa
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/alexa/.Xauthority
+
+[Install]
+WantedBy=multi-user.target

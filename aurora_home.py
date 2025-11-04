@@ -4006,7 +4006,7 @@ fi
                 'bundle_autosave_path': os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json'),
                 'auto_refresh_updates_minutes': 0,
                 'auto_update_enabled': False,
-                'auto_update_interval_days': 1,
+                'auto_update_interval_days': 7,
                 'snapshot_before_update': False
             }
             default.update(data if isinstance(data, dict) else {})
@@ -4021,7 +4021,7 @@ fi
                 'bundle_autosave_path': os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json'),
                 'auto_refresh_updates_minutes': 0,
                 'auto_update_enabled': False,
-                'auto_update_interval_days': 1,
+                'auto_update_interval_days': 7,
                 'snapshot_before_update': False
             }
     
@@ -4389,28 +4389,83 @@ import time
 import subprocess
 import os
 from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QMessageBox
 
 _last_update = 0
+_last_check = 0
 
 def on_tick(app):
-    global _last_update
+    global _last_update, _last_check
     try:
         if not app.settings.get('auto_update_enabled', False):
             return
         
-        days = int(app.settings.get('auto_update_interval_days', 1))
+        days = int(app.settings.get('auto_update_interval_days', 7))
         interval_seconds = days * 24 * 3600
         
         now = time.time()
+        if _last_check and now - _last_check < 3600:  # Check once per hour
+            return
+        
+        _last_check = now
+        
+        # Check if it's time for update
         if _last_update and now - _last_update < interval_seconds:
+            return
+        
+        # Ask user permission for update
+        reply = QMessageBox.question(app, "Scheduled Update", 
+                                   f"It's been {days} days since the last update.\n\n"
+                                   "Would you like to update your system now?\n\n"
+                                   "This will update packages and create snapshots if enabled.",
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                   QMessageBox.StandardButton.Yes)
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            # User declined, reset check timer but don't update last_update
             return
         
         _last_update = now
         
-        # Perform updates first
+        # Create snapshot BEFORE updates if enabled
+        if app.settings.get('snapshot_before_update', False):
+            try:
+                if app.cmd_exists("timeshift"):
+                    # Count existing snapshots and clean up if needed
+                    try:
+                        result = subprocess.run(["timeshift", "--list"], capture_output=True, text=True, timeout=30)
+                        if result.returncode == 0:
+                            lines = result.stdout.strip().split('\n')
+                            snapshot_count = sum(1 for line in lines if line.strip() and not line.startswith('Num') and not line.startswith('---'))
+                            
+                            # If we have 2 or more snapshots, delete oldest ones to keep only 1
+                            if snapshot_count >= 2:
+                                delete_result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "1"], 
+                                                             capture_output=True, text=True, timeout=300)
+                                if delete_result.returncode == 0:
+                                    app.log("Auto-update: Cleaned up old snapshots (keeping latest)")
+                                else:
+                                    app.log(f"Auto-update: Failed to clean up snapshots: {delete_result.stderr}")
+                    except Exception as e:
+                        app.log(f"Auto-update: Error checking snapshots: {e}")
+                    
+                    # Create snapshot before updates
+                    timestamp = subprocess.run(["date", "+%Y-%m-%d_%H-%M-%S"], capture_output=True, text=True).stdout.strip()
+                    comment = f"NeoArch pre-update snapshot {timestamp}"
+                    result = subprocess.run(["pkexec", "timeshift", "--create", "--comments", comment], 
+                                          capture_output=True, text=True, timeout=300)
+                    if result.returncode == 0:
+                        app.log(f"Auto-update: Pre-update snapshot created: {comment}")
+                        app.show_message.emit("Snapshot", f"Pre-update snapshot created: {comment}")
+                    else:
+                        app.log(f"Auto-update: Failed to create pre-update snapshot: {result.stderr}")
+            except Exception as e:
+                app.log(f"Auto-update: Pre-update snapshot creation failed: {e}")
+        
+        # Perform updates
         update_success = False
         try:
-            app.log("Auto-update: Starting automatic system updates...")
+            app.log("Auto-update: Starting scheduled system updates...")
             
             # Update pacman packages
             if app.cmd_exists("pacman"):
@@ -4476,40 +4531,10 @@ def on_tick(app):
         except Exception as e:
             app.log(f"Auto-update: General error: {e}")
         
-        # Create snapshot AFTER successful updates
-        if update_success and app.settings.get('snapshot_before_update', False):
-            try:
-                if app.cmd_exists("timeshift"):
-                    # Count existing snapshots and clean up if needed
-                    try:
-                        result = subprocess.run(["timeshift", "--list"], capture_output=True, text=True, timeout=30)
-                        if result.returncode == 0:
-                            lines = result.stdout.strip().split('\n')
-                            snapshot_count = sum(1 for line in lines if line.strip() and not line.startswith('Num') and not line.startswith('---'))
-                            
-                            # If we have 2 or more snapshots, delete oldest ones to keep only 1
-                            if snapshot_count >= 2:
-                                delete_result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "1"], 
-                                                             capture_output=True, text=True, timeout=300)
-                                if delete_result.returncode == 0:
-                                    app.log("Auto-update: Cleaned up old snapshots (keeping latest)")
-                                else:
-                                    app.log(f"Auto-update: Failed to clean up snapshots: {delete_result.stderr}")
-                    except Exception as e:
-                        app.log(f"Auto-update: Error checking snapshots: {e}")
-                    
-                    # Create new snapshot after cleanup
-                    timestamp = subprocess.run(["date", "+%Y-%m-%d_%H-%M-%S"], capture_output=True, text=True).stdout.strip()
-                    comment = f"NeoArch post-update snapshot {timestamp}"
-                    result = subprocess.run(["pkexec", "timeshift", "--create", "--comments", comment], 
-                                          capture_output=True, text=True, timeout=300)
-                    if result.returncode == 0:
-                        app.log(f"Auto-update: Post-update snapshot created: {comment}")
-                        app.show_message.emit("Auto Update", f"System updated and snapshot created: {comment}")
-                    else:
-                        app.log(f"Auto-update: Failed to create post-update snapshot: {result.stderr}")
-            except Exception as e:
-                app.log(f"Auto-update: Post-update snapshot creation failed: {e}")
+        if update_success:
+            app.show_message.emit("Auto Update", f"System update completed successfully! Next check in {days} days.")
+        else:
+            app.show_message.emit("Auto Update", "Some updates failed. Check the console for details.")
                 """.strip()
             ),
         }

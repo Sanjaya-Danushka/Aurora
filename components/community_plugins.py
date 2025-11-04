@@ -470,8 +470,9 @@ class CommunityPluginsTab(QWidget):
             self.community_plugins = self.plugin_store.discover_plugins()
             self._display_plugins()
         except Exception as e:
-            self._show_error(f"Failed to load community plugins: {e}")
-        finally:
+            self._show_error(f"Failed to load community plugins: {e}\n\n"
+                           "Note: Community plugins require the 'requests' module.\n"
+                           "Install with: pip install requests")
             self.progress_bar.setVisible(False)
 
     def _display_plugins(self):

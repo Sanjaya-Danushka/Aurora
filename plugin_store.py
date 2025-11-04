@@ -6,9 +6,17 @@ Community plugin sharing and discovery system
 
 import os
 import json
-import requests
+import shutil
 from pathlib import Path
 from typing import List, Dict, Optional
+
+# Optional import for requests
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+    print("Warning: requests module not available. Community plugin features will be limited.")
 
 class PluginStore:
     """Manages community plugin sharing and discovery"""
@@ -44,6 +52,11 @@ class PluginStore:
 
     def discover_plugins(self) -> List[Dict]:
         """Discover available community plugins"""
+        if not REQUESTS_AVAILABLE:
+            print("Community plugin discovery requires the 'requests' module.")
+            print("Install with: pip install requests")
+            return list(self.local_plugins.values())
+        
         try:
             # Try to fetch from GitHub repository
             response = requests.get(f"{self.repo_url}index.json", timeout=10)
@@ -52,14 +65,19 @@ class PluginStore:
                 self.local_plugins.update(remote_plugins)
                 self._save_cache()
                 return list(remote_plugins.values())
-        except Exception:
-            pass
-
+        except Exception as e:
+            print(f"Failed to fetch community plugins: {e}")
+        
         # Fallback to cached plugins
         return list(self.local_plugins.values())
 
     def install_community_plugin(self, plugin_id: str) -> bool:
         """Install a plugin from the community repository"""
+        if not REQUESTS_AVAILABLE:
+            print("Community plugin installation requires the 'requests' module.")
+            print("Install with: pip install requests")
+            return False
+        
         try:
             # Get plugin metadata
             plugins = self.discover_plugins()

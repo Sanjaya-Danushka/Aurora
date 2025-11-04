@@ -4407,23 +4407,8 @@ def on_tick(app):
         
         _last_update = now
         
-        # Check if we should create snapshot first
-        if app.settings.get('snapshot_before_update', False):
-            try:
-                if app.cmd_exists("timeshift"):
-                    # Create snapshot automatically
-                    timestamp = subprocess.run(["date", "+%Y-%m-%d_%H-%M-%S"], capture_output=True, text=True).stdout.strip()
-                    comment = f"NeoArch auto-update snapshot {timestamp}"
-                    result = subprocess.run(["pkexec", "timeshift", "--create", "--comments", comment], 
-                                          capture_output=True, text=True, timeout=300)
-                    if result.returncode == 0:
-                        app.log(f"Auto-update: Snapshot created: {comment}")
-                    else:
-                        app.log(f"Auto-update: Failed to create snapshot: {result.stderr}")
-            except Exception as e:
-                app.log(f"Auto-update: Snapshot creation failed: {e}")
-        
-        # Perform updates
+        # Perform updates first
+        update_success = False
         try:
             app.log("Auto-update: Starting automatic system updates...")
             
@@ -4433,6 +4418,7 @@ def on_tick(app):
                                       capture_output=True, text=True, timeout=1800)
                 if result.returncode == 0:
                     app.log("Auto-update: Pacman updates completed successfully")
+                    update_success = True
                     app.show_message.emit("Auto Update", "System packages updated successfully")
                 else:
                     app.log(f"Auto-update: Pacman update failed: {result.stderr}")
@@ -4446,6 +4432,7 @@ def on_tick(app):
                                           capture_output=True, text=True, timeout=1800, env=env)
                     if result.returncode == 0:
                         app.log("Auto-update: AUR updates completed successfully")
+                        update_success = True
                     else:
                         app.log(f"Auto-update: AUR update failed: {result.stderr}")
                 except Exception as e:
@@ -4460,6 +4447,7 @@ def on_tick(app):
                                               capture_output=True, text=True, timeout=900)
                         if result.returncode == 0:
                             app.log(f"Auto-update: Flatpak {scope[0]} updates completed")
+                            update_success = True
                         else:
                             app.log(f"Auto-update: Flatpak {scope[0]} update failed: {result.stderr}")
                     except Exception as e:
@@ -4479,6 +4467,7 @@ def on_tick(app):
                                           capture_output=True, text=True, timeout=600, env=env)
                     if result.returncode == 0:
                         app.log("Auto-update: NPM global packages updated")
+                        update_success = True
                     else:
                         app.log(f"Auto-update: NPM update failed: {result.stderr}")
                 except Exception as e:
@@ -4486,6 +4475,41 @@ def on_tick(app):
                     
         except Exception as e:
             app.log(f"Auto-update: General error: {e}")
+        
+        # Create snapshot AFTER successful updates
+        if update_success and app.settings.get('snapshot_before_update', False):
+            try:
+                if app.cmd_exists("timeshift"):
+                    # Count existing snapshots and clean up if needed
+                    try:
+                        result = subprocess.run(["timeshift", "--list"], capture_output=True, text=True, timeout=30)
+                        if result.returncode == 0:
+                            lines = result.stdout.strip().split('\n')
+                            snapshot_count = sum(1 for line in lines if line.strip() and not line.startswith('Num') and not line.startswith('---'))
+                            
+                            # If we have 2 or more snapshots, delete oldest ones to keep only 1
+                            if snapshot_count >= 2:
+                                delete_result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "1"], 
+                                                             capture_output=True, text=True, timeout=300)
+                                if delete_result.returncode == 0:
+                                    app.log("Auto-update: Cleaned up old snapshots (keeping latest)")
+                                else:
+                                    app.log(f"Auto-update: Failed to clean up snapshots: {delete_result.stderr}")
+                    except Exception as e:
+                        app.log(f"Auto-update: Error checking snapshots: {e}")
+                    
+                    # Create new snapshot after cleanup
+                    timestamp = subprocess.run(["date", "+%Y-%m-%d_%H-%M-%S"], capture_output=True, text=True).stdout.strip()
+                    comment = f"NeoArch post-update snapshot {timestamp}"
+                    result = subprocess.run(["pkexec", "timeshift", "--create", "--comments", comment], 
+                                          capture_output=True, text=True, timeout=300)
+                    if result.returncode == 0:
+                        app.log(f"Auto-update: Post-update snapshot created: {comment}")
+                        app.show_message.emit("Auto Update", f"System updated and snapshot created: {comment}")
+                    else:
+                        app.log(f"Auto-update: Failed to create post-update snapshot: {result.stderr}")
+            except Exception as e:
+                app.log(f"Auto-update: Post-update snapshot creation failed: {e}")
                 """.strip()
             ),
         }
@@ -4587,7 +4611,7 @@ def on_tick(app):
             try:
                 # Create snapshot with timestamp
                 timestamp = subprocess.run(["date", "+%Y-%m-%d_%H-%M-%S"], capture_output=True, text=True).stdout.strip()
-                comment = f"NeoArch pre-update snapshot {timestamp}"
+                comment = f"NeoArch manual snapshot {timestamp}"
                 
                 result = subprocess.run(["pkexec", "timeshift", "--create", "--comments", comment], 
                                       capture_output=True, text=True, timeout=300)
@@ -4709,7 +4733,7 @@ def on_tick(app):
         
         reply = QMessageBox.question(self, "Delete Snapshots", 
                                    "This will delete old snapshots to free up disk space.\n\n"
-                                   "Keep only the most recent snapshot?\n\n"
+                                   "Keep only the 2 most recent snapshots?\n\n"
                                    "This action cannot be undone.",
                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                                    QMessageBox.StandardButton.No)
@@ -4723,8 +4747,8 @@ def on_tick(app):
         
         def do_delete():
             try:
-                # Delete all but the most recent snapshot
-                result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "1"], 
+                # Delete all but the most recent 2 snapshots
+                result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "2"], 
                                       capture_output=True, text=True, timeout=300)
                 
                 if result.returncode == 0:

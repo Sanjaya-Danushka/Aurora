@@ -40,7 +40,7 @@ class AutoUpdateSettingsWidget(QWidget):
         snap_grid.setContentsMargins(12, 12, 12, 12)
         snap_grid.setSpacing(8)
 
-        self.cb_snapshot = QCheckBox("Create snapshot before updates")
+        self.cb_snapshot = QCheckBox("Create snapshot after successful updates")
         self.cb_snapshot.setChecked(bool(self.app.settings.get('snapshot_before_update', False)))
         self.cb_snapshot.toggled.connect(lambda v: self.app._update_setting('snapshot_before_update', v))
         snap_grid.addWidget(self.cb_snapshot, 0, 0, 1, 2)

@@ -1598,6 +1598,8 @@ fi
             self.settings_container.setVisible(False)
             if hasattr(self, 'plugins_view') and self.plugins_view:
                 self.plugins_view.setVisible(False)
+            if hasattr(self, 'plugins_tab_widget') and self.plugins_tab_widget:
+                self.plugins_tab_widget.setVisible(False)
         except Exception:
             pass
         # Cancel ongoing non-install tasks
@@ -1668,7 +1670,7 @@ fi
                 pass
             QTimer.singleShot(0, self.refresh_bundles_table)
         elif view_id == "plugins":
-            # Show plugins view, hide others
+            # Show plugins view with tabs, hide others
             try:
                 self.loading_widget.setVisible(False)
                 self.loading_widget.stop_animation()
@@ -1679,7 +1681,31 @@ fi
             self.package_table.setVisible(False)
             self.load_more_btn.setVisible(False)
             self.plugins_view.setVisible(True)
-            self.plugins_view.refresh_all()
+
+            # Create tab widget for plugins
+            if not hasattr(self, 'plugins_tab_widget'):
+                from PyQt6.QtWidgets import QTabWidget
+                from components.community_plugins import CommunityPluginsTab
+
+                self.plugins_tab_widget = QTabWidget()
+
+                # Built-in plugins tab
+                builtin_tab = QWidget()
+                builtin_layout = QVBoxLayout(builtin_tab)
+                builtin_layout.addWidget(self.plugins_view)
+                self.plugins_tab_widget.addTab(builtin_tab, "Built-in Plugins")
+
+                # Community plugins tab
+                self.community_plugins_tab = CommunityPluginsTab(self)
+                self.plugins_tab_widget.addTab(self.community_plugins_tab, "Community Plugins")
+
+                # Add to packages panel
+                self.packages_panel_layout.addWidget(self.plugins_tab_widget)
+            else:
+                self.plugins_view.refresh_all()
+                if hasattr(self, 'community_plugins_tab'):
+                    self.community_plugins_tab.refresh_plugins()
+
             self.header_info.setText("Install and launch extensions like BleachBit and Timeshift")
             try:
                 self.console_label.setVisible(False)

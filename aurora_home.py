@@ -1499,10 +1499,6 @@ fi
             refresh_btn.setMinimumHeight(36)
             refresh_btn.clicked.connect(lambda: self.plugins_view.refresh_all())
             layout.addWidget(refresh_btn)
-            open_folder_btn = QPushButton("Open Plugins Folder")
-            open_folder_btn.setMinimumHeight(36)
-            open_folder_btn.clicked.connect(self.open_plugins_folder)
-            layout.addWidget(open_folder_btn)
             layout.addStretch()
             help_btn = self.create_toolbar_button(
                 os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),

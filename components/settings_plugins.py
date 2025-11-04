@@ -24,7 +24,7 @@ class PluginsSettingsWidget(QWidget):
         btn_reload.clicked.connect(self.app.reload_plugins_and_notify)
         btn_defaults = QPushButton("Install Default Plugins")
         btn_defaults.clicked.connect(self.install_default_plugins)
-        btn_go_plugins = QPushButton("Go to Plugins Page")
+        btn_go_plugins = QPushButton("Manage Plugins")
         btn_go_plugins.clicked.connect(self.go_to_plugins_page)
 
         actions.addWidget(btn_add)

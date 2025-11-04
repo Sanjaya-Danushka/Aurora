@@ -5,12 +5,20 @@ Allows users to discover, install, and share plugins from the community
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
                              QScrollArea, QFrame, QGridLayout, QTextEdit, QLineEdit,
-                             QMessageBox, QProgressBar, QGroupBox)
+                             QMessageBox, QProgressBar, QGroupBox, QListWidget, QFileDialog)
 from PyQt6.QtCore import pyqtSignal, Qt, QThread, QTimer
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QPixmap
 import os
 
 from plugin_store import PluginStore
+try:
+    import requests as _req
+except Exception:
+    _req = None  # type: ignore
+try:
+    from supabase_store import SupabasePluginStore
+except Exception:
+    SupabasePluginStore = None  # type: ignore
 
 class CommunityPluginCard(QFrame):
     """Card displaying a community plugin"""
@@ -24,14 +32,35 @@ class CommunityPluginCard(QFrame):
         self.setObjectName("communityPluginCard")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet(self._style())
-        self.setMinimumHeight(100)
+        self.setMinimumHeight(84)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
-        # Header with title and author
+        # Header with optional icon, title and author
         header = QHBoxLayout()
+        self.icon_label = QLabel()
+        self.icon_label.setFixedSize(32, 32)
+        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        has_icon = False
+        try:
+            icon_url = plugin_info.get('icon_url')
+            if icon_url and _req is not None:
+                try:
+                    rr = _req.get(icon_url, timeout=8)
+                    if rr.status_code == 200:
+                        pm = QPixmap()
+                        if pm.loadFromData(rr.content):
+                            self.icon_label.setPixmap(pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                            has_icon = True
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        if not has_icon:
+            self.icon_label.setText("🧩")
+        header.addWidget(self.icon_label)
         title = QLabel(plugin_info.get('name', 'Unknown Plugin'))
         title.setObjectName("pluginTitle")
         header.addWidget(title)
@@ -81,17 +110,17 @@ class CommunityPluginCard(QFrame):
         return """
         QFrame#communityPluginCard {
             background-color: #1a1a1a;
-            border-radius: 8px;
+            border-radius: 6px;
             border: 1px solid rgba(255,255,255,0.1);
         }
         QLabel#pluginTitle {
             color: #F0F0F0;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
         }
         QLabel#pluginDesc {
             color: #A0A0A0;
-            font-size: 12px;
+            font-size: 11px;
             line-height: 1.3;
         }
         QPushButton {
@@ -99,8 +128,8 @@ class CommunityPluginCard(QFrame):
             color: #00BFAE;
             border: 1px solid #00BFAE;
             border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 11px;
+            padding: 3px 8px;
+            font-size: 10px;
         }
         QPushButton:hover {
             background-color: rgba(0, 191, 174, 0.1);
@@ -390,10 +419,23 @@ class CommunityPluginsTab(QWidget):
     def __init__(self, main_app, parent=None):
         super().__init__(parent)
         self.main_app = main_app
-        self.plugin_store = PluginStore()
+        self.plugin_store = None
+        self._is_supabase = False
+        try:
+            if SupabasePluginStore is not None:
+                s = SupabasePluginStore()
+                if s.is_configured():
+                    self.plugin_store = s
+                    self._is_supabase = True
+        except Exception:
+            self.plugin_store = None
+        if self.plugin_store is None:
+            self.plugin_store = PluginStore()
         self.community_plugins = []
         self.details_dialog = None
         self.creator_dialog = None
+        self.my_plugins = []
+        self._selected_my_id = None
 
         self._init_ui()
         self.refresh_plugins()
@@ -427,6 +469,27 @@ class CommunityPluginsTab(QWidget):
 
         layout.addLayout(header)
 
+        if self._is_supabase:
+            auth_row = QHBoxLayout()
+            self.email_input = QLineEdit()
+            self.email_input.setPlaceholderText("Email")
+            self.password_input = QLineEdit()
+            self.password_input.setPlaceholderText("Password")
+            self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+            self.btn_login = QPushButton("Login")
+            self.btn_signup = QPushButton("Sign up")
+            self.btn_logout = QPushButton("Logout")
+            self.btn_login.clicked.connect(self.sign_in)
+            self.btn_signup.clicked.connect(self.sign_up)
+            self.btn_logout.clicked.connect(self.sign_out)
+            auth_row.addWidget(self.email_input)
+            auth_row.addWidget(self.password_input)
+            auth_row.addWidget(self.btn_login)
+            auth_row.addWidget(self.btn_signup)
+            auth_row.addWidget(self.btn_logout)
+            auth_row.addStretch()
+            layout.addLayout(auth_row)
+
         # Progress bar for loading
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
@@ -440,10 +503,77 @@ class CommunityPluginsTab(QWidget):
         self.content_widget = QWidget()
         self.grid_layout = QGridLayout(self.content_widget)
         self.grid_layout.setContentsMargins(8, 8, 8, 8)
-        self.grid_layout.setSpacing(12)
+        self.grid_layout.setSpacing(8)
 
         scroll_area.setWidget(self.content_widget)
         layout.addWidget(scroll_area)
+
+        if self._is_supabase:
+            self.my_group = QGroupBox("My Plugins")
+            my_layout = QHBoxLayout(self.my_group)
+            self.my_list = QListWidget()
+            self.my_list.currentTextChanged.connect(self._on_my_select)
+            my_layout.addWidget(self.my_list, 1)
+
+            form_col = QVBoxLayout()
+            form_grid = QGridLayout()
+            form_grid.setSpacing(6)
+            self.input_id = QLineEdit()
+            self.input_name = QLineEdit()
+            self.input_version = QLineEdit()
+            self.input_author = QLineEdit()
+            self.input_desc = QTextEdit()
+            self.input_desc.setMaximumHeight(80)
+            self.input_cats = QLineEdit()
+            self.icon_path = QLineEdit()
+            self.file_path = QLineEdit()
+            btn_browse_icon = QPushButton("Browse Icon")
+            btn_browse_icon.clicked.connect(self._browse_icon)
+            btn_browse_file = QPushButton("Browse File")
+            btn_browse_file.clicked.connect(self._browse_file)
+            form_grid.addWidget(QLabel("ID"), 0, 0)
+            form_grid.addWidget(self.input_id, 0, 1)
+            form_grid.addWidget(QLabel("Name"), 1, 0)
+            form_grid.addWidget(self.input_name, 1, 1)
+            form_grid.addWidget(QLabel("Version"), 2, 0)
+            form_grid.addWidget(self.input_version, 2, 1)
+            form_grid.addWidget(QLabel("Author"), 3, 0)
+            form_grid.addWidget(self.input_author, 3, 1)
+            form_grid.addWidget(QLabel("Categories (comma)"), 4, 0)
+            form_grid.addWidget(self.input_cats, 4, 1)
+            form_grid.addWidget(QLabel("Description"), 5, 0)
+            form_grid.addWidget(self.input_desc, 5, 1)
+            form_grid.addWidget(QLabel("Icon"), 6, 0)
+            row6 = QHBoxLayout()
+            row6.addWidget(self.icon_path, 1)
+            row6.addWidget(btn_browse_icon)
+            form_col.addLayout(form_grid)
+            form_col.addLayout(row6)
+            form_grid2 = QGridLayout()
+            form_grid2.addWidget(QLabel("Plugin File (.py)"), 0, 0)
+            rowf = QHBoxLayout()
+            rowf.addWidget(self.file_path, 1)
+            rowf.addWidget(btn_browse_file)
+            form_col.addLayout(form_grid2)
+            form_col.addLayout(rowf)
+            btn_row = QHBoxLayout()
+            self.btn_new = QPushButton("New")
+            self.btn_save = QPushButton("Save")
+            self.btn_delete = QPushButton("Delete")
+            self.btn_reload_my = QPushButton("Reload")
+            self.btn_new.clicked.connect(self._reset_my_form)
+            self.btn_save.clicked.connect(self._save_my_plugin)
+            self.btn_delete.clicked.connect(self._delete_my_plugin)
+            self.btn_reload_my.clicked.connect(self._load_my_plugins)
+            btn_row.addWidget(self.btn_new)
+            btn_row.addWidget(self.btn_save)
+            btn_row.addWidget(self.btn_delete)
+            btn_row.addWidget(self.btn_reload_my)
+            btn_row.addStretch()
+            form_col.addLayout(btn_row)
+            my_layout.addLayout(form_col, 2)
+            layout.addWidget(self.my_group)
+            self._update_auth_ui()
 
     def refresh_plugins(self):
         """Refresh the list of community plugins"""
@@ -464,6 +594,9 @@ class CommunityPluginsTab(QWidget):
         # Load plugins in background
         QTimer.singleShot(100, self._load_plugins_async)
 
+        if self._is_supabase:
+            QTimer.singleShot(150, self._load_my_plugins)
+
     def _load_plugins_async(self):
         """Load plugins asynchronously"""
         try:
@@ -474,6 +607,22 @@ class CommunityPluginsTab(QWidget):
                            "Note: Community plugins require the 'requests' module.\n"
                            "Install with: pip install requests")
             self.progress_bar.setVisible(False)
+
+    def _update_auth_ui(self):
+        if not self._is_supabase:
+            return
+        try:
+            uid = self.plugin_store.current_user_id()
+        except Exception:
+            uid = None
+        logged_in = bool(uid)
+        self.btn_logout.setVisible(logged_in)
+        self.btn_login.setVisible(not logged_in)
+        self.btn_signup.setVisible(not logged_in)
+        self.email_input.setVisible(not logged_in)
+        self.password_input.setVisible(not logged_in)
+        if hasattr(self, "my_group"):
+            self.my_group.setVisible(logged_in)
 
     def _display_plugins(self):
         """Display the loaded plugins"""
@@ -490,8 +639,8 @@ class CommunityPluginsTab(QWidget):
             self.grid_layout.addWidget(no_plugins_label, 0, 0, 1, 3, Qt.AlignmentFlag.AlignCenter)
             return
 
-        # Display plugins in grid
-        col_count = 3
+        # Display plugins in grid (denser layout)
+        col_count = 4
         for idx, plugin_info in enumerate(self.community_plugins):
             card = CommunityPluginCard(
                 plugin_info,
@@ -529,6 +678,139 @@ class CommunityPluginsTab(QWidget):
             QMessageBox.critical(self, "Error", f"Installation error: {e}")
         finally:
             self.progress_bar.setVisible(False)
+
+    def sign_in(self):
+        if not self._is_supabase:
+            return
+        email = (self.email_input.text() or "").strip()
+        password = (self.password_input.text() or "").strip()
+        if not email or not password:
+            QMessageBox.warning(self, "Login", "Enter email and password")
+            return
+        res = self.plugin_store.sign_in(email, password)
+        if not res.get("ok"):
+            QMessageBox.critical(self, "Login", str(res.get("error")))
+            return
+        self._update_auth_ui()
+        self._load_my_plugins()
+
+    def sign_up(self):
+        if not self._is_supabase:
+            return
+        email = (self.email_input.text() or "").strip()
+        password = (self.password_input.text() or "").strip()
+        if not email or not password:
+            QMessageBox.warning(self, "Sign up", "Enter email and password")
+            return
+        res = self.plugin_store.sign_up(email, password)
+        if not res.get("ok"):
+            QMessageBox.critical(self, "Sign up", str(res.get("error")))
+            return
+        QMessageBox.information(self, "Sign up", "Check your email to confirm (if required). Now login.")
+
+    def sign_out(self):
+        if not self._is_supabase:
+            return
+        self.plugin_store.sign_out()
+        self._update_auth_ui()
+
+    def _load_my_plugins(self):
+        if not self._is_supabase:
+            return
+        try:
+            self.my_plugins = self.plugin_store.list_my_plugins() or []
+        except Exception:
+            self.my_plugins = []
+        try:
+            self.my_list.blockSignals(True)
+            self.my_list.clear()
+            for p in self.my_plugins:
+                name = p.get('name') or p.get('id')
+                self.my_list.addItem(name)
+        finally:
+            self.my_list.blockSignals(False)
+
+    def _find_my_by_name(self, name):
+        for p in self.my_plugins:
+            if (p.get('name') or p.get('id')) == name:
+                return p
+        return None
+
+    def _on_my_select(self, text):
+        p = self._find_my_by_name(text)
+        if not p:
+            return
+        self._selected_my_id = p.get('id')
+        self.input_id.setText(p.get('id') or "")
+        self.input_id.setEnabled(False)
+        self.input_name.setText(p.get('name') or "")
+        self.input_version.setText(p.get('version') or "")
+        self.input_author.setText(p.get('author') or "")
+        self.input_desc.setPlainText(p.get('description') or "")
+        cats = p.get('categories') or []
+        self.input_cats.setText(','.join(cats))
+        self.icon_path.setText("")
+        self.file_path.setText("")
+
+    def _reset_my_form(self):
+        self._selected_my_id = None
+        self.input_id.setEnabled(True)
+        self.input_id.clear()
+        self.input_name.clear()
+        self.input_version.clear()
+        self.input_author.clear()
+        self.input_desc.clear()
+        self.input_cats.clear()
+        self.icon_path.clear()
+        self.file_path.clear()
+
+    def _save_my_plugin(self):
+        if not self._is_supabase:
+            return
+        pid = (self.input_id.text() or "").strip()
+        name = (self.input_name.text() or "").strip()
+        version = (self.input_version.text() or "").strip() or "1.0.0"
+        author = (self.input_author.text() or "").strip() or "Unknown"
+        desc = self.input_desc.toPlainText().strip()
+        cats = [c.strip() for c in (self.input_cats.text() or "").split(',') if c.strip()]
+        iconp = (self.icon_path.text() or "").strip() or None
+        filep = (self.file_path.text() or "").strip() or None
+        if not pid or not name:
+            QMessageBox.warning(self, "Save", "ID and Name are required")
+            return
+        if self._selected_my_id:
+            res = self.plugin_store.update_plugin(self._selected_my_id, name=name, description=desc, version=version, author=author, categories=cats, icon_path=iconp, file_path=filep)
+        else:
+            res = self.plugin_store.create_plugin(pid, name, desc, version, author, cats, iconp, filep)
+        if not res.get('ok'):
+            QMessageBox.critical(self, "Save", str(res.get('error')))
+            return
+        QMessageBox.information(self, "Save", "Saved")
+        self._reset_my_form()
+        self._load_my_plugins()
+        self.refresh_plugins()
+
+    def _delete_my_plugin(self):
+        if not self._is_supabase or not self._selected_my_id:
+            return
+        res = self.plugin_store.delete_plugin(self._selected_my_id)
+        if not res.get('ok'):
+            QMessageBox.critical(self, "Delete", str(res.get('error')))
+            return
+        QMessageBox.information(self, "Delete", "Deleted")
+        self._reset_my_form()
+        self._load_my_plugins()
+        self.refresh_plugins()
+
+    def _browse_icon(self):
+        p, _ = QFileDialog.getOpenFileName(self, "Select Icon", os.path.expanduser('~'), "Images (*.png *.svg *.jpg *.jpeg)")
+        if p:
+            self.icon_path.setText(p)
+
+    def _browse_file(self):
+        p, _ = QFileDialog.getOpenFileName(self, "Select Plugin File", os.path.expanduser('~'), "Python (*.py)")
+        if p:
+            self.file_path.setText(p)
 
     def show_plugin_details(self, plugin_info):
         """Show detailed information about a plugin"""

@@ -15,12 +15,12 @@ class PluginCard(QFrame):
         self.setObjectName("pluginCard")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet(self._style())
-        self.setMinimumHeight(120)
+        self.setMinimumHeight(92)
 
         layout = QHBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        layout.setSpacing(6)
 
         icon_label = QLabel()
         try:
@@ -95,12 +95,12 @@ class PluginCard(QFrame):
         }
         QLabel#pluginTitle {
             color: #F0F0F0;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
         }
         QLabel#pluginDesc {
             color: #A0A0A0;
-            font-size: 11px;
+            font-size: 10px;
         }
         QLabel#pluginStatus {
             color: #00BFAE;
@@ -286,10 +286,10 @@ class PluginsView(QWidget):
         grid_container = QWidget()
         self.grid = QGridLayout(grid_container)
         self.grid.setContentsMargins(0, 0, 0, 0)
-        self.grid.setHorizontalSpacing(10)
-        self.grid.setVerticalSpacing(10)
+        self.grid.setHorizontalSpacing(8)
+        self.grid.setVerticalSpacing(8)
 
-        col_count = 3
+        col_count = 4
         for idx, spec in enumerate(self.plugins):
             installed = self.is_installed(spec)
             icon = self._icon_for(spec)

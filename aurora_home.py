@@ -1162,15 +1162,15 @@ fi
     
     def create_packages_panel(self):
         panel = QWidget()
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(12)
+        self.packages_panel_layout = QVBoxLayout(panel)
+        self.packages_panel_layout.setContentsMargins(12, 12, 12, 12)
+        self.packages_panel_layout.setSpacing(12)
         
         # Toolbar
         self.toolbar_widget = QWidget()
         self.toolbar_layout = QVBoxLayout(self.toolbar_widget)
         self.toolbar_layout.setContentsMargins(0,0,0,0)
-        layout.addWidget(self.toolbar_widget)
+        self.packages_panel_layout.addWidget(self.toolbar_widget)
         
         # Loading spinner widget
         self.loading_widget = LoadingSpinner(message="Checking for updates...")
@@ -1191,12 +1191,12 @@ fi
         loading_layout.addWidget(self.cancel_install_btn)
         loading_layout.addStretch()  # Right stretch to center
         
-        layout.addWidget(loading_container)
+        self.packages_panel_layout.addWidget(loading_container)
         
         # Large search box for discover page
         self.large_search_box = LargeSearchBox()
         self.large_search_box.search_requested.connect(self.on_large_search_requested)
-        layout.addWidget(self.large_search_box)
+        self.packages_panel_layout.addWidget(self.large_search_box)
         
         # Settings container (hidden by default)
         self.settings_container = QScrollArea()
@@ -1207,7 +1207,7 @@ fi
         self.settings_layout.setContentsMargins(12, 12, 12, 12)
         self.settings_layout.setSpacing(12)
         self.settings_container.setWidget(self.settings_root)
-        layout.addWidget(self.settings_container)
+        self.packages_panel_layout.addWidget(self.settings_container)
         
         # Plugins view (hidden by default)
         self.plugins_view = PluginsView(self, self.get_svg_icon)
@@ -1218,7 +1218,18 @@ fi
         except Exception:
             pass
         self.plugins_view.setVisible(False)
-        layout.addWidget(self.plugins_view)
+        
+        # Create plugins tab widget
+        self.plugins_tab_widget = QTabWidget()
+        self.plugins_tab_widget.setVisible(False)
+        
+        # Built-in plugins tab
+        builtin_tab = QWidget()
+        builtin_layout = QVBoxLayout(builtin_tab)
+        builtin_layout.addWidget(self.plugins_view)
+        self.plugins_tab_widget.addTab(builtin_tab, "Built-in Plugins")
+        
+        self.packages_panel_layout.addWidget(self.plugins_tab_widget)
         
         # Packages Table
         self.package_table = QTableWidget()
@@ -1237,7 +1248,7 @@ fi
         self.package_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.package_table.setSelectionMode(QTableWidget.SelectionMode.MultiSelection)
         self.package_table.selectionModel().selectionChanged.connect(self.on_selection_changed)
-        layout.addWidget(self.package_table, 1)
+        self.packages_panel_layout.addWidget(self.package_table, 1)
         self.load_more_btn = QPushButton("Load More Packages")
         self.load_more_btn.setMinimumHeight(36)
         icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
@@ -1245,17 +1256,17 @@ fi
         self.load_more_btn.setIcon(self.get_svg_icon(os.path.join(icon_dir, "load-more.svg"), 20))
         self.load_more_btn.clicked.connect(self.load_more_packages)
         self.load_more_btn.setVisible(False)
-        layout.addWidget(self.load_more_btn)
+        self.packages_panel_layout.addWidget(self.load_more_btn)
         
         # Console Output
         self.console_label = QLabel("Console Output")
         self.console_label.setObjectName("sectionLabel")
-        layout.addWidget(self.console_label)
+        self.packages_panel_layout.addWidget(self.console_label)
         
         self.console = QTextEdit()
         self.console.setReadOnly(True)
         self.console.setMaximumHeight(150)
-        layout.addWidget(self.console)
+        self.packages_panel_layout.addWidget(self.console)
         
         return panel
     
@@ -1680,31 +1691,25 @@ fi
             self.settings_container.setVisible(False)
             self.package_table.setVisible(False)
             self.load_more_btn.setVisible(False)
-            self.plugins_view.setVisible(True)
-
-            # Create tab widget for plugins
-            if not hasattr(self, 'plugins_tab_widget'):
-                from PyQt6.QtWidgets import QTabWidget
-                from components.community_plugins import CommunityPluginsTab
-
-                self.plugins_tab_widget = QTabWidget()
-
-                # Built-in plugins tab
-                builtin_tab = QWidget()
-                builtin_layout = QVBoxLayout(builtin_tab)
-                builtin_layout.addWidget(self.plugins_view)
-                self.plugins_tab_widget.addTab(builtin_tab, "Built-in Plugins")
-
-                # Community plugins tab
-                self.community_plugins_tab = CommunityPluginsTab(self)
-                self.plugins_tab_widget.addTab(self.community_plugins_tab, "Community Plugins")
-
-                # Add to packages panel
-                self.packages_panel_layout.addWidget(self.plugins_tab_widget)
-            else:
-                self.plugins_view.refresh_all()
-                if hasattr(self, 'community_plugins_tab'):
-                    self.community_plugins_tab.refresh_plugins()
+            
+            # Add community plugins tab if not already added
+            if self.plugins_tab_widget.count() == 1:  # Only built-in tab exists
+                try:
+                    from components.community_plugins import CommunityPluginsTab
+                    self.community_plugins_tab = CommunityPluginsTab(self)
+                    self.plugins_tab_widget.addTab(self.community_plugins_tab, "Community Plugins")
+                except Exception as e:
+                    print(f"Failed to load community plugins: {e}")
+            
+            self.plugins_tab_widget.setVisible(True)
+            # Ensure built-in plugins grid is visible
+            try:
+                self.plugins_view.setVisible(True)
+            except Exception:
+                pass
+            self.plugins_view.refresh_all()
+            if hasattr(self, 'community_plugins_tab'):
+                self.community_plugins_tab.refresh_plugins()
 
             self.header_info.setText("Install and launch extensions like BleachBit and Timeshift")
             try:

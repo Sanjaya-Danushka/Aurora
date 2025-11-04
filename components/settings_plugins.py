@@ -22,15 +22,12 @@ class PluginsSettingsWidget(QWidget):
         btn_remove.clicked.connect(self.app.remove_selected_plugins)
         btn_reload = QPushButton("Reload Plugins")
         btn_reload.clicked.connect(self.app.reload_plugins_and_notify)
-        btn_defaults = QPushButton("Install Default Plugins")
-        btn_defaults.clicked.connect(self.install_default_plugins)
         btn_go_plugins = QPushButton("Manage Plugins")
         btn_go_plugins.clicked.connect(self.go_to_plugins_page)
 
         actions.addWidget(btn_add)
         actions.addWidget(btn_remove)
         actions.addWidget(btn_reload)
-        actions.addWidget(btn_defaults)
         actions.addWidget(btn_go_plugins)
         actions.addStretch()
         self.layout.addLayout(actions)
@@ -119,11 +116,6 @@ class PluginsSettingsWidget(QWidget):
         self.refresh_plugins_table()
         if removed > 0:
             self.app._show_message("Remove Plugins", f"Removed {removed} plugin(s)")
-
-    def install_default_plugins(self):
-        """Install default plugins and refresh the table"""
-        self.app.install_default_plugins()
-        self.refresh_plugins_table()
 
     def go_to_plugins_page(self):
         """Switch to the main plugins page"""

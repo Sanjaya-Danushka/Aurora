@@ -59,6 +59,7 @@ class LargeSearchBox(QWidget):
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Try \"system monitor\" or \"AUR helpers\"")
         self.search_input.setObjectName("largeSearchInput")
+        self.search_input.setFixedHeight(48)
         self.search_input.returnPressed.connect(self.on_search_triggered)
         self.search_input.textChanged.connect(self.on_text_changed)
         search_layout.addWidget(self.search_input, 1)

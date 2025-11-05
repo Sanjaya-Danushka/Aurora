@@ -3294,6 +3294,11 @@ def on_tick(app):
         except Exception:
             pass
         try:
+            if getattr(self, 'current_view', None) == "discover" and hasattr(self, 'large_search_box'):
+                self.large_search_box.set_compact_mode(new_state)
+        except Exception:
+            pass
+        try:
             if hasattr(self, 'console_toggle_btn'):
                 self.console_toggle_btn.setToolTip("Hide Console" if new_state else "Show Console")
         except Exception:

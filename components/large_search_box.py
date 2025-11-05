@@ -20,6 +20,8 @@ class LargeSearchBox(QWidget):
         self.search_timer.setInterval(800)
         self.search_timer.setSingleShot(True)
         self.search_timer.timeout.connect(self.on_auto_search)
+        self.highlight_widgets = []
+        self.compact_mode = False
         self.init_ui()
 
     def init_ui(self):
@@ -108,6 +110,13 @@ class LargeSearchBox(QWidget):
             description_label.setWordWrap(True)
             card_layout_inner.addWidget(description_label)
 
+            self.highlight_widgets.append({
+                "card": highlight_card,
+                "icon": icon_label,
+                "title": title_label,
+                "desc": description_label,
+            })
+
             highlights_layout.addWidget(highlight_card, 1)
 
         card_layout.addWidget(highlights_container)
@@ -179,6 +188,16 @@ class LargeSearchBox(QWidget):
         if query:
             self.search_timer.stop()  # Stop any pending auto-search
             self.search_requested.emit(query)
+
+    def set_compact_mode(self, compact: bool):
+        self.compact_mode = compact
+        for w in self.highlight_widgets:
+            try:
+                w["icon"].setVisible(not compact)
+                w["desc"].setVisible(not compact)
+                w["title"].setVisible(True)
+            except Exception:
+                pass
 
     def get_stylesheet(self):
         """Get stylesheet for this component"""

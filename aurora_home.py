@@ -53,6 +53,9 @@ def _qt_msg_handler(mode, context, message):
 qInstallMessageHandler(_qt_msg_handler)
 
 app = QApplication(sys.argv)
+icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "logo1.png")
+if os.path.exists(icon_path):
+    app.setWindowIcon(QIcon(icon_path))
 
 class ArchPkgManagerUniGetUI(QMainWindow):
     packages_ready = pyqtSignal(list)
@@ -70,6 +73,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.setMinimumSize(1200, 800)  # Set minimum size
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setStyleSheet(Styles.get_dark_stylesheet())
+        icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "logo1.png")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
         # self.set_minimal_icon()
         
         self.current_view = "discover"

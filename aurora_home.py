@@ -28,6 +28,9 @@ from plugin_manager import PluginsManager
 from workers import CommandWorker, PackageLoaderWorker
 import config_utils
 import sys_utils
+import snapshot_service
+import update_service
+import uninstall_service
 
 def _qt_msg_handler(mode, context, message):
     s = str(message)
@@ -3021,70 +3024,7 @@ fi
             self.log("No packages selected for update")
             return
         self.log(f"Selected packages for update: {', '.join([f'{pkg} ({source})' for source, pkgs in packages_by_source.items() for pkg in pkgs])}")
-        def update():
-            try:
-                for source, pkgs in packages_by_source.items():
-                    if source == 'pacman':
-                        cmd = ["pacman", "-S", "--noconfirm"] + pkgs
-                        worker = CommandWorker(cmd, sudo=True)
-                        worker.output.connect(self.log)
-                        worker.error.connect(self.log)
-                        worker.run()
-                    elif source == 'AUR':
-                        env, _ = self.prepare_askpass_env()
-                        cmd = ["yay", "-S", "--noconfirm"] + pkgs
-                        worker = CommandWorker(cmd, sudo=False, env=env)
-                        worker.output.connect(self.log)
-                        worker.error.connect(self.log)
-                        worker.run()
-                    elif source == 'Flatpak':
-                        cmd = ["flatpak", "update", "-y", "--noninteractive"] + pkgs
-                        worker = CommandWorker(cmd, sudo=False)
-                        worker.output.connect(self.log)
-                        worker.error.connect(self.log)
-                        worker.run()
-                    elif source == 'npm':
-                        env = os.environ.copy()
-                        try:
-                            npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
-                            os.makedirs(npm_prefix, exist_ok=True)
-                            env['npm_config_prefix'] = npm_prefix
-                            env['NPM_CONFIG_PREFIX'] = npm_prefix
-                            env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
-                        except Exception:
-                            pass
-                        cmd = ["npm", "update", "-g"] + pkgs
-                        worker = CommandWorker(cmd, sudo=False, env=env)
-                        worker.output.connect(self.log)
-                        worker.error.connect(self.log)
-                        worker.run()
-                    elif source == 'Local':
-                        entries = { (e.get('id') or e.get('name')): e for e in self.load_local_update_entries() }
-                        for token in pkgs:
-                            e = entries.get(token) or entries.get(token.strip())
-                            if not e:
-                                continue
-                            upd = e.get('update_cmd')
-                            if not upd:
-                                continue
-                            try:
-                                process = subprocess.Popen(["bash", "-lc", upd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                                while True:
-                                    line = process.stdout.readline() if process.stdout else ""
-                                    if not line and process.poll() is not None:
-                                        break
-                                    if line:
-                                        self.log(line.strip())
-                                _, stderr = process.communicate()
-                                if process.returncode != 0 and stderr:
-                                    self.log(f"Error: {stderr}")
-                            except Exception as ex:
-                                self.log(str(ex))
-                self.show_message.emit("Update Complete", f"Successfully updated {sum(len(v) for v in packages_by_source.values())} package(s).")
-                QTimer.singleShot(0, self.refresh_packages)
-            except Exception as e:
-                self.log(f"Error in update thread: {str(e)}")
-        Thread(target=update, daemon=True).start()
+        update_service.update_packages(self, packages_by_source)
     
     def ignore_selected(self):
         items = []
@@ -3749,49 +3689,7 @@ fi
         
         flat_summary = ', '.join([f"{pkg} ({src})" for src, pkgs in packages_by_source.items() for pkg in pkgs])
         self.log(f"Selected for uninstallation: {flat_summary}")
-        
-        def uninstall():
-            self.log("Uninstallation thread started")
-            try:
-                for source, pkgs in packages_by_source.items():
-                    if not pkgs:
-                        continue
-                    if source in ('pacman', 'AUR'):
-                        cmd = ["pacman", "-R", "--noconfirm"] + pkgs
-                        self.log(f"Running: {' '.join(cmd)}")
-                        worker = CommandWorker(cmd, sudo=True)
-                        worker.output.connect(self.log)
-                        worker.error.connect(self.log)
-                        worker.run()
-                    elif source == 'Flatpak':
-                        cmd = ["flatpak", "uninstall", "-y", "--noninteractive"] + pkgs
-                        self.log(f"Running: {' '.join(cmd)}")
-                        worker = CommandWorker(cmd, sudo=False)
-                        worker.output.connect(self.log)
-                        worker.error.connect(self.log)
-                        worker.run()
-                    elif source == 'npm':
-                        env = os.environ.copy()
-                        try:
-                            npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
-                            os.makedirs(npm_prefix, exist_ok=True)
-                            env['npm_config_prefix'] = npm_prefix
-                            env['NPM_CONFIG_PREFIX'] = npm_prefix
-                            env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
-                        except Exception:
-                            pass
-                        cmd = ["npm", "uninstall", "-g"] + pkgs
-                        self.log(f"Running: {' '.join(cmd)}")
-                        worker = CommandWorker(cmd, sudo=False, env=env)
-                        worker.output.connect(self.log)
-                        worker.error.connect(self.log)
-                        worker.run()
-                self.show_message.emit("Uninstallation Complete", f"Successfully processed {sum(len(v) for v in packages_by_source.values())} package(s).")
-                QTimer.singleShot(0, self.load_installed_packages)
-            except Exception as e:
-                self.log(f"Error in uninstallation thread: {str(e)}")
-        
-        Thread(target=uninstall, daemon=True).start()
+        uninstall_service.uninstall_packages(self, packages_by_source)
     
     def apply_filters(self):
         if self.current_view != "installed":
@@ -4524,180 +4422,16 @@ def on_tick(app):
                               "NeoArch - Elevate Your \nArch Experience\nVersion 1.0\n\nBuilt with PyQt6")
 
     def create_snapshot(self):
-        """Create a system snapshot before updates"""
-        if not self.cmd_exists("timeshift"):
-            QMessageBox.warning(self, "Timeshift Not Found", 
-                              "Timeshift is not installed. Please install Timeshift to use snapshot functionality.\n\nInstall with: sudo pacman -S timeshift")
-            return
-        
-        reply = QMessageBox.question(self, "Create Snapshot", 
-                                   "Create a system snapshot before proceeding with updates?\n\nThis will take some time.",
-                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                                   QMessageBox.StandardButton.Yes)
-        
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-        
-        self.loading_widget.setVisible(True)
-        self.loading_widget.set_message("Creating snapshot...")
-        self.loading_widget.start_animation()
-        
-        def do_create():
-            try:
-                # Create snapshot with timestamp
-                timestamp = subprocess.run(["date", "+%Y-%m-%d_%H-%M-%S"], capture_output=True, text=True).stdout.strip()
-                comment = f"NeoArch manual snapshot {timestamp}"
-                
-                result = subprocess.run(["pkexec", "timeshift", "--create", "--comments", comment], 
-                                      capture_output=True, text=True, timeout=300)
-                
-                if result.returncode == 0:
-                    self.show_message.emit("Snapshot", f"Snapshot created successfully: {comment}")
-                else:
-                    self.show_message.emit("Snapshot", f"Failed to create snapshot: {result.stderr}")
-                    
-            except Exception as e:
-                self.show_message.emit("Snapshot", f"Error creating snapshot: {str(e)}")
-            finally:
-                self.loading_widget.stop_animation()
-                self.loading_widget.setVisible(False)
-        
-        Thread(target=do_create, daemon=True).start()
+        return snapshot_service.create_snapshot(self)
 
     def revert_to_snapshot(self):
-        """Revert system to a previous snapshot"""
-        if not self.cmd_exists("timeshift"):
-            QMessageBox.warning(self, "Timeshift Not Found", 
-                              "Timeshift is not installed. Please install Timeshift to use snapshot functionality.")
-            return
-        
-        # Get available snapshots
-        try:
-            result = subprocess.run(["timeshift", "--list"], capture_output=True, text=True, timeout=30)
-            if result.returncode != 0:
-                QMessageBox.warning(self, "No Snapshots", "No snapshots found or Timeshift error.")
-                return
-            
-            snapshots = []
-            lines = result.stdout.strip().split('\n')
-            for line in lines:
-                if line.strip() and not line.startswith('Num') and not line.startswith('---'):
-                    parts = line.split()
-                    if len(parts) >= 4:
-                        snapshots.append({
-                            'num': parts[0],
-                            'date': parts[1],
-                            'time': parts[2],
-                            'comment': ' '.join(parts[3:])
-                        })
-            
-            if not snapshots:
-                QMessageBox.information(self, "No Snapshots", "No snapshots available for restoration.")
-                return
-            
-            # Show snapshot selection dialog
-            from PyQt6.QtWidgets import QComboBox, QVBoxLayout, QDialog, QDialogButtonBox
-            
-            dialog = QDialog(self)
-            dialog.setWindowTitle("Select Snapshot to Restore")
-            dialog.setModal(True)
-            
-            layout = QVBoxLayout(dialog)
-            layout.addWidget(QLabel("Select a snapshot to restore the system to:"))
-            
-            combo = QComboBox()
-            for snap in snapshots:
-                combo.addItem(f"{snap['date']} {snap['time']} - {snap['comment']}", snap['num'])
-            layout.addWidget(combo)
-            
-            buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-            buttons.accepted.connect(dialog.accept)
-            buttons.rejected.connect(dialog.reject)
-            layout.addWidget(buttons)
-            
-            if dialog.exec() == QDialog.DialogCode.Accepted:
-                selected_num = combo.currentData()
-                if selected_num:
-                    self._restore_snapshot(selected_num)
-                    
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to list snapshots: {str(e)}")
+        return snapshot_service.revert_to_snapshot(self)
 
     def _restore_snapshot(self, snapshot_num):
-        """Restore to the specified snapshot"""
-        reply = QMessageBox.warning(self, "Confirm Restoration", 
-                                  f"This will restore your system to snapshot #{snapshot_num}.\n\n"
-                                  "The system will reboot after restoration.\n\n"
-                                  "Are you sure you want to proceed?",
-                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                                  QMessageBox.StandardButton.No)
-        
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-        
-        self.loading_widget.setVisible(True)
-        self.loading_widget.set_message("Restoring snapshot...")
-        self.loading_widget.start_animation()
-        
-        def do_restore():
-            try:
-                result = subprocess.run(["pkexec", "timeshift", "--restore", "--snapshot", snapshot_num], 
-                                      capture_output=True, text=True, timeout=600)
-                
-                if result.returncode == 0:
-                    self.show_message.emit("Snapshot", "Snapshot restoration initiated. System will reboot.")
-                    # Schedule reboot after a short delay
-                    QTimer.singleShot(3000, lambda: subprocess.run(["pkexec", "reboot"]))
-                else:
-                    self.show_message.emit("Snapshot", f"Failed to restore snapshot: {result.stderr}")
-                    
-            except Exception as e:
-                self.show_message.emit("Snapshot", f"Error restoring snapshot: {str(e)}")
-            finally:
-                self.loading_widget.stop_animation()
-                self.loading_widget.setVisible(False)
-        
-        Thread(target=do_restore, daemon=True).start()
+        return snapshot_service.restore_snapshot(self, snapshot_num)
 
     def delete_snapshots(self):
-        """Delete old snapshots"""
-        if not self.cmd_exists("timeshift"):
-            QMessageBox.warning(self, "Timeshift Not Found", 
-                              "Timeshift is not installed.")
-            return
-        
-        reply = QMessageBox.question(self, "Delete Snapshots", 
-                                   "This will delete old snapshots to free up disk space.\n\n"
-                                   "Keep only the 2 most recent snapshots?\n\n"
-                                   "This action cannot be undone.",
-                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                                   QMessageBox.StandardButton.No)
-        
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-        
-        self.loading_widget.setVisible(True)
-        self.loading_widget.set_message("Deleting old snapshots...")
-        self.loading_widget.start_animation()
-        
-        def do_delete():
-            try:
-                # Delete all but the most recent 2 snapshots
-                result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "2"], 
-                                      capture_output=True, text=True, timeout=300)
-                
-                if result.returncode == 0:
-                    self.show_message.emit("Snapshot", "Old snapshots deleted successfully")
-                else:
-                    self.show_message.emit("Snapshot", f"Failed to delete snapshots: {result.stderr}")
-                    
-            except Exception as e:
-                self.show_message.emit("Snapshot", f"Error deleting snapshots: {str(e)}")
-            finally:
-                self.loading_widget.stop_animation()
-                self.loading_widget.setVisible(False)
-        
-        Thread(target=do_delete, daemon=True).start()
+        return snapshot_service.delete_snapshots(self)
 
     def install_plugin(self):
         path, _ = QFileDialog.getOpenFileName(self, "Install Plugin", os.path.expanduser('~'), "Python Plugin (*.py)")

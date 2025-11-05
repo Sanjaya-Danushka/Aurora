@@ -7,18 +7,19 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushBut
                              QScrollArea, QFrame, QGridLayout, QTextEdit, QLineEdit,
                              QMessageBox, QProgressBar, QGroupBox, QListWidget, QFileDialog)
 from PyQt6.QtCore import pyqtSignal, Qt, QThread, QTimer
-from PyQt6.QtGui import QIcon, QPixmap, QGuiApplication
+from PyQt6.QtGui import QGuiApplication
 import os
 
 from plugin_store import PluginStore
-try:
-    import requests as _req
-except Exception:
-    _req = None  # type: ignore
+ 
 try:
     from supabase_store import SupabasePluginStore
 except Exception:
     SupabasePluginStore = None  # type: ignore
+try:
+    from mongo_store import MongoPluginStore
+except Exception:
+    MongoPluginStore = None  # type: ignore
 
 class CommunityPluginCard(QFrame):
     """Card displaying a community plugin"""
@@ -38,39 +39,19 @@ class CommunityPluginCard(QFrame):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(6)
 
-        # Header with optional icon, title and author
+        # Header with title, author, and version (no image)
         header = QHBoxLayout()
-        self.icon_label = QLabel()
-        self.icon_label.setFixedSize(24, 24)
-        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        has_icon = False
-        try:
-            icon_url = plugin_info.get('icon_url')
-            if icon_url and _req is not None:
-                try:
-                    rr = _req.get(icon_url, timeout=8)
-                    if rr.status_code == 200:
-                        pm = QPixmap()
-                        if pm.loadFromData(rr.content):
-                            self.icon_label.setPixmap(pm.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-                            has_icon = True
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        if not has_icon:
-            self.icon_label.setText("🧩")
-        header.addWidget(self.icon_label)
         title = QLabel(plugin_info.get('name', 'Unknown Plugin'))
         title.setObjectName("pluginTitle")
         header.addWidget(title)
-
         author = QLabel(f"by {plugin_info.get('author', 'Unknown')}")
         author.setObjectName("pluginAuthor")
         author.setStyleSheet("color: #888; font-size: 11px;")
         header.addWidget(author)
         header.addStretch()
-
+        ver = QLabel(f"v{plugin_info.get('version', '1.0.0')}")
+        ver.setStyleSheet("color: #666; font-size: 10px;")
+        header.addWidget(ver)
         layout.addLayout(header)
 
         # Description
@@ -80,17 +61,8 @@ class CommunityPluginCard(QFrame):
         desc.setMaximumHeight(32)
         layout.addWidget(desc)
 
-        # Footer with version, downloads, and buttons
+        # Footer with actions
         footer = QHBoxLayout()
-
-        version = QLabel(f"v{plugin_info.get('version', '1.0.0')}")
-        version.setStyleSheet("color: #666; font-size: 10px;")
-        footer.addWidget(version)
-
-        downloads = QLabel(f"⬇️ {plugin_info.get('downloads', 0)}")
-        downloads.setStyleSheet("color: #666; font-size: 10px;")
-        footer.addWidget(downloads)
-
         footer.addStretch()
 
         # Buttons
@@ -421,14 +393,24 @@ class CommunityPluginsTab(QWidget):
         self.main_app = main_app
         self.plugin_store = None
         self._is_supabase = False
+        self._is_mongo = False
         try:
-            if SupabasePluginStore is not None:
-                s = SupabasePluginStore()
-                if s.is_configured():
-                    self.plugin_store = s
-                    self._is_supabase = True
+            if MongoPluginStore is not None:
+                m = MongoPluginStore()
+                if m.is_configured():
+                    self.plugin_store = m
+                    self._is_mongo = True
         except Exception:
             self.plugin_store = None
+        if self.plugin_store is None:
+            try:
+                if SupabasePluginStore is not None:
+                    s = SupabasePluginStore()
+                    if s.is_configured():
+                        self.plugin_store = s
+                        self._is_supabase = True
+            except Exception:
+                self.plugin_store = None
         if self.plugin_store is None:
             self.plugin_store = PluginStore()
         self.community_plugins = []
@@ -622,9 +604,7 @@ class CommunityPluginsTab(QWidget):
             self.community_plugins = self.plugin_store.discover_plugins()
             self._display_plugins()
         except Exception as e:
-            self._show_error(f"Failed to load community plugins: {e}\n\n"
-                           "Note: Community plugins require the 'requests' module.\n"
-                           "Install with: pip install requests")
+            self._show_error(f"Failed to load community plugins: {e}")
             self.progress_bar.setVisible(False)
 
     def _update_auth_ui(self):
@@ -743,8 +723,8 @@ class CommunityPluginsTab(QWidget):
             self.grid_layout.addWidget(no_plugins_label, 0, 0, 1, 5, Qt.AlignmentFlag.AlignCenter)
             return
 
-        # Display plugins in grid (denser layout)
-        col_count = 5
+        # Display plugins in grid (three columns for readability)
+        col_count = 3
         for idx, plugin_info in enumerate(self.community_plugins):
             card = CommunityPluginCard(
                 plugin_info,

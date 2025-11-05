@@ -144,6 +144,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.large_search_box.setVisible(True)
                 self.package_table.setVisible(False)
                 self.load_more_btn.setVisible(False)
+                if hasattr(self, 'no_results_widget'):
+                    self.no_results_widget.setVisible(False)
             self.package_table.setRowCount(0)
             self.header_info.setText("Search and discover new packages to install")
             # Removed verbose log message: "Type a package name to search in AUR and official repositories"
@@ -1027,6 +1029,20 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.large_search_box = LargeSearchBox()
         self.large_search_box.search_requested.connect(self.on_large_search_requested)
         self.packages_panel_layout.addWidget(self.large_search_box)
+        self.no_results_widget = QFrame()
+        nr_layout = QVBoxLayout(self.no_results_widget)
+        nr_layout.setContentsMargins(0, 40, 0, 40)
+        nr_layout.setSpacing(8)
+        self.no_results_title = QLabel("No results found")
+        self.no_results_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.no_results_title.setStyleSheet("color: #c0c0c0; font-size: 18px; font-weight: 600;")
+        self.no_results_desc = QLabel("")
+        self.no_results_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.no_results_desc.setStyleSheet("color: #9aa0a6; font-size: 13px;")
+        nr_layout.addWidget(self.no_results_title)
+        nr_layout.addWidget(self.no_results_desc)
+        self.no_results_widget.setVisible(False)
+        self.packages_panel_layout.addWidget(self.no_results_widget)
         
         # Settings container (hidden by default)
         self.settings_container = QScrollArea()
@@ -1445,6 +1461,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.plugins_view.setVisible(False)
             if hasattr(self, 'plugins_tab_widget') and self.plugins_tab_widget:
                 self.plugins_tab_widget.setVisible(False)
+            if hasattr(self, 'no_results_widget'):
+                self.no_results_widget.setVisible(False)
         except Exception:
             pass
         # Cancel ongoing non-install tasks
@@ -2169,12 +2187,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         query = self.search_input.text().lower()
         
         if not query:
-            self.current_page = 0
+            if self.current_view == "discover":
+                self.large_search_box.setVisible(True)
+                self.package_table.setVisible(False)
+                self.load_more_btn.setVisible(False)
+                if hasattr(self, 'no_results_widget'):
+                    self.no_results_widget.setVisible(False)
             self.package_table.setRowCount(0)
-            if self.current_view != "discover":
-                self.display_page()
-                if self.current_view == "updates":
-                    self.update_updates_header_counts()
+            self.header_info.setText("Search and discover new packages to install")
+            # Removed verbose log message: "Type a package name to search in AUR and official repositories"
             return
         
         if self.current_view == "discover":
@@ -2237,6 +2258,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.loading_widget.set_message("Searching packages...")
         self.loading_widget.start_animation()
         self.package_table.setVisible(False)
+        if hasattr(self, 'no_results_widget'):
+            self.no_results_widget.setVisible(False)
         
         def search_in_thread():
             try:
@@ -2475,10 +2498,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if not filtered:
             self.header_info.setText(f"No packages found matching '{query}'.")
             self.log(f"No packages found matching '{query}'.")
+            self.package_table.setVisible(False)
+            if hasattr(self, 'no_results_widget'):
+                self.no_results_desc.setText(f"No packages found matching '{query}'.")
+                self.no_results_widget.setVisible(True)
         else:
             count = len(filtered)
             self.header_info.setText(f"{count} packages were found, {count} of which match the specified filters")
             self.log(f"Found {count} packages matching '{query}'. Showing first 10...")
+            if hasattr(self, 'no_results_widget'):
+                self.no_results_widget.setVisible(False)
+            self.package_table.setVisible(True)
 
     def refresh_packages(self):
         if self.current_view == "updates":

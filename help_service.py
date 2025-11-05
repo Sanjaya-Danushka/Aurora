@@ -39,60 +39,85 @@ def show_help(parent, current_view: str):
     tabs = QTabWidget()
 
     overview = (
-        "NeoArch helps you search, install, and manage software across multiple sources.\n\n"
-        "Use the left sidebar to switch sections. The top titlebar contains actions for each section.\n"
-        "The console can be toggled to view logs during operations."
+        "NeoArch is a comprehensive package manager for Arch Linux with multi-source support.\n\n"
+        "Key features:\n"
+        "- Unified search and management across pacman, AUR, Flatpak, and npm.\n"
+        "- One-click installs with progress display and cancel support.\n"
+        "- Bundles for curating and sharing sets of packages.\n"
+        "- Plugins panel for extensions and system tools (e.g., BleachBit, Timeshift).\n"
+        "- GitHub and Docker install helpers for alternative sources.\n"
+        "- Snapshot integration via Timeshift (manual and pre-update).\n"
+        "- Auto update checks and scheduled update workflow.\n"
+        "- Source and status filters to focus results.\n\n"
+        "Use the left sidebar to switch sections; the top titlebar shows actions for each section.\n"
+        "Toggle the console from the bottom-right to see logs during operations."
     )
     tabs.addTab(_make_text_tab(overview), "Overview")
 
     discover = (
-        "Discover: Search packages across pacman, AUR, Flatpak and npm.\n\n"
-        "- Type at least 3 characters to search.\n"
-        "- Select results and click Install selected packages.\n"
-        "- Use Add selected to Bundle to curate bundles.\n"
-        "- Use Install via GitHub or Docker for alternative sources.\n"
-        "- Sudo installs where needed."
+        "Discover: Search packages across pacman, AUR, Flatpak, and npm.\n\n"
+        "- Type at least 3 characters to search; results span all enabled sources.\n"
+        "- Select results and click \"Install selected packages\".\n"
+        "- \"Add selected to Bundle\" to curate a bundle for later.\n"
+        "- \"Install via GitHub\" and \"Install via Docker\" support alternative sources.\n"
+        "- Use \"Install with Sudo Privileges\" when elevated rights are required (polkit/askpass handled automatically)."
     )
     tabs.addTab(_make_text_tab(discover), "Discover")
 
     updates = (
-        "Updates: View and apply available updates.\n\n"
-        "- Update Selected to upgrade chosen packages.\n"
-        "- Ignore Selected to hide packages from updates.\n"
-        "- Manage Ignored to review ignored list."
+        "Updates: Review and apply updates across sources.\n\n"
+        "- \"Update Selected\" to upgrade chosen packages.\n"
+        "- \"Ignore Selected\" to hide packages from future update lists.\n"
+        "- \"Manage Ignored\" to review and restore items.\n"
+        "- Snapshot support: optionally create a Timeshift snapshot before updating (see Settings).\n"
+        "- \"Update Tools\" refreshes system tooling (pacman/yay, Flatpak, npm)."
     )
     tabs.addTab(_make_text_tab(updates), "Updates")
 
     installed = (
-        "Installed: Browse installed packages.\n\n"
-        "- Update Selected to upgrade packages with updates.\n"
-        "- Uninstall Selected to remove packages.\n"
-        "- Add selected to Bundle to create bundles."
+        "Installed: Browse and act on installed software.\n\n"
+        "- \"Update Selected\" to upgrade packages with available updates.\n"
+        "- \"Uninstall Selected\" to remove packages.\n"
+        "- \"Add selected to Bundle\" to curate bundles.\n"
+        "- Filter by source and status to narrow the list."
     )
     tabs.addTab(_make_text_tab(installed), "Installed")
 
     bundles = (
-        "Bundles: Create, import, export, and install curated package sets.\n\n"
-        "- Install Bundle to install all items.\n"
-        "- Import/Export for sharing.\n"
-        "- Clear or Remove Selected to manage contents."
+        "Bundles: Create, import, export, and install curated sets of packages.\n\n"
+        "- \"Install Bundle\" installs all items in the bundle.\n"
+        "- \"Import\"/\"Export\" to share bundles.\n"
+        "- \"Clear\" or \"Remove Selected\" to manage contents.\n"
+        "- Optional autosave path can be configured in Settings."
     )
     tabs.addTab(_make_text_tab(bundles), "Bundles")
 
     plugins = (
-        "Plugins: Discover and manage extensions.\n\n"
-        "- Refresh to update list.\n"
-        "- Use the sidebar to filter by name, status, or category.\n"
-        "- Install/Uninstall and Launch supported tools."
+        "Plugins: Discover and manage extensions and system tools.\n\n"
+        "- Use \"Refresh\" to update the list.\n"
+        "- Filter by name, status, or category from the left sidebar.\n"
+        "- Install/Uninstall and Launch supported tools (e.g., BleachBit, Timeshift)."
     )
     tabs.addTab(_make_text_tab(plugins), "Plugins")
 
     settings_help = (
-        "Settings: Configure general options and plugins.\n\n"
-        "- Auto update checks, snapshots, bundle autosave.\n"
-        "- Manage enabled plugins and defaults."
+        "Settings: Configure global behavior and plugins.\n\n"
+        "- General: auto update checks, number of minutes between refreshes.\n"
+        "- Snapshots: enable pre-update Timeshift snapshots; manual create/revert/delete.\n"
+        "- Bundles: enable autosave and configure default path.\n"
+        "- Plugins: manage enabled plugins and defaults."
     )
     tabs.addTab(_make_text_tab(settings_help), "Settings")
+
+    advanced = (
+        "Advanced:\n\n"
+        "- Console: toggle from the bottom-right to see real-time logs.\n"
+        "- Cancel installation: available while installs are running.\n"
+        "- Flathub: user remote ensured automatically for Flatpak operations.\n"
+        "- Privileges: pacman uses pkexec; AUR operations use askpass when needed.\n"
+        "- Scheduled updates: background workflow can prompt updates and create snapshots if enabled."
+    )
+    tabs.addTab(_make_text_tab(advanced), "Advanced")
 
     if isinstance(current_view, str):
         index_by_name = {
@@ -143,6 +168,20 @@ def show_about(parent):
         "Use Bundles to curate sets of packages. Manage extensions via Plugins."
     )
     tabs.addTab(_make_text_tab(about_text), "About")
+
+    features_text = (
+        "Features:\n\n"
+        "- Unified package management across pacman, AUR, Flatpak, and npm.\n"
+        "- Discover view with GitHub/Docker install helpers and sudo install option.\n"
+        "- Rich update workflow with Ignore/Manage Ignored and Tools update.\n"
+        "- Bundles: create, import/export, install, and manage curated sets.\n"
+        "- Plugins: discover, filter, install/uninstall, and launch tools.\n"
+        "- Snapshots via Timeshift: manual create/revert/delete and pre-update integration.\n"
+        "- Console with real-time logs and cancel installation support.\n"
+        "- Flatpak Flathub user remote ensured automatically.\n"
+        "- Scheduled updates workflow with optional snapshot creation.\n"
+    )
+    tabs.addTab(_make_text_tab(features_text), "Features")
 
     sys_text = (
         f"Python: {platform.python_version()}\n"

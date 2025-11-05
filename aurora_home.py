@@ -31,6 +31,7 @@ import sys_utils
 import snapshot_service
 import update_service
 import uninstall_service
+import ignore_service
 
 def _qt_msg_handler(mode, context, message):
     s = str(message)
@@ -597,70 +598,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 pass
 
     def update_core_tools(self):
-        self.loading_widget.setVisible(True)
-        self.loading_widget.set_message("Updating tools...")
-        self.loading_widget.start_animation()
-        def do_update():
-            try:
-                deps = ["flatpak", "git", "nodejs", "npm", "docker"]
-                if self.cmd_exists("pacman"):
-                    w1 = CommandWorker(["pacman", "-Syu", "--noconfirm"] + deps, sudo=True)
-                    w1.output.connect(self.log)
-                    w1.error.connect(self.log)
-                    w1.run()
-                try:
-                    self.ensure_flathub_user_remote()
-                except Exception:
-                    pass
-                # Flatpak updates mark
-                try:
-                    update_ids = set()
-                    for scope in ([], ["--user"], ["--system"]):
-                        cmdu = ["flatpak"] + scope + ["list", "--app", "--updates", "--columns=application,version"]
-                        fu = subprocess.run(cmdu, capture_output=True, text=True, timeout=60)
-                        if fu.returncode == 0 and fu.stdout:
-                            for ln in [x for x in fu.stdout.strip().split('\n') if x.strip()]:
-                                cols = ln.split('\t')
-                                if cols:
-                                    update_ids.add(cols[0].strip())
-                    if update_ids:
-                        for pkg in packages:
-                            if pkg.get('source') == 'Flatpak' and pkg.get('name') in update_ids:
-                                pkg['has_update'] = True
-                except Exception:
-                    pass
-                if self.cmd_exists("flatpak"):
-                    w2 = CommandWorker(["flatpak", "--user", "update", "-y"], sudo=False)
-                    w2.output.connect(self.log)
-                    w2.error.connect(self.log)
-                    w2.run()
-                if self.cmd_exists("npm"):
-                    env = os.environ.copy()
-                    try:
-                        npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
-                        os.makedirs(npm_prefix, exist_ok=True)
-                        env['npm_config_prefix'] = npm_prefix
-                        env['NPM_CONFIG_PREFIX'] = npm_prefix
-                        env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
-                    except Exception:
-                        pass
-                    w3 = CommandWorker(["npm", "update", "-g"], sudo=False, env=env)
-                    w3.output.connect(self.log)
-                    w3.error.connect(self.log)
-                    w3.run()
-                if self.cmd_exists("yay"):
-                    env, _ = self.prepare_askpass_env()
-                    w4 = CommandWorker(["yay", "-Syu", "--noconfirm"], sudo=False, env=env)
-                    w4.output.connect(self.log)
-                    w4.error.connect(self.log)
-                    w4.run()
-                self.show_message.emit("Environment", "Tools updated")
-            except Exception as e:
-                self.show_message.emit("Environment", f"Update failed: {str(e)}")
-            finally:
-                self.loading_widget.stop_animation()
-                self.loading_widget.setVisible(False)
-        Thread(target=do_update, daemon=True).start()
+        return update_service.update_core_tools(self)
     
     def get_sudo_askpass(self):
         candidates = [
@@ -3027,155 +2965,10 @@ fi
         update_service.update_packages(self, packages_by_source)
     
     def ignore_selected(self):
-        items = []
-        for row in range(self.package_table.rowCount()):
-            checkbox = self.get_row_checkbox(row)
-            if checkbox is not None and checkbox.isChecked():
-                name_item = self.package_table.item(row, 1)
-                if name_item:
-                    items.append(name_item.text().strip())
-        if not items:
-            self.log("No packages selected to ignore")
-            return
-        ignored = self.load_ignored_updates()
-        for n in items:
-            ignored.add(n)
-        self.save_ignored_updates(ignored)
-        self.log(f"Ignored {len(items)} package(s)")
-        if self.current_view == "updates":
-            self.load_updates()
+        return ignore_service.ignore_selected(self)
     
     def manage_ignored(self):
-        ignored = sorted(self.load_ignored_updates())
-        dlg = QDialog(self)
-        dlg.setWindowTitle("Manage Ignored Updates")
-        v = QVBoxLayout()
-        hdr = QLabel(f"Ignored packages: {len(ignored)}")
-        v.addWidget(hdr)
-        search = QLineEdit()
-        search.setPlaceholderText("Filter packages...")
-        v.addWidget(search)
-        tbl = QTableWidget()
-        tbl.setColumnCount(5)
-        tbl.setHorizontalHeaderLabels(["", "Package", "Source", "Installed", "Available"])
-        tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        tbl.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        tbl.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        tbl.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        tbl.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-        tbl.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
-        v.addWidget(tbl)
-        row = QWidget()
-        h = QHBoxLayout(row)
-        btn_unignore = QPushButton("Unignore Selected")
-        btn_unall = QPushButton("Unignore All")
-        btn_close = QPushButton("Close")
-        h.addWidget(btn_unignore)
-        h.addWidget(btn_unall)
-        h.addStretch()
-        h.addWidget(btn_close)
-        v.addWidget(row)
-
-        installed = {}
-        try:
-            r = subprocess.run(["pacman", "-Q"], capture_output=True, text=True, timeout=20)
-            if r.returncode == 0 and r.stdout:
-                for ln in r.stdout.strip().split('\n'):
-                    ps = ln.split()
-                    if len(ps) >= 2:
-                        installed[ps[0]] = ps[1]
-        except Exception:
-            pass
-        aur_set = set()
-        try:
-            r = subprocess.run(["pacman", "-Qm"], capture_output=True, text=True, timeout=10)
-            if r.returncode == 0 and r.stdout:
-                for ln in r.stdout.strip().split('\n'):
-                    ps = ln.split()
-                    if ps:
-                        aur_set.add(ps[0])
-        except Exception:
-            pass
-        new_versions = {}
-        try:
-            r = subprocess.run(["pacman", "-Qu"], capture_output=True, text=True, timeout=20)
-            if r.returncode == 0 and r.stdout:
-                for ln in r.stdout.strip().split('\n'):
-                    if ' -> ' in ln:
-                        left, nv = ln.split(' -> ', 1)
-                        nm = left.split()[0]
-                        new_versions[nm] = nv.strip()
-        except Exception:
-            pass
-        try:
-            r = subprocess.run(["yay", "-Qua"], capture_output=True, text=True, timeout=20)
-            if r.returncode == 0 and r.stdout:
-                for ln in r.stdout.strip().split('\n'):
-                    if ' -> ' in ln:
-                        left, nv = ln.split(' -> ', 1)
-                        nm = left.split()[0]
-                        new_versions[nm] = nv.strip()
-        except Exception:
-            pass
-
-        tbl.setRowCount(len(ignored))
-        for i, name in enumerate(ignored):
-            cb = QCheckBox()
-            cb.setObjectName("tableCheckbox")
-            w = QWidget()
-            l = QHBoxLayout(w)
-            l.setContentsMargins(0,0,0,0)
-            l.addWidget(cb)
-            l.addStretch()
-            tbl.setCellWidget(i, 0, w)
-            tbl.setItem(i, 1, QTableWidgetItem(name))
-            src = "AUR" if name in aur_set else "pacman"
-            tbl.setItem(i, 2, QTableWidgetItem(src))
-            tbl.setItem(i, 3, QTableWidgetItem(installed.get(name, "")))
-            tbl.setItem(i, 4, QTableWidgetItem(new_versions.get(name, "")))
-
-        def apply_filter(text):
-            t = text.strip().lower()
-            for r in range(tbl.rowCount()):
-                nm = tbl.item(r,1).text().lower() if tbl.item(r,1) else ""
-                tbl.setRowHidden(r, t not in nm)
-        search.textChanged.connect(apply_filter)
-
-        def unignore_selected():
-            sel = []
-            for r in range(tbl.rowCount()):
-                w = tbl.cellWidget(r, 0)
-                if not w:
-                    continue
-                chks = w.findChildren(QCheckBox)
-                if chks and chks[0].isChecked():
-                    nm = tbl.item(r,1).text()
-                    sel.append(nm)
-            if sel:
-                s = self.load_ignored_updates()
-                for nm in sel:
-                    s.discard(nm)
-                self.save_ignored_updates(s)
-                for r in reversed(range(tbl.rowCount())):
-                    w = tbl.cellWidget(r,0)
-                    if not w:
-                        continue
-                    chks = w.findChildren(QCheckBox)
-                    if chks and chks[0].isChecked():
-                        tbl.removeRow(r)
-                QTimer.singleShot(0, self.refresh_packages)
-        btn_unignore.clicked.connect(unignore_selected)
-
-        def unignore_all():
-            self.save_ignored_updates(set())
-            tbl.setRowCount(0)
-            QTimer.singleShot(0, self.refresh_packages)
-        btn_unall.clicked.connect(unignore_all)
-
-        btn_close.clicked.connect(dlg.accept)
-        dlg.setLayout(v)
-        dlg.resize(820, 520)
-        dlg.exec()
+        return ignore_service.manage_ignored(self)
 
     def get_source_text(self, row, view_id=None):
         vid = view_id or self.current_view

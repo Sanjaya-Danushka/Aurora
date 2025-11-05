@@ -1103,6 +1103,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.load_more_btn.clicked.connect(self.load_more_packages)
         self.load_more_btn.setVisible(False)
         self.packages_panel_layout.addWidget(self.load_more_btn)
+
+        # Console toggle button (bottom-right)
+        self.console_toggle_btn = QPushButton("🖥️")
+        self.console_toggle_btn.setFixedSize(36, 36)
+        self.console_toggle_btn.setToolTip("Show Console")
+        self.console_toggle_btn.clicked.connect(self.toggle_console)
+        self.console_toggle_btn.setVisible(False)
+        self.packages_panel_layout.addWidget(self.console_toggle_btn, alignment=Qt.AlignmentFlag.AlignRight)
         
         # Console Output
         self.console_label = QLabel("Console Output")
@@ -1463,6 +1471,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.plugins_tab_widget.setVisible(False)
             if hasattr(self, 'no_results_widget'):
                 self.no_results_widget.setVisible(False)
+            if hasattr(self, 'console_toggle_btn'):
+                self.console_toggle_btn.setVisible(False)
         except Exception:
             pass
         # Cancel ongoing non-install tasks
@@ -1520,6 +1530,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.setRowCount(0)
             self.header_info.setText("Search and discover new packages to install")
             # Removed verbose log: self.log("Type a package name to search in AUR and official repositories")
+            # Hide console in Discover view
+            try:
+                self.console_label.setVisible(False)
+                self.console.setVisible(False)
+                if hasattr(self, 'console_toggle_btn'):
+                    self.console_toggle_btn.setVisible(True)
+                    self.console_toggle_btn.setToolTip("Show Console")
+            except Exception:
+                pass
         elif view_id == "bundles":
             self.package_table.setRowCount(0)
             self.header_info.setText("Create, import, export, and install bundles of packages across sources")
@@ -1610,8 +1629,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.run_plugin_hook('on_view_changed', view_id)
         except Exception:
             pass
-        # Other views: ensure console visible
-        if view_id not in ("settings", "plugins"):
+        # Other views: ensure console visible (not in settings/plugins/discover)
+        if view_id not in ("settings", "plugins", "discover"):
             try:
                 self.console_label.setVisible(True)
                 self.console.setVisible(True)
@@ -2497,7 +2516,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Provide feedback if no results match
         if not filtered:
             self.header_info.setText(f"No packages found matching '{query}'.")
-            self.log(f"No packages found matching '{query}'.")
+            if packages is not None:
+                self.log(f"No packages found matching '{query}'.")
             self.package_table.setVisible(False)
             if hasattr(self, 'no_results_widget'):
                 self.no_results_desc.setText(f"No packages found matching '{query}'.")
@@ -2505,7 +2525,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         else:
             count = len(filtered)
             self.header_info.setText(f"{count} packages were found, {count} of which match the specified filters")
-            self.log(f"Found {count} packages matching '{query}'. Showing first 10...")
+            if packages is not None:
+                self.log(f"Found {count} packages matching '{query}'. Showing first 10...")
             if hasattr(self, 'no_results_widget'):
                 self.no_results_widget.setVisible(False)
             self.package_table.setVisible(True)
@@ -3258,6 +3279,23 @@ def on_tick(app):
     
     def log(self, message):
         self.console.append(message)
+    
+    def toggle_console(self):
+        try:
+            showing = self.console.isVisible()
+        except Exception:
+            showing = False
+        new_state = not showing
+        try:
+            self.console.setVisible(new_state)
+            self.console_label.setVisible(new_state)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, 'console_toggle_btn'):
+                self.console_toggle_btn.setToolTip("Hide Console" if new_state else "Show Console")
+        except Exception:
+            pass
     
     def show_about(self):
         QMessageBox.information(self, "About NeoArch", 

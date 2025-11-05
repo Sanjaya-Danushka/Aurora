@@ -2332,14 +2332,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     if result_flatpak.returncode == 0 and result_flatpak.stdout:
                         lines = [l for l in result_flatpak.stdout.strip().split('\n') if l.strip()]
                         for line in lines:
-                            cols = line.split('\t')
-                            if not cols:
+                            ls = line.strip()
+                            low = ls.lower()
+                            if ('no match' in low) or ('no results' in low) or ('not found' in low):
                                 continue
-                            app_id = cols[0].strip() if len(cols) > 0 else ''
-                            app_name = cols[1].strip() if len(cols) > 1 and cols[1].strip() else app_id
+                            cols = line.split('\t')
+                            if len(cols) < 2:
+                                continue
+                            app_id = cols[0].strip()
+                            app_name = cols[1].strip() if cols[1].strip() else app_id
                             description = cols[2].strip() if len(cols) > 2 else ''
                             version = cols[3].strip() if len(cols) > 3 else ''
-                            if app_id:
+                            if app_id and ('no match' not in app_id.lower()) and ('not found' not in app_id.lower()):
                                 packages.append({
                                     'name': app_name,
                                     'version': version,

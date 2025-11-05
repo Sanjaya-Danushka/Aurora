@@ -1484,15 +1484,34 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.setVisible(False)
             self.load_more_btn.setVisible(False)
             
-            # Add community plugins tab if not already added
-            if self.plugins_tab_widget.count() == 1:  # Only built-in tab exists
+            # Clear and add PluginsSidebar
+            while self.filters_layout.count():
+                item = self.filters_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            try:
+                self.plugins_sidebar = PluginsSidebar(self)
+                self.plugins_sidebar.filter_changed.connect(self.on_plugins_filter_changed)
+                # Populate sidebar with the same list as cards
                 try:
-                    from components.community_plugins import CommunityPluginsTab
-                    self.community_plugins_tab = CommunityPluginsTab(self)
-                    self.plugins_tab_widget.addTab(self.community_plugins_tab, "Community Plugins")
-                except Exception as e:
-                    print(f"Failed to load community plugins: {e}")
-            
+                    if hasattr(self, 'plugins_view') and self.plugins_view:
+                        self.plugins_sidebar.set_plugins(self.plugins_view.plugins)
+                        cats = sorted({(p.get('category') or '') for p in self.plugins_view.plugins if p.get('category')})
+                        try:
+                            self.plugins_sidebar.set_categories(cats)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                # Allow install from sidebar
+                try:
+                    self.plugins_sidebar.install_requested.connect(self.on_plugin_install_requested)
+                    self.plugins_sidebar.uninstall_requested.connect(self.on_plugin_uninstall_requested)
+                except Exception:
+                    pass
+                self.filters_layout.addWidget(self.plugins_sidebar)
+            except Exception:
+                pass
             self.plugins_tab_widget.setVisible(True)
             # Ensure built-in plugins grid is visible
             try:
@@ -1500,8 +1519,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             except Exception:
                 pass
             self.plugins_view.refresh_all()
-            if hasattr(self, 'community_plugins_tab'):
-                self.community_plugins_tab.refresh_plugins()
 
             self.header_info.setText("Install and launch extensions like BleachBit and Timeshift")
             try:

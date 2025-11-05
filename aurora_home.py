@@ -32,6 +32,11 @@ import snapshot_service
 import update_service
 import uninstall_service
 import ignore_service
+import bundle_service
+import askpass_service
+import settings_service
+import filters_service
+import install_service
 
 def _qt_msg_handler(mode, context, message):
     s = str(message)
@@ -601,48 +606,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         return update_service.update_core_tools(self)
     
     def get_sudo_askpass(self):
-        candidates = [
-            "ksshaskpass",
-            "ssh-askpass",
-            "qt5-askpass",
-            "lxqt-openssh-askpass",
-        ]
-        for c in candidates:
-            p = shutil.which(c)
-            if p:
-                return p
-        return None
+        return askpass_service.get_sudo_askpass()
 
     def prepare_askpass_env(self):
-        env = os.environ.copy()
-        cleanup_path = None
-        # Always use our custom askpass to ensure consistent UI and messaging
-        try:
-            script = """#!/bin/sh
-title=${NEOARCH_ASKPASS_TITLE:-"NeoArch - AUR Install"}
-text=${NEOARCH_ASKPASS_TEXT:-"AUR packages are community-maintained and may be unsafe.\nEnter your password to proceed."}
-icon=${NEOARCH_ASKPASS_ICON:-"dialog-password"}
-if command -v kdialog >/dev/null 2>&1; then
-  kdialog --title "$title" --icon "$icon" --password "$text"
-elif command -v zenity >/dev/null 2>&1; then
-  zenity --password --title="$title" --text="$text" --window-icon="$icon"
-elif command -v yad >/dev/null 2>&1; then
-  yad --title="$title" --text="$text" --entry --hide-text --window-icon="$icon"
-else
-  exit 1
-fi
-"""
-            fd, path = tempfile.mkstemp(prefix="neoarch-askpass-", suffix=".sh")
-            with os.fdopen(fd, "w") as f:
-                f.write(script)
-            os.chmod(path, 0o700)
-            cleanup_path = path
-            env["SUDO_ASKPASS"] = path
-            env["SSH_ASKPASS"] = path
-            env["SUDO_ASKPASS_REQUIRE"] = "force"
-        except Exception:
-            pass
-        return env, cleanup_path
+        return askpass_service.prepare_askpass_env()
 
     def get_source_accent(self, source):
         m = {
@@ -3000,205 +2967,27 @@ fi
         version = version_item.text().strip() if version_item else ""
         source = self.get_source_text(row, vid)
         return {"name": name, "id": pkg_id, "version": version, "source": source}
-
+    
     def add_selected_to_bundle(self):
-        items = []
-        for row in range(self.package_table.rowCount()):
-            checkbox = self.get_row_checkbox(row)
-            if checkbox is not None and checkbox.isChecked():
-                info = self.get_row_info(row)
-                if info.get("name") and info.get("source"):
-                    items.append(info)
-        if not items:
-            self.log("No selected rows to add to bundle")
-            return
-        # de-dupe by (source, id/name)
-        existing = {(i.get('source'), i.get('id') or i.get('name')) for i in self.bundle_items}
-        added = 0
-        for it in items:
-            key = (it.get('source'), it.get('id') or it.get('name'))
-            if key not in existing:
-                self.bundle_items.append(it)
-                existing.add(key)
-                added += 1
-        self.log(f"Added {added} item(s) to bundle")
-        if self.current_view == "bundles":
-            self.refresh_bundles_table()
+        return bundle_service.add_selected_to_bundle(self)
 
     def refresh_bundles_table(self):
-        if self.current_view != "bundles":
-            return
-        self.package_table.setRowCount(0)
-        self.package_table.setUpdatesEnabled(False)
-        for it in self.bundle_items:
-            # Reuse discover-like row rendering
-            pkg = {
-                'name': it.get('name', ''),
-                'id': it.get('id') or it.get('name', ''),
-                'version': it.get('version', ''),
-                'source': it.get('source', ''),
-            }
-            self.add_discover_row(pkg)
-        self.package_table.setUpdatesEnabled(True)
-        try:
-            self.package_table.clearSelection()
-        except Exception:
-            pass
-
-        self.load_more_btn.setVisible(False)
-        # Ensure table is visible in Bundles view
-        try:
-            self.package_table.setVisible(True)
-        except Exception:
-            pass
+        return bundle_service.refresh_bundles_table(self)
 
     def export_bundle(self):
-        if not self.bundle_items:
-            self._show_message("Export Bundle", "Bundle is empty")
-            return
-        path, _ = QFileDialog.getSaveFileName(self, "Export Bundle", os.path.expanduser("~"), "Bundle JSON (*.json)")
-        if not path:
-            return
-        data = {"app": "NeoArch", "items": self.bundle_items}
-        try:
-            with open(path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2)
-            self._show_message("Export Bundle", f"Saved {len(self.bundle_items)} items to {path}")
-        except Exception as e:
-            self._show_message("Export Bundle", f"Failed: {e}")
+        return bundle_service.export_bundle(self)
 
     def import_bundle(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Import Bundle", os.path.expanduser("~"), "Bundle JSON (*.json)")
-        if not path:
-            return
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            items = data.get('items') if isinstance(data, dict) else None
-            if not isinstance(items, list):
-                self._show_message("Import Bundle", "Invalid bundle file")
-                return
-            existing = {(i.get('source'), i.get('id') or i.get('name')) for i in self.bundle_items}
-            added = 0
-            for it in items:
-                if not isinstance(it, dict):
-                    continue
-                src = (it.get('source') or '').strip()
-                nm = (it.get('name') or '').strip()
-                pkg_id = (it.get('id') or nm).strip()
-                if not src or not nm:
-                    continue
-                key = (src, pkg_id or nm)
-                if key not in existing:
-                    self.bundle_items.append({
-                        'name': nm,
-                        'id': pkg_id or nm,
-                        'version': (it.get('version') or '').strip(),
-                        'source': src,
-                    })
-                    existing.add(key)
-                    added += 1
-            self._show_message("Import Bundle", f"Added {added} items")
-            if self.current_view == "bundles":
-                self.refresh_bundles_table()
-        except Exception as e:
-            self._show_message("Import Bundle", f"Failed: {e}")
+        return bundle_service.import_bundle(self)
 
     def remove_selected_from_bundle(self):
-        if self.current_view != "bundles":
-            return
-        keys_to_remove = []
-        for row in range(self.package_table.rowCount()):
-            chk = self.get_row_checkbox(row)
-            if chk is not None and chk.isChecked():
-                info = self.get_row_info(row, view_id='bundles')
-                keys_to_remove.append((info.get('source'), info.get('id') or info.get('name')))
-        if not keys_to_remove:
-            self.log("No selected items to remove from bundle")
-            return
-        before = len(self.bundle_items)
-        self.bundle_items = [it for it in self.bundle_items if (it.get('source'), it.get('id') or it.get('name')) not in keys_to_remove]
-        removed = before - len(self.bundle_items)
-        self.log(f"Removed {removed} items from bundle")
-        self.refresh_bundles_table()
+        return bundle_service.remove_selected_from_bundle(self)
 
     def clear_bundle(self):
-        if not self.bundle_items:
-            return
-        self.bundle_items = []
-        self.refresh_bundles_table()
+        return bundle_service.clear_bundle(self)
 
     def install_bundle(self):
-        if not self.bundle_items:
-            self._show_message("Install Bundle", "Bundle is empty")
-            return
-        items = list(self.bundle_items)
-        # install in thread
-        def run():
-            try:
-                by_src = {}
-                for it in items:
-                    src = it.get('source') or 'pacman'
-                    name = it.get('name') or ''
-                    pkg_id = it.get('id') or name
-                    if not name:
-                        continue
-                    by_src.setdefault(src, []).append(pkg_id if src == 'Flatpak' else name)
-                for src, lst in by_src.items():
-                    if not lst:
-                        continue
-                    if src == 'pacman':
-                        cmd = ["pacman", "-S", "--noconfirm"] + lst
-                        w = CommandWorker(cmd, sudo=True)
-                        w.output.connect(self.log); w.error.connect(self.log); w.run()
-                    elif src == 'AUR':
-                        env, _ = self.prepare_askpass_env()
-                        cmd = ["yay", "-S", "--noconfirm"] + lst
-                        w = CommandWorker(cmd, sudo=False, env=env)
-                        w.output.connect(self.log); w.error.connect(self.log); w.run()
-                    elif src == 'Flatpak':
-                        cmd = ["flatpak", "install", "-y", "--noninteractive"] + lst
-                        w = CommandWorker(cmd, sudo=False)
-                        w.output.connect(self.log); w.error.connect(self.log); w.run()
-                    elif src == 'npm':
-                        env = os.environ.copy()
-                        try:
-                            npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
-                            os.makedirs(npm_prefix, exist_ok=True)
-                            env['npm_config_prefix'] = npm_prefix
-                            env['NPM_CONFIG_PREFIX'] = npm_prefix
-                            env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
-                        except Exception:
-                            pass
-                        cmd = ["npm", "install", "-g"] + lst
-                        w = CommandWorker(cmd, sudo=False, env=env)
-                        w.output.connect(self.log); w.error.connect(self.log); w.run()
-                    elif src == 'Local':
-                        entries = { (e.get('id') or e.get('name')): e for e in self.load_local_update_entries() }
-                        for token in lst:
-                            e = entries.get(token) or entries.get(token.strip())
-                            if not e:
-                                continue
-                            cmd = e.get('install_cmd') or e.get('update_cmd')
-                            if not cmd:
-                                continue
-                            try:
-                                process = subprocess.Popen(["bash", "-lc", cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                                while True:
-                                    line = process.stdout.readline() if process.stdout else ""
-                                    if not line and process.poll() is not None:
-                                        break
-                                    if line:
-                                        self.log(line.strip())
-                                _, stderr = process.communicate()
-                                if process.returncode != 0 and stderr:
-                                    self.log(f"Error: {stderr}")
-                            except Exception as ex:
-                                self.log(str(ex))
-                self.show_message.emit("Install Bundle", f"Installed {sum(len(v) for v in by_src.values())} package(s)")
-            except Exception as e:
-                self.log(f"Bundle install error: {str(e)}")
-        Thread(target=run, daemon=True).start()
+        return bundle_service.install_bundle(self)
     
     def install_selected(self):
         packages_by_source = {}
@@ -3231,231 +3020,7 @@ fi
         self.log_signal.emit(f"Selected packages: {', '.join([f'{pkg} ({source})' for source, pkgs in packages_by_source.items() for pkg in pkgs])}")
         
         self.log_signal.emit(f"Proceeding with installation...")
-        
-        def install():
-            self.install_cancel_event = Event()
-            self.installation_progress.emit("start", True)  # Start with cancel enabled
-            self.log_signal.emit("Installation thread started")
-            
-            success = True
-            current_download_info = ""
-            
-            # Calculate total packages and sources for progress tracking
-            total_packages = sum(len(pkgs) for pkgs in packages_by_source.values())
-            total_sources = len(packages_by_source)
-            completed_packages = 0
-            completed_sources = 0
-            
-            def update_progress_message(msg=""):
-                """Update the loading spinner message with overall progress"""
-                if completed_sources == total_sources:
-                    percentage = 100
-                else:
-                    # Show progress based on sources completed
-                    percentage = int((completed_sources / total_sources) * 100) if total_sources > 0 else 0
-                
-                base_msg = f"Installing: {completed_packages}/{total_packages} packages ({percentage}%)"
-                if current_download_info and msg:
-                    self.loading_widget.set_message(f"{base_msg}\n{current_download_info}")
-                elif current_download_info:
-                    self.loading_widget.set_message(f"{base_msg}\n{current_download_info}")
-                elif msg:
-                    self.loading_widget.set_message(f"{base_msg}\n{msg}")
-                else:
-                    self.loading_widget.set_message(base_msg)
-            
-            def parse_output_line(line):
-                """Parse pacman/yay output for download information"""
-                nonlocal current_download_info
-                
-                # Look for download progress lines
-                if "downloading" in line.lower() and ("mib" in line.lower() or "kib" in line.lower() or "gib" in line.lower()):
-                    # Extract size information from "downloading package.tar.xz (10.5 MiB)"
-                    size_match = re.search(r'\(([\d.]+)\s*(MiB|KiB|GiB|B)\)', line)
-                    if size_match:
-                        size, unit = size_match.groups()
-                        current_download_info = f"Downloading {size} {unit}"
-                        update_progress_message("")
-                
-                # Look for progress bar lines like "package.tar.xz ... 10.5 MiB/s 00:30 [####################] 100%"
-                elif re.search(r'\[.*\]\s*\d+%', line):
-                    progress_match = re.search(r'(\d+)%', line)
-                    if progress_match:
-                        percentage = progress_match.group(1)
-                        if current_download_info:
-                            current_download_info = f"{current_download_info} - {percentage}%"
-                        else:
-                            current_download_info = f"Downloading... {percentage}%"
-                        update_progress_message("")
-                
-                # Reset download info when download completes
-                elif "installed" in line.lower() or "upgraded" in line.lower():
-                    current_download_info = ""
-                    update_progress_message("")
-            
-            try:
-                for source, packages in packages_by_source.items():
-                    if self.install_cancel_event.is_set():
-                        self.log_signal.emit("Installation cancelled by user")
-                        self.installation_progress.emit("cancelled", False)
-                        return
-                    
-                    update_progress_message(f"Installing from {source}...")
-                    
-                    if source == 'pacman':
-                        cmd = ["pacman", "-S", "--noconfirm"] + packages
-                    elif source == 'AUR':
-                        cmd = [
-                            "yay",
-                            "-S", "--noconfirm",
-                            "--sudoloop",
-                            "--answerclean", "None",
-                            "--answerdiff", "None",
-                            "--answeredit", "None"
-                        ] + packages
-                    elif source == 'Flatpak':
-                        try:
-                            self.ensure_flathub_user_remote()
-                        except Exception:
-                            pass
-                        cmd = ["flatpak", "--user", "install", "-y", "flathub"] + packages
-                    elif source == 'npm':
-                        cmd = ["npm", "install", "--location=user"] + packages
-                    else:
-                        self.log_signal.emit(f"Unknown source {source} for packages {packages}")
-                        continue
-                    
-                    self.log_signal.emit(f"Running command for {source}: {' '.join(cmd)}")
-                    
-                    # Check for cancellation before each command
-                    if self.install_cancel_event.is_set():
-                        self.log_signal.emit("Installation cancelled by user")
-                        self.installation_progress.emit("cancelled", False)
-                        return
-                    
-                    # Prepare environment and worker
-                    env = os.environ.copy()
-                    cleanup_path = None
-                    if source == 'AUR':
-                        env, cleanup_path = self.prepare_askpass_env()
-                        # Configure git to use HTTPS instead of SSH for GitHub URLs
-                        # This prevents "Permission denied (publickey)" errors during AUR builds
-                        env['GIT_CONFIG_KEY_0'] = 'url.https://github.com/.insteadOf'
-                        env['GIT_CONFIG_VALUE_0'] = 'git@github.com:'
-                        env['GIT_CONFIG_KEY_1'] = 'url.https://github.com/.insteadOf'  
-                        env['GIT_CONFIG_VALUE_1'] = 'ssh://git@github.com/'
-                        env['GIT_CONFIG_COUNT'] = '2'
-                        # Customize prompt content
-                        try:
-                            title = "NeoArch - Confirm AUR Install"
-                            if len(packages) <= 3:
-                                pkg_list = ", ".join(packages)
-                            else:
-                                pkg_list = ", ".join(packages[:3]) + f" and {len(packages)-3} more"
-                            text = (
-                                "AUR packages are community-maintained and may be unsafe.\n"
-                                f"Packages: {pkg_list}\n\n"
-                                "Enter your password to proceed."
-                            )
-                            env["NEOARCH_ASKPASS_TITLE"] = title
-                            env["NEOARCH_ASKPASS_TEXT"] = text
-                            env["NEOARCH_ASKPASS_ICON"] = "dialog-password"
-                        except Exception:
-                            pass
-                    worker = CommandWorker(cmd, sudo=(source == 'pacman'), env=env)
-                    worker.output.connect(lambda msg: self.log_signal.emit(msg))
-                    worker.error.connect(lambda msg: self.log_signal.emit(msg))
-                    
-                    # Also connect to parse download progress
-                    worker.output.connect(parse_output_line)
-                    
-                    # Run the command with cancellation check
-                    try:
-                        exec_cmd = worker.command
-                        if source == 'pacman':
-                            exec_cmd = ["pkexec", "--disable-internal-agent"] + exec_cmd
-                        process = subprocess.Popen(
-                            exec_cmd,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            stdin=subprocess.DEVNULL,
-                            text=True,
-                            bufsize=1,
-                            preexec_fn=os.setsid,
-                            env=worker.env
-                        )
-                        
-
-                        while True:
-                            if self.install_cancel_event.is_set():
-                                process.terminate()
-                                try:
-                                    process.wait(timeout=5)
-                                except subprocess.TimeoutExpired:
-                                    process.kill()
-                                self.log_signal.emit("Installation cancelled by user")
-                                self.installation_progress.emit("cancelled", False)
-                                return
-                                
-                            if process.poll() is not None:
-                                break
-                            
-                            # Read output
-                            if process.stdout:
-                                line = process.stdout.readline()
-                                if line:
-                                    line = line.strip()
-                                    parse_output_line(line)
-                                    worker.output.emit(line)
-                            
-                            import time
-                            time.sleep(0.1)  # Small delay to prevent busy waiting
-                        
-                        # Check return code
-                        if process.returncode == 0:
-                            # Success - increment completed packages and sources
-                            completed_packages += len(packages)
-                            completed_sources += 1
-                            update_progress_message(f"Completed {source} packages")
-                            self.log_signal.emit(f"Successfully installed {len(packages)} {source} package(s)")
-                        else:
-                            success = False
-                            if process.stderr:
-                                error_output = process.stderr.read()
-                                if error_output:
-                                    error_text = f"Error: {error_output}"
-                                    # Check for tar ownership error
-                                    if "Cannot change ownership" in error_output and "Value too large for defined data type" in error_output:
-                                        error_text += "\n\nThis error occurs when tar tries to set file ownership to UIDs/GIDs that don't exist in the current environment.\n"
-                                        error_text += "To fix this, you can modify the PKGBUILD to add '--no-same-owner' to the tar command.\n"
-                                        error_text += "For example, change 'tar -xzf file.tar.gz' to 'tar -xzf file.tar.gz --no-same-owner'"
-                                    worker.error.emit(error_text)
-                            break
-                    finally:
-                        # Remove temporary askpass script if created
-                        if source == 'AUR' and cleanup_path and os.path.exists(cleanup_path):
-                            try:
-                                os.remove(cleanup_path)
-                            except Exception:
-                                pass
-                
-                if success and not self.install_cancel_event.is_set():
-                    update_progress_message("Installation complete!")
-                    self.log_signal.emit("Install completed")
-                    self.show_message.emit("Installation Complete", f"Successfully installed {total_packages} package(s).")
-                    self.installation_progress.emit("success", False)
-                elif not success and not self.install_cancel_event.is_set():
-                    self.log_signal.emit("Install failed")
-                    self.installation_progress.emit("failed", False)
-                    
-            except Exception as e:
-                self.log_signal.emit(f"Error in installation thread: {str(e)}")
-                self.installation_progress.emit("failed", False)
-            finally:
-                if hasattr(self, 'install_cancel_event'):
-                    delattr(self, 'install_cancel_event')
-        
-        Thread(target=install, daemon=True).start()
+        install_service.install_packages(self, packages_by_source)
     
     def uninstall_selected(self):
         selected_rows = self.package_table.selectionModel().selectedRows()
@@ -3485,86 +3050,10 @@ fi
         uninstall_service.uninstall_packages(self, packages_by_source)
     
     def apply_filters(self):
-        if self.current_view != "installed":
-            return
-        base = getattr(self, 'installed_all', []) or []
-        # Filter by SourceCard selection
-        selected_sources = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True, "Local": True}
-        if hasattr(self, 'source_card') and self.source_card:
-            try:
-                selected_sources.update(self.source_card.get_selected_sources())
-            except Exception:
-                pass
-        filtered_by_source = []
-        for pkg in base:
-            s = pkg.get('source')
-            if s in selected_sources and selected_sources.get(s, True):
-                filtered_by_source.append(pkg)
-        # Filter by status (Updates/Installed)
-        selected_filters = {"Updates available": True, "Installed": True}
-        if hasattr(self, 'filter_card') and self.filter_card:
-            try:
-                selected_filters = self.filter_card.get_selected_filters()
-            except Exception:
-                pass
-        show_updates = selected_filters.get("Updates available", True)
-        show_installed = selected_filters.get("Installed", True)
-        final = []
-        for pkg in filtered_by_source:
-            if pkg.get('has_update') and show_updates:
-                final.append(pkg)
-            elif not pkg.get('has_update') and show_installed:
-                final.append(pkg)
-        # Display via standard paginator
-        self.all_packages = final
-        self.current_page = 0
-        self.package_table.setRowCount(0)
-        self.display_page()
+        return filters_service.apply_filters(self)
 
     def apply_update_filters(self):
-        if self.current_view != "updates" or not self.all_packages:
-            return
-        
-        # Use SourceCard selection (available in Updates view) to filter sources
-        selected_sources = {}
-        if hasattr(self, 'source_card') and self.source_card:
-            try:
-                selected_sources = self.source_card.get_selected_sources()
-            except Exception:
-                selected_sources = {}
-        # Fallback to enabling all known sources in Updates view
-        if not selected_sources:
-            selected_sources = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True, "Local": True}
-
-        show_pacman = selected_sources.get("pacman", True)
-        show_aur = selected_sources.get("AUR", True)
-        show_flatpak = selected_sources.get("Flatpak", True)
-        show_npm = selected_sources.get("npm", True)
-        show_local = selected_sources.get("Local", True)
-
-        filtered = []
-        for pkg in self.all_packages:
-            src = pkg.get('source')
-            if src == 'pacman' and show_pacman:
-                filtered.append(pkg)
-            elif src == 'AUR' and show_aur:
-                filtered.append(pkg)
-            elif src == 'Flatpak' and show_flatpak:
-                filtered.append(pkg)
-            elif src == 'npm' and show_npm:
-                filtered.append(pkg)
-            elif src == 'Local' and show_local:
-                filtered.append(pkg)
-
-        # Update the all_packages to show filtered results
-        self.all_packages = filtered
-        self.current_page = 0
-        self.package_table.setRowCount(0)
-        self.display_page()
-        self.log(
-            f"Filtered to {len(filtered)} packages "
-            f"(pacman: {show_pacman}, AUR: {show_aur}, Flatpak: {show_flatpak}, npm: {show_npm}, Local: {show_local})"
-        )
+        return filters_service.apply_update_filters(self)
 
     def on_selection_changed(self):
         selected_rows = set(index.row() for index in self.package_table.selectionModel().selectedRows())
@@ -3589,52 +3078,10 @@ fi
             checkbox.setChecked(False)
     
     def load_settings(self):
-        try:
-            base = os.path.join(os.path.expanduser('~'), '.config', 'aurora')
-            os.makedirs(base, exist_ok=True)
-            path = os.path.join(base, 'settings.json')
-            if os.path.exists(path):
-                with open(path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-            else:
-                data = {}
-            default = {
-                'auto_check_updates': True,
-                'npm_user_mode': True,
-                'include_local_source': True,
-                'enabled_plugins': [],
-                'bundle_autosave': True,
-                'bundle_autosave_path': os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json'),
-                'auto_refresh_updates_minutes': 0,
-                'auto_update_enabled': False,
-                'auto_update_interval_days': 7,
-                'snapshot_before_update': False
-            }
-            default.update(data if isinstance(data, dict) else {})
-            return default
-        except Exception:
-            return {
-                'auto_check_updates': True,
-                'npm_user_mode': True,
-                'include_local_source': True,
-                'enabled_plugins': [],
-                'bundle_autosave': True,
-                'bundle_autosave_path': os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json'),
-                'auto_refresh_updates_minutes': 0,
-                'auto_update_enabled': False,
-                'auto_update_interval_days': 7,
-                'snapshot_before_update': False
-            }
+        return settings_service.load_settings()
     
     def save_settings(self):
-        try:
-            base = os.path.join(os.path.expanduser('~'), '.config', 'aurora')
-            os.makedirs(base, exist_ok=True)
-            path = os.path.join(base, 'settings.json')
-            with open(path, 'w', encoding='utf-8') as f:
-                json.dump(self.settings, f, indent=2)
-        except Exception as e:
-            self.log(f"Settings save error: {str(e)}")
+        return settings_service.save_settings(self.settings, self.log)
     
     def get_user_plugins_dir(self):
         p = os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'plugins')
@@ -3768,30 +3215,10 @@ fi
         self.save_settings()
     
     def export_settings(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Export Settings", os.path.expanduser('~'), "Settings JSON (*.json)")
-        if not path:
-            return
-        try:
-            with open(path, 'w', encoding='utf-8') as f:
-                json.dump(self.settings, f, indent=2)
-            self._show_message("Export Settings", f"Saved to {path}")
-        except Exception as e:
-            self._show_message("Export Settings", f"Failed: {e}")
+        return settings_service.export_settings(self)
     
     def import_settings(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Import Settings", os.path.expanduser('~'), "Settings JSON (*.json)")
-        if not path:
-            return
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            if isinstance(data, dict):
-                self.settings.update(data)
-                self.save_settings()
-                self.build_settings_ui()
-                self._show_message("Import Settings", "Imported")
-        except Exception as e:
-            self._show_message("Import Settings", f"Failed: {e}")
+        return settings_service.import_settings(self)
     
     # -------------------- Plugin runtime --------------------
     def initialize_plugins(self):

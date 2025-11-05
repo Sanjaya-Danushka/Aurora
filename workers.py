@@ -26,7 +26,7 @@ class PackageLoaderWorker(QObject):
                                 'version': parts[1],
                                 'id': parts[0]
                             })
-            self.packages_ready.emit(packages)
+            self.packages_loaded.emit(packages)
         except Exception as e:
             self.error_occurred.emit(f"Error: {str(e)}")
         finally:

@@ -26,6 +26,8 @@ from components import (SourceCard, FilterCard, LargeSearchBox, LoadingSpinner, 
                        GeneralSettingsWidget, AutoUpdateSettingsWidget, PluginsSettingsWidget)
 from plugin_manager import PluginsManager
 from workers import CommandWorker, PackageLoaderWorker
+import config_utils
+import sys_utils
 
 def _qt_msg_handler(mode, context, message):
     s = str(message)
@@ -517,71 +519,27 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 ], capture_output=True, text=True, timeout=30)
         except Exception:
             pass
-
+    
     def get_ignore_file_path(self):
-        cfg = os.path.join(os.path.expanduser('~'), '.config', 'neoarch')
-        try:
-            os.makedirs(cfg, exist_ok=True)
-        except Exception:
-            pass
-        return os.path.join(cfg, 'ignored_updates.json')
+        return config_utils.get_ignore_file_path()
 
     def load_ignored_updates(self):
-        p = self.get_ignore_file_path()
-        try:
-            with open(p, 'r') as f:
-                data = json.load(f)
-            if isinstance(data, list):
-                return set(data)
-        except Exception:
-            pass
-        return set()
+        return config_utils.load_ignored_updates()
 
     def save_ignored_updates(self, items):
-        p = self.get_ignore_file_path()
-        try:
-            with open(p, 'w') as f:
-                json.dump(sorted(list(items)), f)
-        except Exception:
-            pass
+        return config_utils.save_ignored_updates(items)
 
     def get_local_updates_file_path(self):
-        cfg = os.path.join(os.path.expanduser('~'), '.config', 'neoarch')
-        try:
-            os.makedirs(cfg, exist_ok=True)
-        except Exception:
-            pass
-        return os.path.join(cfg, 'local_updates.json')
+        return config_utils.get_local_updates_file_path()
 
     def load_local_update_entries(self):
-        p = self.get_local_updates_file_path()
-        try:
-            with open(p, 'r') as f:
-                data = json.load(f)
-            if isinstance(data, list):
-                return data
-        except Exception:
-            pass
-        return []
+        return config_utils.load_local_update_entries()
 
     def cmd_exists(self, cmd):
-        return shutil.which(cmd) is not None
+        return sys_utils.cmd_exists(cmd)
 
     def get_missing_dependencies(self):
-        missing = []
-        if not self.cmd_exists("flatpak"):
-            missing.append("flatpak")
-        if not self.cmd_exists("git"):
-            missing.append("git")
-        if not self.cmd_exists("node"):
-            missing.append("nodejs")
-        if not self.cmd_exists("npm"):
-            missing.append("npm")
-        if not self.cmd_exists("docker"):
-            missing.append("docker")
-        if not self.cmd_exists("yay"):
-            missing.append("yay")
-        return missing
+        return sys_utils.get_missing_dependencies()
 
     def run_first_run_checks(self):
         missing = self.get_missing_dependencies()

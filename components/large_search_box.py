@@ -100,11 +100,12 @@ class LargeSearchBox(QWidget):
 
             title_label = QLabel(title)
             title_label.setObjectName("highlightTitle")
+            title_label.setWordWrap(True)
             card_layout_inner.addWidget(title_label)
 
             description_label = QLabel(description)
             description_label.setObjectName("highlightDescription")
-            description_label.setWordWrap(False)
+            description_label.setWordWrap(True)
             card_layout_inner.addWidget(description_label)
 
             highlights_layout.addWidget(highlight_card, 1)

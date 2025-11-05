@@ -38,6 +38,7 @@ import settings_service
 import filters_service
 import install_service
 import packages_service
+import help_service
 
 def _qt_msg_handler(mode, context, message):
     s = str(message)
@@ -898,13 +899,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def show_help(self):
         """Show help dialog"""
-        QMessageBox.information(self, "Help - NeoArch", 
-                              "NeoArch Package Manager Help\n\n"
-                              "• Discover: Search and install packages from pacman, AUR, and Flatpak\n"
-                              "• Updates: View and update available package updates\n"
-                              "• Installed: View all installed packages\n"
-                              "• Bundles: Manage package bundles\n\n"
-                              "For more information, visit the project documentation.")
+        help_service.show_help(self, getattr(self, 'current_view', ''))
     
     def go_to_bundles(self):
         """Switch to bundles view"""
@@ -1431,6 +1426,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             clear_btn.clicked.connect(self.clear_bundle)
             layout.addWidget(clear_btn)
 
+            layout.addStretch()
+            help_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
+                "Help & Documentation",
+                self.show_help
+            )
+            layout.addWidget(help_btn)
+            self.toolbar_layout.addLayout(layout)
+        elif self.current_view == "settings":
+            layout = QHBoxLayout()
+            layout.setSpacing(12)
             layout.addStretch()
             help_btn = self.create_toolbar_button(
                 os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
@@ -3311,8 +3317,7 @@ def on_tick(app):
             pass
     
     def show_about(self):
-        QMessageBox.information(self, "About NeoArch", 
-                              "NeoArch - Elevate Your \nArch Experience\nVersion 1.0\n\nBuilt with PyQt6")
+        help_service.show_about(self)
 
     def create_snapshot(self):
         return snapshot_service.create_snapshot(self)

@@ -1105,8 +1105,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.packages_panel_layout.addWidget(self.load_more_btn)
 
         # Console toggle button (bottom-right)
-        self.console_toggle_btn = QPushButton("🖥️")
+        self.console_toggle_btn = QPushButton()
         self.console_toggle_btn.setFixedSize(36, 36)
+        self.console_toggle_btn.setIcon(self.get_svg_icon(os.path.join(icon_dir, "terminal.svg"), 20))
+        self.console_toggle_btn.setIconSize(QSize(20, 20))
         self.console_toggle_btn.setToolTip("Show Console")
         self.console_toggle_btn.clicked.connect(self.toggle_console)
         self.console_toggle_btn.setVisible(False)

@@ -92,6 +92,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.plugin_timer = QTimer()
         self.plugin_timer.setInterval(60000)
         self.plugin_timer.timeout.connect(self.run_plugin_tick)
+        self._icon_cache = {}
+        self._source_icon_cache = {}
+        self._flathub_checked = False
         self.plugins_manager = PluginsManager(self)
         self.packages_ready.connect(self.on_packages_loaded)
         self.discover_results_ready.connect(self.display_discover_results)
@@ -487,6 +490,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         }
         filename = mapping.get(source, "packagename.svg")
         icon_path = os.path.join(icon_dir, filename)
+        try:
+            cache = getattr(self, "_source_icon_cache", None)
+            if isinstance(cache, dict):
+                key = (source, int(size))
+                cached = cache.get(key)
+                if cached is not None and not cached.isNull():
+                    return cached
+        except Exception:
+            pass
 
         try:
             pixmap = QPixmap(size, size)
@@ -507,14 +519,20 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 renderer.render(painter, QRectF(pixmap.rect()))
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
                 painter.fillRect(pixmap.rect(), QColor("white"))
+                painter.end()
+                icon = QIcon(pixmap)
             else:
                 # Fallback: try to load as regular icon
                 painter.end()
-                return QIcon(icon_path)
+                icon = QIcon(icon_path)
 
-            painter.end()
-            return QIcon(pixmap)
-        except:
+            try:
+                if isinstance(getattr(self, "_source_icon_cache", None), dict):
+                    self._source_icon_cache[(source, int(size))] = icon
+            except Exception:
+                pass
+            return icon
+        except Exception:
             return QIcon()
     
     def ensure_flathub_user_remote(self):
@@ -527,6 +545,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     "flatpak", "--user", "remote-add", "--if-not-exists",
                     "flathub", "https://flathub.org/repo/flathub.flatpakrepo"
                 ], capture_output=True, text=True, timeout=30)
+        except Exception:
+            pass
+        try:
+            self._flathub_checked = True
         except Exception:
             pass
     
@@ -652,6 +674,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
 
     def get_svg_icon(self, icon_path, size=18):
         try:
+            cache = getattr(self, "_icon_cache", None)
+            if isinstance(cache, dict):
+                key = (os.path.abspath(icon_path), int(size))
+                cached = cache.get(key)
+                if cached is not None and not cached.isNull():
+                    return cached
+        except Exception:
+            pass
+
+        try:
             pixmap = QPixmap(size, size)
             if pixmap.isNull() or not pixmap.size().isValid():
                 return QIcon()
@@ -670,14 +702,20 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 renderer.render(painter, QRectF(pixmap.rect()))
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
                 painter.fillRect(pixmap.rect(), QColor("white"))
+                painter.end()
+                icon = QIcon(pixmap)
             else:
                 # Fallback: try to load as regular icon
                 painter.end()
-                return QIcon(icon_path)
+                icon = QIcon(icon_path)
 
-            painter.end()
-            return QIcon(pixmap)
-        except:
+            try:
+                if isinstance(getattr(self, "_icon_cache", None), dict):
+                    self._icon_cache[(os.path.abspath(icon_path), int(size))] = icon
+            except Exception:
+                pass
+            return icon
+        except Exception:
             return QIcon()
     
     def create_toolbar_button(self, icon_path, tooltip, callback, icon_size=24):
@@ -1058,6 +1096,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.console = QTextEdit()
         self.console.setReadOnly(True)
         self.console.setMaximumHeight(150)
+        try:
+            self.console.document().setMaximumBlockCount(500)
+        except Exception:
+            pass
         self.packages_panel_layout.addWidget(self.console)
         
         return panel
@@ -2177,6 +2219,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Prepare discover loading context
         self.cancel_discover_search = False
         self.loading_context = "discover"
+
+        try:
+            if hasattr(self, 'source_card') and self.source_card:
+                _src = self.source_card.get_selected_sources()
+            else:
+                _src = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True}
+        except Exception:
+            _src = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True}
+        show_pacman = bool(_src.get("pacman", True))
+        show_aur = bool(_src.get("AUR", True))
+        show_flatpak = bool(_src.get("Flatpak", True))
+        show_npm = bool(_src.get("npm", True))
         
         # Show loading spinner
         self.loading_widget.setVisible(True)
@@ -2189,14 +2243,39 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 packages = []
                 
                 tokens = [t for t in query.split() if t]
-                pacman_seen = set()
-                if len(tokens) > 1:
-                    for tok in tokens:
-                        try:
-                            result = subprocess.run(["pacman", "-Ss", tok], capture_output=True, text=True, timeout=30)
-                        except Exception:
-                            result = None
-                        if result and result.returncode == 0 and result.stdout:
+                if show_pacman:
+                    pacman_seen = set()
+                    if len(tokens) > 1:
+                        for tok in tokens:
+                            try:
+                                result = subprocess.run(["pacman", "-Ss", tok], capture_output=True, text=True, timeout=30)
+                            except Exception:
+                                result = None
+                            if result and result.returncode == 0 and result.stdout:
+                                lines = result.stdout.strip().split('\n')
+                                i = 0
+                                while i < len(lines):
+                                    if lines[i].strip() and '/' in lines[i]:
+                                        parts = lines[i].split()
+                                        if len(parts) >= 2:
+                                            name = parts[0].split('/')[-1]
+                                            version = parts[1]
+                                            description = ' '.join(parts[2:]) if len(parts) > 2 else ''
+                                            key = ('pacman', name)
+                                            if key not in pacman_seen:
+                                                pacman_seen.add(key)
+                                                packages.append({
+                                                    'name': name,
+                                                    'version': version,
+                                                    'id': name,
+                                                    'source': 'pacman',
+                                                    'description': description,
+                                                    'has_update': False
+                                                })
+                                    i += 1
+                    else:
+                        result = subprocess.run(["pacman", "-Ss", query], capture_output=True, text=True, timeout=30)
+                        if result.returncode == 0 and result.stdout:
                             lines = result.stdout.strip().split('\n')
                             i = 0
                             while i < len(lines):
@@ -2206,101 +2285,88 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                                         name = parts[0].split('/')[-1]
                                         version = parts[1]
                                         description = ' '.join(parts[2:]) if len(parts) > 2 else ''
-                                        key = ('pacman', name)
-                                        if key not in pacman_seen:
-                                            pacman_seen.add(key)
-                                            packages.append({
-                                                'name': name,
-                                                'version': version,
-                                                'id': name,
-                                                'source': 'pacman',
-                                                'description': description,
-                                                'has_update': False
-                                            })
+                                        packages.append({
+                                            'name': name,
+                                            'version': version,
+                                            'id': name,
+                                            'source': 'pacman',
+                                            'description': description,
+                                            'has_update': False
+                                        })
                                 i += 1
-                else:
-                    result = subprocess.run(["pacman", "-Ss", query], capture_output=True, text=True, timeout=30)
-                    if result.returncode == 0 and result.stdout:
-                        lines = result.stdout.strip().split('\n')
-                        i = 0
-                        while i < len(lines):
-                            if lines[i].strip() and '/' in lines[i]:
-                                parts = lines[i].split()
-                                if len(parts) >= 2:
-                                    name = parts[0].split('/')[-1]
-                                    version = parts[1]
-                                    description = ' '.join(parts[2:]) if len(parts) > 2 else ''
+
+                if show_aur:
+                    result_aur = subprocess.run(["curl", "-s", f"https://aur.archlinux.org/rpc/?v=5&type=search&by=name&arg={query}"], capture_output=True, text=True, timeout=10)
+                    if result_aur.returncode == 0:
+                        try:
+                            data = json.loads(result_aur.stdout)
+                            if data.get('results'):
+                                for pkg in data['results']:
                                     packages.append({
-                                        'name': name,
-                                        'version': version,
-                                        'id': name,
-                                        'source': 'pacman',
-                                        'description': description,
-                                        'has_update': False
+                                        'name': pkg.get('Name', ''),
+                                        'version': pkg.get('Version', ''),
+                                        'id': pkg.get('Name', ''),
+                                        'source': 'AUR',
+                                        'description': pkg.get('Description', ''),
+                                        'tags': ', '.join(pkg.get('Keywords', []))
                                     })
-                            i += 1
-                
-                result_aur = subprocess.run(["curl", "-s", f"https://aur.archlinux.org/rpc/?v=5&type=search&by=name&arg={query}"], capture_output=True, text=True, timeout=10)
-                if result_aur.returncode == 0:
+                        except Exception:
+                            pass
+
+                if show_flatpak:
                     try:
-                        data = json.loads(result_aur.stdout)
-                        if data.get('results'):
-                            for pkg in data['results']:
-                                packages.append({
-                                    'name': pkg.get('Name', ''),
-                                    'version': pkg.get('Version', ''),
-                                    'id': pkg.get('Name', ''),
-                                    'source': 'AUR',
-                                    'description': pkg.get('Description', ''),
-                                    'tags': ', '.join(pkg.get('Keywords', []))
-                                })
-                    except:
+                        if not getattr(self, "_flathub_checked", False):
+                            try:
+                                self.ensure_flathub_user_remote()
+                            except Exception:
+                                pass
+                            try:
+                                self._flathub_checked = True
+                            except Exception:
+                                pass
+                    except Exception:
                         pass
-                
-                try:
-                    self.ensure_flathub_user_remote()
-                except Exception:
-                    pass
-                result_flatpak = subprocess.run([
-                    "flatpak", "search", "--columns=application,name,description,version", query
-                ], capture_output=True, text=True, timeout=30)
-                if result_flatpak.returncode == 0 and result_flatpak.stdout:
-                    lines = [l for l in result_flatpak.stdout.strip().split('\n') if l.strip()]
-                    for line in lines:
-                        cols = line.split('\t')
-                        if not cols:
-                            continue
-                        app_id = cols[0].strip() if len(cols) > 0 else ''
-                        app_name = cols[1].strip() if len(cols) > 1 and cols[1].strip() else app_id
-                        description = cols[2].strip() if len(cols) > 2 else ''
-                        version = cols[3].strip() if len(cols) > 3 else ''
-                        if app_id:
-                            packages.append({
-                                'name': app_name,
-                                'version': version,
-                                'id': app_id,
-                                'source': 'Flatpak',
-                                'description': description,
-                                'has_update': False
-                            })
-                
-                # Search npm packages
-                try:
-                    result_npm = subprocess.run(["npm", "search", "--json", query], capture_output=True, text=True, timeout=30)
-                    if result_npm.returncode == 0 and result_npm.stdout:
-                        npm_data = json.loads(result_npm.stdout)
-                        for pkg in npm_data:
-                            packages.append({
-                                'name': pkg.get('name', ''),
-                                'version': pkg.get('version', ''),
-                                'id': pkg.get('name', ''),
-                                'source': 'npm',
-                                'description': pkg.get('description', ''),
-                                'has_update': False
-                            })
-                except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError):
-                    # npm not available, try alternative method
-                    pass
+                    result_flatpak = subprocess.run([
+                        "flatpak", "search", "--columns=application,name,description,version", query
+                    ], capture_output=True, text=True, timeout=30)
+                    if result_flatpak.returncode == 0 and result_flatpak.stdout:
+                        lines = [l for l in result_flatpak.stdout.strip().split('\n') if l.strip()]
+                        for line in lines:
+                            cols = line.split('\t')
+                            if not cols:
+                                continue
+                            app_id = cols[0].strip() if len(cols) > 0 else ''
+                            app_name = cols[1].strip() if len(cols) > 1 and cols[1].strip() else app_id
+                            description = cols[2].strip() if len(cols) > 2 else ''
+                            version = cols[3].strip() if len(cols) > 3 else ''
+                            if app_id:
+                                packages.append({
+                                    'name': app_name,
+                                    'version': version,
+                                    'id': app_id,
+                                    'source': 'Flatpak',
+                                    'description': description,
+                                    'has_update': False
+                                })
+
+                if show_npm:
+                    # Search npm packages
+                    try:
+                        result_npm = subprocess.run(["npm", "search", "--json", query], capture_output=True, text=True, timeout=30)
+                        if result_npm.returncode == 0 and result_npm.stdout:
+                            npm_data = json.loads(result_npm.stdout)
+                            for pkg in npm_data:
+                                packages.append({
+                                    'name': pkg.get('name', ''),
+                                    'version': pkg.get('version', ''),
+                                    'id': pkg.get('name', ''),
+                                    'source': 'npm',
+                                    'description': pkg.get('description', ''),
+                                    'has_update': False
+                                })
+                    except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError):
+                        # npm not available, try alternative method
+                        pass
                 
                 # Only deliver results if still on Discover and not cancelled
                 if not self.cancel_discover_search and self.loading_context == 'discover' and self.current_view == 'discover':

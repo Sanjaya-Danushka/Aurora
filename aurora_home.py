@@ -1562,7 +1562,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Update header
         headers = {
-            "updates": ("🔄 Software Updates", ""),
+            "updates": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "update12.svg"), "Software Updates", ""),
             "installed": ("📦 Installed Packages", "View all installed packages on your system"),
             "discover": ("/home/alexa/StudioProjects/Aurora/assets/icons/discover/search.svg", "Discover Packages", "Search and discover new packages to install"),
             "bundles": ("📋 Package Bundles", "Manage package bundles"),

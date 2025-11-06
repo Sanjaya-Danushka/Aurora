@@ -160,7 +160,7 @@ class ScheduledUpdater:
             print("Updating AUR packages...")
             try:
                 env = os.environ.copy()
-                result = subprocess.run(["yay", "-Syu", "--noconfirm"],
+                result = subprocess.run(["yay", "-Syu", "--noconfirm", "--sudoflags", "-A"],
                                       capture_output=True, text=True, timeout=1800, env=env)
                 if result.returncode == 0:
                     print("AUR updates completed successfully")

@@ -160,7 +160,7 @@ def install_bundle(app):
                     w.output.connect(app.log); w.error.connect(app.log); w.run()
                 elif src == 'AUR':
                     env, _ = app.prepare_askpass_env()
-                    cmd = ["yay", "-S", "--noconfirm"] + lst
+                    cmd = ["yay", "-S", "--noconfirm", "--sudoflags", "-A"] + lst
                     w = CommandWorker(cmd, sudo=False, env=env)
                     w.output.connect(app.log); w.error.connect(app.log); w.run()
                 elif src == 'Flatpak':

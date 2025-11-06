@@ -126,7 +126,7 @@ def update_core_tools(app):
                 w3.run()
             if app.cmd_exists("yay"):
                 env, _ = app.prepare_askpass_env()
-                w4 = CommandWorker(["yay", "-Syu", "--noconfirm"], sudo=False, env=env)
+                w4 = CommandWorker(["yay", "-Syu", "--noconfirm", "--sudoflags", "-A"], sudo=False, env=env)
                 w4.output.connect(app.log)
                 w4.error.connect(app.log)
                 w4.run()

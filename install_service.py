@@ -71,7 +71,7 @@ def install_packages(app, packages_by_source: dict):
                     cmd = [
                         "yay",
                         "-S", "--noconfirm",
-                        "--sudoloop",
+                        "--sudoflags", "-A",
                         "--answerclean", "None",
                         "--answerdiff", "None",
                         "--answeredit", "None"
@@ -168,6 +168,12 @@ def install_packages(app, packages_by_source: dict):
                         if process.stderr:
                             error_output = process.stderr.read()
                             if error_output:
+                                # Check if user cancelled password dialog
+                                if source == 'AUR' and ("cancelled" in error_output.lower() or "authentication failed" in error_output.lower() or process.returncode == 1):
+                                    app.log_signal.emit("AUR installation cancelled by user")
+                                    app.installation_progress.emit("cancelled", False)
+                                    return
+                                
                                 error_text = f"Error: {error_output}"
                                 if "Cannot change ownership" in error_output and "Value too large for defined data type" in error_output:
                                     error_text += "\n\nThis error occurs when tar tries to set file ownership to UIDs/GIDs that don't exist in the current environment.\n"

@@ -3168,7 +3168,7 @@ def on_tick(app):
             if app.cmd_exists("yay"):
                 try:
                     env, _ = app.prepare_askpass_env()
-                    result = subprocess.run(["yay", "-Syu", "--noconfirm"], 
+                    result = subprocess.run(["yay", "-Syu", "--noconfirm", "--sudoflags", "-A"], 
                                           capture_output=True, text=True, timeout=1800, env=env)
                     if result.returncode == 0:
                         app.log("Auto-update: AUR updates completed successfully")

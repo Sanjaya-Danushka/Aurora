@@ -2839,14 +2839,31 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         try:
             import shutil as _sh
             if (force or ('npm' not in self._installed_index_sources)) and show_npm and _sh.which('npm'):
-                np = subprocess.run(["npm", "ls", "-g", "--depth=0", "--json"], capture_output=True, text=True, timeout=30)
-                if np.returncode == 0 and np.stdout:
-                    data = json.loads(np.stdout)
-                    deps = (data.get('dependencies') or {}) if isinstance(data, dict) else {}
-                    for name in deps.keys():
-                        idx['npm'].add(name)
-                    self._installed_index_sources.add("npm")
-                    built_any = True
+                results = []
+                np_def = subprocess.run(["npm", "ls", "-g", "--depth=0", "--json"], capture_output=True, text=True, timeout=30)
+                results.append((np_def.returncode, np_def.stdout))
+                env_user = os.environ.copy()
+                try:
+                    npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                    os.makedirs(npm_prefix, exist_ok=True)
+                    env_user['npm_config_prefix'] = npm_prefix
+                    env_user['NPM_CONFIG_PREFIX'] = npm_prefix
+                    env_user['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env_user.get('PATH', '')
+                except Exception:
+                    pass
+                np_user = subprocess.run(["npm", "ls", "-g", "--depth=0", "--json"], capture_output=True, text=True, env=env_user, timeout=30)
+                results.append((np_user.returncode, np_user.stdout))
+                for code, out in results:
+                    if code == 0 and out and out.strip():
+                        try:
+                            data = json.loads(out)
+                            deps = (data.get('dependencies') or {}) if isinstance(data, dict) else {}
+                            for name in deps.keys():
+                                idx['npm'].add(name)
+                        except Exception:
+                            pass
+                self._installed_index_sources.add("npm")
+                built_any = True
         except Exception:
             pass
         self.installed_index = idx

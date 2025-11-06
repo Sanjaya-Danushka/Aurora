@@ -396,20 +396,39 @@ def load_installed_packages(app):
                 pass
 
             try:
-                np = subprocess.run(["npm", "ls", "-g", "--depth=0", "--json"], capture_output=True, text=True, timeout=60)
-                if np.returncode == 0 and np.stdout:
-                    data = json.loads(np.stdout)
-                    deps = (data.get('dependencies') or {}) if isinstance(data, dict) else {}
-                    for name, info in deps.items():
-                        ver = (info.get('version') or '').strip()
-                        if name and ver:
-                            packages.append({
-                                'name': name,
-                                'version': ver,
-                                'id': name,
-                                'source': 'npm',
-                                'has_update': False
-                            })
+                results = []
+                np_def = subprocess.run(["npm", "ls", "-g", "--depth=0", "--json"], capture_output=True, text=True, timeout=60)
+                results.append((np_def.returncode, np_def.stdout))
+                env_user = os.environ.copy()
+                try:
+                    npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                    os.makedirs(npm_prefix, exist_ok=True)
+                    env_user['npm_config_prefix'] = npm_prefix
+                    env_user['NPM_CONFIG_PREFIX'] = npm_prefix
+                    env_user['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env_user.get('PATH', '')
+                except Exception:
+                    pass
+                np_user = subprocess.run(["npm", "ls", "-g", "--depth=0", "--json"], capture_output=True, text=True, env=env_user, timeout=60)
+                results.append((np_user.returncode, np_user.stdout))
+                seen = set()
+                for code, out in results:
+                    if code == 0 and out and out.strip():
+                        try:
+                            data = json.loads(out)
+                            deps = (data.get('dependencies') or {}) if isinstance(data, dict) else {}
+                            for name, info in deps.items():
+                                ver = (info.get('version') or '').strip()
+                                if name and ver and (name, ver) not in seen:
+                                    packages.append({
+                                        'name': name,
+                                        'version': ver,
+                                        'id': name,
+                                        'source': 'npm',
+                                        'has_update': False
+                                    })
+                                    seen.add((name, ver))
+                        except Exception:
+                            pass
             except Exception:
                 pass
 

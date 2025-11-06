@@ -83,7 +83,17 @@ def install_packages(app, packages_by_source: dict):
                         pass
                     cmd = ["flatpak", "--user", "install", "-y", "flathub"] + packages
                 elif source == 'npm':
-                    cmd = ["npm", "install", "--location=user"] + packages
+                    env = os.environ.copy()
+                    try:
+                        npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                        os.makedirs(npm_prefix, exist_ok=True)
+                        env['npm_config_prefix'] = npm_prefix
+                        env['NPM_CONFIG_PREFIX'] = npm_prefix
+                        env['PREFIX'] = npm_prefix
+                        env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
+                    except Exception:
+                        pass
+                    cmd = ["npm", "install", "-g"] + packages
                 else:
                     app.log_signal.emit(f"Unknown source {source} for packages {packages}")
                     continue
@@ -173,6 +183,53 @@ def install_packages(app, packages_by_source: dict):
                                     app.log_signal.emit("AUR installation cancelled by user")
                                     app.installation_progress.emit("cancelled", False)
                                     return
+                                # Fallback: npm EACCES -> try with system privileges (polkit)
+                                if source == 'npm' and ("EACCES" in error_output or "permission denied" in error_output.lower()):
+                                    try:
+                                        app.log_signal.emit("Permission denied installing npm package(s). Retrying with system privileges (polkit)...")
+                                        exec_cmd2 = ["pkexec", "--disable-internal-agent", "npm", "install", "-g"] + packages
+                                        env2 = os.environ.copy()
+                                        process2 = subprocess.Popen(
+                                            exec_cmd2,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
+                                            stdin=subprocess.DEVNULL,
+                                            text=True,
+                                            bufsize=1,
+                                            preexec_fn=os.setsid,
+                                            env=env2
+                                        )
+                                        while True:
+                                            if app.install_cancel_event.is_set():
+                                                process2.terminate()
+                                                try:
+                                                    process2.wait(timeout=5)
+                                                except subprocess.TimeoutExpired:
+                                                    process2.kill()
+                                                app.log_signal.emit("Installation cancelled by user")
+                                                app.installation_progress.emit("cancelled", False)
+                                                return
+                                            if process2.poll() is not None:
+                                                break
+                                            if process2.stdout:
+                                                line2 = process2.stdout.readline()
+                                                if line2:
+                                                    line2 = line2.strip()
+                                                    parse_output_line(line2)
+                                                    worker.output.emit(line2)
+                                            time.sleep(0.1)
+                                        if process2.returncode == 0:
+                                            success = True
+                                            completed_packages += len(packages)
+                                            completed_sources += 1
+                                            update_progress_message(f"Completed {source} packages (elevated)")
+                                            app.log_signal.emit(f"Successfully installed {len(packages)} {source} package(s) with system privileges")
+                                        else:
+                                            err2 = process2.stderr.read() if process2.stderr else ''
+                                            worker.error.emit(f"Error: {err2 or error_output}")
+                                        continue
+                                    except Exception as _e:
+                                        worker.error.emit(f"Error: {str(_e)}")
                                 
                                 error_text = f"Error: {error_output}"
                                 if "Cannot change ownership" in error_output and "Value too large for defined data type" in error_output:

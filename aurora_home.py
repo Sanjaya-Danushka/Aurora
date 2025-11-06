@@ -1495,7 +1495,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def switch_view(self, view_id):
         self.current_view = view_id
-        self.console.clear()
+        try:
+            _installing = getattr(self, "_installing", False) or hasattr(self, 'install_cancel_event')
+        except Exception:
+            _installing = False
+        if not _installing:
+            self.console.clear()
         # Stop any spinners and cancel background loads when switching views
         try:
             self.loading_widget.stop_animation()
@@ -1600,6 +1605,27 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     self.console_toggle_btn.setToolTip("Show Console")
             except Exception:
                 pass
+            try:
+                _installing = getattr(self, "_installing", False) or hasattr(self, 'install_cancel_event')
+            except Exception:
+                _installing = False
+            if _installing:
+                try:
+                    self.loading_widget.setVisible(True)
+                    self.loading_widget.start_animation()
+                    if hasattr(self, 'loading_container'):
+                        self.loading_container.setVisible(True)
+                except Exception:
+                    pass
+                try:
+                    self.large_search_box.setVisible(False)
+                    self.package_table.setVisible(False)
+                except Exception:
+                    pass
+                try:
+                    self.cancel_install_btn.setVisible(True)
+                except Exception:
+                    pass
         elif view_id == "bundles":
             self.package_table.setRowCount(0)
             self.header_info.setText("Create, import, export, and install bundles of packages across sources")
@@ -2070,6 +2096,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def on_installation_progress(self, status, can_cancel):
         if status == "start":
+            try:
+                self._installing = True
+            except Exception:
+                pass
             self.load_more_btn.setVisible(False)
             self.loading_widget.set_message("Installing packages...")
             self.loading_widget.setVisible(True)
@@ -2104,22 +2134,38 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 pass
             self.cancel_install_btn.setVisible(can_cancel)
         elif status == "success":
+            try:
+                self._installing = False
+            except Exception:
+                pass
             self.loading_widget.set_message("Success")
             self.cancel_install_btn.setVisible(False)
             # Keep spinner visible briefly to show success, then hide
             QTimer.singleShot(1500, lambda: self.finish_installation_progress())
         elif status == "failed":
+            try:
+                self._installing = False
+            except Exception:
+                pass
             self.loading_widget.set_message("Install failed")
             self.cancel_install_btn.setVisible(False)
             # Keep spinner visible briefly to show failure, then hide
             QTimer.singleShot(2000, lambda: self.finish_installation_progress())
         elif status == "cancelled":
+            try:
+                self._installing = False
+            except Exception:
+                pass
             self.loading_widget.set_message("Installation cancelled")
             self.cancel_install_btn.setVisible(False)
             # Keep spinner visible briefly to show cancellation, then hide
             QTimer.singleShot(1500, lambda: self.finish_installation_progress())
     
     def finish_installation_progress(self):
+        try:
+            self._installing = False
+        except Exception:
+            pass
         self.loading_widget.setVisible(False)
         self.loading_widget.stop_animation()
         try:

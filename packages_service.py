@@ -5,6 +5,10 @@ from threading import Thread
 
 
 def load_updates(app):
+    try:
+        app._updates_loading = True
+    except Exception:
+        pass
     app.package_table.setRowCount(0)
     app.all_packages = []
     app.current_page = 0
@@ -22,6 +26,10 @@ def load_updates(app):
     try:
         if hasattr(app, 'loading_container'):
             app.loading_container.setVisible(True)
+    except Exception:
+        pass
+    try:
+        app.cancel_install_btn.setVisible(False)
     except Exception:
         pass
     try:
@@ -240,9 +248,17 @@ def load_updates(app):
                 pass
 
             if not app.cancel_update_load and app.loading_context == 'updates' and app.current_view == 'updates':
+                try:
+                    app._updates_loading = False
+                except Exception:
+                    pass
                 app.packages_ready.emit(packages)
         except Exception as e:
             app.log(f"Error: {str(e)}")
+            try:
+                app._updates_loading = False
+            except Exception:
+                pass
             app.load_error.emit()
 
     Thread(target=load_in_thread, daemon=True).start()

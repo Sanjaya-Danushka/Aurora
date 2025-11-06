@@ -1611,6 +1611,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 _installing = False
             if _installing:
                 try:
+                    self.loading_widget.set_message("Installing packages...")
                     self.loading_widget.setVisible(True)
                     self.loading_widget.start_animation()
                     if hasattr(self, 'loading_container'):

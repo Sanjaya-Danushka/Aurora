@@ -19,6 +19,7 @@ def install_packages(app, packages_by_source: dict):
         total_sources = len(packages_by_source)
         completed_packages = 0
         completed_sources = 0
+        force_sudo = bool(getattr(app, 'force_sudo_install', False))
 
         def update_progress_message(msg: str = ""):
             base_msg = f"Installing: {completed_packages}/{total_packages} packages"
@@ -61,6 +62,9 @@ def install_packages(app, packages_by_source: dict):
 
                 update_progress_message(f"Installing from {source}...")
 
+                # Prepare default environment (can be overridden per-source)
+                env = os.environ.copy()
+
                 if source == 'pacman':
                     cmd = ["pacman", "-S", "--noconfirm"] + packages
                 elif source == 'AUR':
@@ -77,18 +81,22 @@ def install_packages(app, packages_by_source: dict):
                         app.ensure_flathub_user_remote()
                     except Exception:
                         pass
-                    cmd = ["flatpak", "--user", "install", "-y", "flathub"] + packages
+                    # In sudo mode install system-wide; otherwise user-scoped
+                    if force_sudo:
+                        cmd = ["flatpak", "install", "-y", "flathub"] + packages
+                    else:
+                        cmd = ["flatpak", "--user", "install", "-y", "flathub"] + packages
                 elif source == 'npm':
-                    env = os.environ.copy()
-                    try:
-                        npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
-                        os.makedirs(npm_prefix, exist_ok=True)
-                        env['npm_config_prefix'] = npm_prefix
-                        env['NPM_CONFIG_PREFIX'] = npm_prefix
-                        env['PREFIX'] = npm_prefix
-                        env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
-                    except Exception:
-                        pass
+                    if not force_sudo:
+                        try:
+                            npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
+                            os.makedirs(npm_prefix, exist_ok=True)
+                            env['npm_config_prefix'] = npm_prefix
+                            env['NPM_CONFIG_PREFIX'] = npm_prefix
+                            env['PREFIX'] = npm_prefix
+                            env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
+                        except Exception:
+                            pass
                     cmd = ["npm", "install", "-g"] + packages
                 else:
                     app.log_signal.emit(f"Unknown source {source} for packages {packages}")
@@ -101,7 +109,6 @@ def install_packages(app, packages_by_source: dict):
                     app.installation_progress.emit("cancelled", False)
                     return
 
-                env = os.environ.copy()
                 cleanup_path = None
                 if source == 'AUR':
                     env, cleanup_path = app.prepare_askpass_env()
@@ -128,7 +135,7 @@ def install_packages(app, packages_by_source: dict):
 
                 try:
                     exec_cmd = worker.command
-                    if source == 'pacman':
+                    if source == 'pacman' or (force_sudo and source in ('Flatpak', 'npm')):
                         exec_cmd = ["pkexec", "--disable-internal-agent"] + exec_cmd
                     process = subprocess.Popen(
                         exec_cmd,
@@ -253,6 +260,12 @@ def install_packages(app, packages_by_source: dict):
             app.log_signal.emit(f"Error in installation thread: {str(e)}")
             app.installation_progress.emit("failed", False)
         finally:
+            try:
+                # Reset sudo mode flag if set by caller
+                if hasattr(app, 'force_sudo_install'):
+                    app.force_sudo_install = False
+            except Exception:
+                pass
             if hasattr(app, 'install_cancel_event'):
                 delattr(app, 'install_cancel_event')
 

@@ -929,35 +929,66 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def sudo_install_selected(self):
         """Install selected packages with sudo privileges"""
-        selected_rows = []
+        packages_by_source = {}
         for row in range(self.package_table.rowCount()):
             checkbox = self.get_row_checkbox(row)
             if checkbox is not None and checkbox.isChecked():
-                selected_rows.append(row)
+                name_item = self.package_table.item(row, 1)
+                id_item = self.package_table.item(row, 2)
+                pkg_name = name_item.text().strip() if name_item else ''
+                pkg_id = id_item.text().strip() if id_item else pkg_name
+                if self.current_view == "discover":
+                    source = ""
+                    chip = self.package_table.cellWidget(row, 4)
+                    if chip is not None:
+                        labels = chip.findChildren(QLabel)
+                        if labels:
+                            source = labels[-1].text()
+                else:
+                    source_item = self.package_table.item(row, 5)
+                    source = source_item.text() if source_item else "pacman"
+                if source not in packages_by_source:
+                    packages_by_source[source] = []
+                install_token = pkg_id if source == 'Flatpak' else pkg_name
+                packages_by_source[source].append(install_token)
         
-        if not selected_rows:
+        if not packages_by_source:
             QMessageBox.information(self, "No Selection", "Please select packages to install.")
             return
         
-        # Get package names
-        packages_to_install = []
-        for row in selected_rows:
-            package_name = self.package_table.item(row, 1).text()
-            packages_to_install.append(package_name)
-        
-        # Show confirmation dialog
-        package_list = "\n".join(f"• {pkg}" for pkg in packages_to_install)
+        try:
+            if self.current_view == "discover":
+                sel_src = {s: True for s in packages_by_source.keys()}
+            else:
+                sel_src = None
+            self.build_installed_index(sel_src)
+        except Exception:
+            pass
+        to_install = {}
+        idx = self.installed_index or {}
+        for source, pkgs in packages_by_source.items():
+            installed_set = idx.get(source) or set()
+            remaining = [p for p in pkgs if p not in installed_set]
+            if remaining:
+                to_install[source] = remaining
+        if not to_install:
+            self.log_signal.emit("All selected packages are already installed")
+            return
+        package_list = "\n".join(f"• {pkg}" for src, pkgs in to_install.items() for pkg in pkgs)
         reply = QMessageBox.question(
             self, "Install Packages with Sudo",
             f"This will install the following packages with elevated privileges:\n\n{package_list}\n\nContinue?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
-        
-        if reply == QMessageBox.StandardButton.Yes:
-            self.log(f"Installing packages with sudo: {', '.join(packages_to_install)}")
-            # Note: Actual sudo installation would require additional implementation
-            QMessageBox.information(self, "Sudo Install", "Sudo installation feature is under development.")
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            self.force_sudo_install = True
+        except Exception:
+            pass
+        self.log_signal.emit(f"Installing with sudo: {', '.join([f'{pkg} ({source})' for source, pkgs in to_install.items() for pkg in pkgs])}")
+        install_service.install_packages(self, to_install)
     
     def create_filters_panel(self):
         panel = QFrame()

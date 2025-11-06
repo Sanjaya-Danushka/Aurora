@@ -1025,16 +1025,19 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.cancel_install_btn.setVisible(False)  # Hidden by default
         self.cancel_install_btn.clicked.connect(self.cancel_installation)
         
-        # Container for loading widget and cancel button
-        loading_container = QWidget()
-        loading_layout = QHBoxLayout(loading_container)
+        # Container for loading widget and cancel button (centered both axes)
+        self.loading_container = QWidget()
+        self.loading_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        loading_layout = QVBoxLayout(self.loading_container)
         loading_layout.setContentsMargins(0, 0, 0, 0)
-        loading_layout.addStretch()  # Left stretch to center
-        loading_layout.addWidget(self.loading_widget)
-        loading_layout.addWidget(self.cancel_install_btn)
-        loading_layout.addStretch()  # Right stretch to center
+        loading_layout.setSpacing(12)
+        loading_layout.addStretch()  # Top stretch for vertical centering
+        loading_layout.addWidget(self.loading_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
+        loading_layout.addWidget(self.cancel_install_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        loading_layout.addStretch()  # Bottom stretch for vertical centering
+        self.loading_container.setVisible(False)
         
-        self.packages_panel_layout.addWidget(loading_container)
+        self.packages_panel_layout.addWidget(self.loading_container, 1)
         self.no_results_widget = QFrame()
         nr_layout = QVBoxLayout(self.no_results_widget)
         nr_layout.setContentsMargins(0, 40, 0, 40)
@@ -1482,6 +1485,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         try:
             self.loading_widget.stop_animation()
             self.loading_widget.setVisible(False)
+            if hasattr(self, 'loading_container'):
+                self.loading_container.setVisible(False)
             self.cancel_install_btn.setVisible(False)
             self.settings_container.setVisible(False)
             if hasattr(self, 'plugins_view') and self.plugins_view:
@@ -2296,6 +2301,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.loading_widget.set_message("Searching packages...")
         self.loading_widget.start_animation()
         self.package_table.setVisible(False)
+        try:
+            if hasattr(self, 'loading_container'):
+                self.loading_container.setVisible(True)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, 'console_toggle_btn'):
+                self.console_toggle_btn.setVisible(False)
+        except Exception:
+            pass
         if hasattr(self, 'no_results_widget'):
             self.no_results_widget.setVisible(False)
         
@@ -2497,7 +2512,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Hide loading spinner and show package table
         self.loading_widget.setVisible(False)
         self.loading_widget.stop_animation()
+        try:
+            if hasattr(self, 'loading_container'):
+                self.loading_container.setVisible(False)
+        except Exception:
+            pass
         self.package_table.setVisible(True)
+        try:
+            if hasattr(self, 'console_toggle_btn'):
+                self.console_toggle_btn.setVisible(True)
+        except Exception:
+            pass
         
         if selected_sources is None:
             # Get selected sources from the SourceCard component

@@ -1544,6 +1544,28 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Load data for view
         if view_id == "updates":
+            # Prepare UI for loading updates
+            try:
+                self.large_search_box.setVisible(False)
+            except Exception:
+                pass
+            try:
+                self.console_label.setVisible(False)
+                self.console.setVisible(False)
+                if hasattr(self, 'console_toggle_btn'):
+                    self.console_toggle_btn.setVisible(True)
+                    self.console_toggle_btn.setToolTip("Show Console")
+            except Exception:
+                pass
+            try:
+                self.loading_widget.set_message("Checking for updates...")
+                self.loading_widget.setVisible(True)
+                self.loading_widget.start_animation()
+                if hasattr(self, 'loading_container'):
+                    self.loading_container.setVisible(True)
+            except Exception:
+                pass
+            self.package_table.setVisible(False)
             self.load_updates()
         elif view_id == "installed":
             self.load_installed_packages()
@@ -1986,7 +2008,19 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Hide loading spinner, stop animation, and show packages table
         self.loading_widget.setVisible(False)
         self.loading_widget.stop_animation()
+        try:
+            if hasattr(self, 'loading_container'):
+                self.loading_container.setVisible(False)
+        except Exception:
+            pass
         self.package_table.setVisible(True)
+        # Show console toggle button for updates view like Discover
+        try:
+            if self.current_view == "updates" and hasattr(self, 'console_toggle_btn'):
+                self.console_toggle_btn.setVisible(True)
+                self.console_toggle_btn.setToolTip("Show Console")
+        except Exception:
+            pass
         # Update counts and nav badge
         if self.current_view == "updates":
             try:
@@ -1999,7 +2033,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Hide loading spinner, stop animation, and show packages table (empty)
         self.loading_widget.setVisible(False)
         self.loading_widget.stop_animation()
+        try:
+            if hasattr(self, 'loading_container'):
+                self.loading_container.setVisible(False)
+        except Exception:
+            pass
         self.package_table.setVisible(True)
+        try:
+            if self.current_view == "updates" and hasattr(self, 'console_toggle_btn'):
+                self.console_toggle_btn.setVisible(True)
+                self.console_toggle_btn.setToolTip("Show Console")
+        except Exception:
+            pass
         self.log("Failed to load packages. Please check the logs for details.")
     
     def cancel_installation(self):

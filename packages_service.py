@@ -12,9 +12,24 @@ def load_updates(app):
     app.loading_context = "updates"
 
     app.loading_widget.setVisible(True)
+    try:
+        app.loading_widget.set_message("Checking for updates...")
+    except Exception:
+        pass
     app.package_table.setVisible(False)
     app.load_more_btn.setVisible(False)
     app.loading_widget.start_animation()
+    try:
+        if hasattr(app, 'loading_container'):
+            app.loading_container.setVisible(True)
+    except Exception:
+        pass
+    try:
+        if hasattr(app, 'console_toggle_btn'):
+            app.console_toggle_btn.setVisible(True)
+            app.console_toggle_btn.setToolTip("Show Console")
+    except Exception:
+        pass
 
     def load_in_thread():
         try:

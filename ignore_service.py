@@ -1,8 +1,8 @@
 import subprocess
-from PyQt6.QtCore import QTimer, QThread, QObject, pyqtSignal
+from PyQt6.QtCore import QTimer, QThread, QObject, pyqtSignal, Qt
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QLineEdit, QTableWidget, QHeaderView,
-    QWidget, QHBoxLayout, QCheckBox, QPushButton, QTableWidgetItem
+    QWidget, QHBoxLayout, QCheckBox, QPushButton, QTableWidgetItem, QSizePolicy
 )
 
 
@@ -87,11 +87,17 @@ def manage_ignored(app):
     tbl = QTableWidget()
     tbl.setColumnCount(5)
     tbl.setHorizontalHeaderLabels(["", "Package", "Source", "Installed", "Available"])
-    tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+    tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
     tbl.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
     tbl.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
     tbl.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
     tbl.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+    try:
+        tbl.verticalHeader().setDefaultSectionSize(44)
+        tbl.horizontalHeader().setMinimumSectionSize(44)
+        tbl.setColumnWidth(0, 56)
+    except Exception:
+        pass
     tbl.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
     v.addWidget(tbl)
     row = QWidget()
@@ -108,17 +114,33 @@ def manage_ignored(app):
     tbl.setRowCount(len(ignored))
     for i, name in enumerate(ignored):
         cb = QCheckBox()
-        cb.setObjectName("tableCheckbox")
+        cb.setObjectName("ignoredCheckbox")
+        cb.setCursor(Qt.CursorShape.PointingHandCursor)
+        cb.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        cb.setStyleSheet(
+            """
+            QCheckBox#ignoredCheckbox { padding: 6px; }
+            QCheckBox#ignoredCheckbox::indicator {
+                width: 28px;
+                height: 28px;
+                border-radius: 0px;
+                border: 2px solid rgba(0, 191, 174, 0.4);
+                background-color: transparent;
+            }
+            QCheckBox#ignoredCheckbox::indicator:hover {
+                border-color: rgba(0, 191, 174, 0.8);
+            }
+            QCheckBox#ignoredCheckbox::indicator:checked {
+                background-color: #00BFAE;
+                border: 2px solid #00BFAE;
+            }
+            """
+        )
         try:
-            app.apply_checkbox_accent(cb, "ignored")
+            cb.setMinimumSize(36, 36)
         except Exception:
             pass
-        w = QWidget()
-        l = QHBoxLayout(w)
-        l.setContentsMargins(0,0,0,0)
-        l.addWidget(cb)
-        l.addStretch()
-        tbl.setCellWidget(i, 0, w)
+        tbl.setCellWidget(i, 0, cb)
         tbl.setItem(i, 1, QTableWidgetItem(name))
         tbl.setItem(i, 2, QTableWidgetItem("—"))
         tbl.setItem(i, 3, QTableWidgetItem("—"))
@@ -143,6 +165,16 @@ def manage_ignored(app):
     worker_thread.finished.connect(worker_thread.deleteLater)
     worker_thread.start()
 
+    def on_cell_clicked(row, col):
+        if col == 0:
+            w = tbl.cellWidget(row, 0)
+            if isinstance(w, QCheckBox):
+                w.setChecked(not w.isChecked())
+    try:
+        tbl.cellClicked.connect(on_cell_clicked)
+    except Exception:
+        pass
+
     def apply_filter(text):
         t = text.strip().lower()
         for r in range(tbl.rowCount()):
@@ -156,8 +188,13 @@ def manage_ignored(app):
             w = tbl.cellWidget(r, 0)
             if not w:
                 continue
-            chks = w.findChildren(QCheckBox)
-            if chks and chks[0].isChecked():
+            checked = False
+            if isinstance(w, QCheckBox):
+                checked = w.isChecked()
+            else:
+                chks = w.findChildren(QCheckBox)
+                checked = bool(chks and chks[0].isChecked())
+            if checked:
                 nm = tbl.item(r,1).text()
                 sel.append(nm)
         if sel:
@@ -169,8 +206,13 @@ def manage_ignored(app):
                 w = tbl.cellWidget(r,0)
                 if not w:
                     continue
-                chks = w.findChildren(QCheckBox)
-                if chks and chks[0].isChecked():
+                checked = False
+                if isinstance(w, QCheckBox):
+                    checked = w.isChecked()
+                else:
+                    chks = w.findChildren(QCheckBox)
+                    checked = bool(chks and chks[0].isChecked())
+                if checked:
                     tbl.removeRow(r)
             QTimer.singleShot(0, app.refresh_packages)
     btn_unignore.clicked.connect(unignore_selected)

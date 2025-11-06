@@ -2,7 +2,5 @@ PyQt6==6.6.1
 
 # plugins page souce card resizebug
 # have some bug update 
-# aur percentage bug
-# discover install go other page then come back not show page
 #
 requests

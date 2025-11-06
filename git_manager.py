@@ -30,6 +30,17 @@ class GitManager(QObject):
 
     def create_git_section(self):
         """Create and add the Git section to the sources layout"""
+        # Remove previous section if it exists (avoid duplicates after navigation)
+        try:
+            if self.git_section is not None:
+                try:
+                    self.git_section.setParent(None)
+                except Exception:
+                    pass
+                self.git_section.deleteLater()
+        except Exception:
+            pass
+
         self.git_section = QWidget()
         git_layout = QVBoxLayout(self.git_section)
         git_layout.setContentsMargins(0, 8, 0, 0)  # Add top margin for spacing
@@ -195,7 +206,11 @@ class GitManager(QObject):
         self.recent_repos_list.setVisible(False)  # Initially hidden
         git_layout.addWidget(self.recent_repos_list)
 
-        self.sources_layout.addWidget(self.git_section)
+        try:
+            insert_at = 2 if self.sources_layout.count() >= 2 else self.sources_layout.count()
+            self.sources_layout.insertWidget(insert_at, self.git_section)
+        except Exception:
+            self.sources_layout.addWidget(self.git_section)
 
         # Load recent repos on startup
         self.load_recent_git_repos()

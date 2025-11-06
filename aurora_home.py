@@ -1883,6 +1883,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.source_card.add_source(source_name, icon_path)
         
         self.sources_layout.addWidget(self.source_card)
+        if not hasattr(self, 'git_manager') or self.git_manager is None:
+            from git_manager import GitManager
+            self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
+        else:
+            try:
+                self.git_manager.create_git_section()
+            except Exception:
+                pass
 
     def update_updates_sources(self):
         while self.sources_layout.count() > 1:
@@ -1890,7 +1898,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             if item.widget():
                 item.widget().deleteLater()
         self.source_card = SourceCard(self)
-        self.source_card.source_changed.connect(self.on_updates_source_changed)
         sources = [
             ("pacman", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "pacman.svg")),
             ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg")),
@@ -1904,6 +1911,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if not hasattr(self, 'git_manager') or self.git_manager is None:
             from git_manager import GitManager
             self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
+        else:
+            try:
+                # Recreate/Reattach the Git section under the current Sources card
+                self.git_manager.create_git_section()
+            except Exception:
+                pass
+        self.source_card.source_changed.connect(self.on_updates_source_changed)
+        try:
+            self.source_card.on_source_changed()
+        except Exception:
+            pass
 
     def update_installed_sources(self):
         while self.sources_layout.count() > 1:

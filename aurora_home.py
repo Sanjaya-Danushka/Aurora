@@ -2,6 +2,7 @@
 import sys
 import os
 import subprocess
+import time
 import json
 import re
 import shutil
@@ -90,6 +91,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.docker_manager = None  # Docker manager instance
         self.current_search_mode = 'both'
         self.filtered_results = []
+        self.installed_index = None
+        self._installed_index_building = False
+        self._installed_index_last_built = 0
+        self._installed_index_sources = set()
         # Working bundle state (list of {name,id,source,version?})
         self.bundle_items = []
         # Settings state
@@ -128,6 +133,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         QTimer.singleShot(500, self.show_welcome_animation)
         # Initialize plugins shortly after UI is ready
         QTimer.singleShot(1000, self.initialize_plugins)
+        QTimer.singleShot(1200, self._prewarm_installed_index_async)
         
         # Debounce search input
         self.search_timer.setInterval(800)
@@ -2190,6 +2196,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         if self.current_view == "discover":
             dataset = self.get_filtered_discover_results()
+            if self.installed_index is None:
+                try:
+                    ss = self.source_card.get_selected_sources() if hasattr(self, 'source_card') and self.source_card else None
+                except Exception:
+                    ss = None
+                self._ensure_installed_index_async(ss)
         else:
             dataset = self.search_results if self.search_results else self.all_packages
         
@@ -2266,6 +2278,29 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         chip_text = QLabel(pkg.get('source', ''))
         chip_layout.addWidget(chip_text)
         self.package_table.setCellWidget(row, 4, source_chip)
+        try:
+            installed = self.is_package_installed(pkg)
+        except Exception:
+            installed = False
+        if installed:
+            green = QColor(16, 185, 129)
+            name_item.setForeground(green)
+            id_item.setForeground(green)
+            ver_item.setForeground(green)
+            tip = "Already installed"
+            name_item.setToolTip(tip)
+            id_item.setToolTip(tip)
+            ver_item.setToolTip(tip)
+            try:
+                chip_text.setStyleSheet("color: rgb(16,185,129);")
+                source_chip.setToolTip(tip)
+            except Exception:
+                pass
+            try:
+                checkbox.setEnabled(False)
+                checkbox.setToolTip(tip)
+            except Exception:
+                pass
     
     def add_package_row(self, name, pkg_id, version, new_version, source, pkg_data=None):
         row = self.package_table.rowCount()
@@ -2631,6 +2666,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         self.package_table.setUpdatesEnabled(False)
         self.package_table.setRowCount(0)
+        self._ensure_installed_index_async(selected_sources)
         
         start = 0
         end = min(self.packages_per_page, len(filtered))
@@ -2746,6 +2782,86 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         source = self.get_source_text(row, vid)
         return {"name": name, "id": pkg_id, "version": version, "source": source}
     
+    def build_installed_index(self, selected_sources=None, force=False):
+        idx = self.installed_index if (self.installed_index is not None and not force) else {'pacman': set(), 'AUR': set(), 'Flatpak': set(), 'npm': set()}
+        show_pacman = show_aur = show_flatpak = show_npm = True
+        if selected_sources is not None:
+            try:
+                show_pacman = bool(selected_sources.get("pacman", True))
+                show_aur = bool(selected_sources.get("AUR", True))
+                show_flatpak = bool(selected_sources.get("Flatpak", True))
+                show_npm = bool(selected_sources.get("npm", True))
+            except Exception:
+                pass
+        needed = set()
+        if show_pacman or show_aur:
+            needed.update(["pacman", "AUR"])
+        if show_flatpak:
+            needed.add("Flatpak")
+        if show_npm:
+            needed.add("npm")
+        now = time.time()
+        if (not force) and self.installed_index is not None:
+            if (now - (self._installed_index_last_built or 0) < 10) and needed.issubset(self._installed_index_sources or set()):
+                return
+        built_any = False
+        try:
+            if (force or (('pacman' not in self._installed_index_sources) or ('AUR' not in self._installed_index_sources))) and (show_pacman or show_aur):
+                r = subprocess.run(["pacman", "-Qq"], capture_output=True, text=True, timeout=30)
+                if r.returncode == 0 and r.stdout:
+                    names = [l.strip() for l in r.stdout.strip().split('\n') if l.strip()]
+                    idx['pacman'].update(names)
+                    idx['AUR'].update(names)
+                    self._installed_index_sources.update(["pacman", "AUR"])
+                    built_any = True
+        except Exception:
+            pass
+        try:
+            import shutil as _sh
+            if (force or ('Flatpak' not in self._installed_index_sources)) and show_flatpak and _sh.which('flatpak'):
+                installed_flatpak = set()
+                for scope in ([], ["--user"], ["--system"]):
+                    try:
+                        cmd = ["flatpak"] + scope + ["list", "--app", "--columns=application"]
+                        fp = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                        if fp.returncode == 0 and fp.stdout:
+                            for ln in [x for x in fp.stdout.strip().split('\n') if x.strip()]:
+                                app_id = ln.split('\t')[0].strip()
+                                if app_id:
+                                    installed_flatpak.add(app_id)
+                    except Exception:
+                        continue
+                idx['Flatpak'].update(installed_flatpak)
+                self._installed_index_sources.add("Flatpak")
+                built_any = True
+        except Exception:
+            pass
+        try:
+            import shutil as _sh
+            if (force or ('npm' not in self._installed_index_sources)) and show_npm and _sh.which('npm'):
+                np = subprocess.run(["npm", "ls", "-g", "--depth=0", "--json"], capture_output=True, text=True, timeout=30)
+                if np.returncode == 0 and np.stdout:
+                    data = json.loads(np.stdout)
+                    deps = (data.get('dependencies') or {}) if isinstance(data, dict) else {}
+                    for name in deps.keys():
+                        idx['npm'].add(name)
+                    self._installed_index_sources.add("npm")
+                    built_any = True
+        except Exception:
+            pass
+        self.installed_index = idx
+        if built_any:
+            self._installed_index_last_built = now
+
+    def is_package_installed(self, pkg):
+        try:
+            src = pkg.get('source', '')
+            name = (pkg.get('id') or '').strip() if src == 'Flatpak' else (pkg.get('name') or '').strip()
+            index = self.installed_index or {}
+            return bool(name) and (name in (index.get(src) or set()))
+        except Exception:
+            return False
+    
     def add_selected_to_bundle(self):
         return bundle_service.add_selected_to_bundle(self)
 
@@ -2794,11 +2910,95 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if not packages_by_source:
             self.log_signal.emit("No packages selected for installation")
             return
-        
-        self.log_signal.emit(f"Selected packages: {', '.join([f'{pkg} ({source})' for source, pkgs in packages_by_source.items() for pkg in pkgs])}")
-        
+        # Filter out already installed packages
+        try:
+            if self.current_view == "discover":
+                sel_src = {s: True for s in packages_by_source.keys()}
+            else:
+                sel_src = None
+            self.build_installed_index(sel_src)
+        except Exception:
+            pass
+        to_install = {}
+        idx = self.installed_index or {}
+        for source, pkgs in packages_by_source.items():
+            installed_set = idx.get(source) or set()
+            remaining = [p for p in pkgs if p not in installed_set]
+            if remaining:
+                to_install[source] = remaining
+        if not to_install:
+            self.log_signal.emit("All selected packages are already installed")
+            return
+        self.log_signal.emit(f"Selected packages: {', '.join([f'{pkg} ({source})' for source, pkgs in to_install.items() for pkg in pkgs])}")
         self.log_signal.emit(f"Proceeding with installation...")
-        install_service.install_packages(self, packages_by_source)
+        install_service.install_packages(self, to_install)
+
+    def _prewarm_installed_index_async(self):
+        try:
+            def _run():
+                try:
+                    sel = {"pacman": True, "AUR": True, "Flatpak": False, "npm": False}
+                    self.build_installed_index(sel)
+                except Exception:
+                    pass
+            Thread(target=_run, daemon=True).start()
+        except Exception:
+            pass
+    
+    def _ensure_installed_index_async(self, selected_sources=None):
+        try:
+            if self._installed_index_building:
+                return
+            self._installed_index_building = True
+            def _run():
+                try:
+                    self.build_installed_index(selected_sources)
+                finally:
+                    self._installed_index_building = False
+                    QTimer.singleShot(0, self._mark_installed_in_visible_rows)
+            Thread(target=_run, daemon=True).start()
+        except Exception:
+            self._installed_index_building = False
+    
+    def _mark_installed_in_visible_rows(self):
+        try:
+            if self.current_view != "discover" or not self.installed_index:
+                return
+            green = QColor(16, 185, 129)
+            for row in range(self.package_table.rowCount()):
+                name_item = self.package_table.item(row, 1)
+                id_item = self.package_table.item(row, 2)
+                ver_item = self.package_table.item(row, 3)
+                if not name_item or not id_item or not ver_item:
+                    continue
+                chip = self.package_table.cellWidget(row, 4)
+                src = self.get_source_text(row, "discover")
+                pkg = {"name": name_item.text().strip(), "id": id_item.text().strip(), "source": src}
+                if self.is_package_installed(pkg):
+                    name_item.setForeground(green)
+                    id_item.setForeground(green)
+                    ver_item.setForeground(green)
+                    tip = "Already installed"
+                    name_item.setToolTip(tip)
+                    id_item.setToolTip(tip)
+                    ver_item.setToolTip(tip)
+                    if chip is not None:
+                        try:
+                            labels = chip.findChildren(QLabel)
+                            if labels:
+                                labels[-1].setStyleSheet("color: rgb(16,185,129);")
+                            chip.setToolTip(tip)
+                        except Exception:
+                            pass
+                    try:
+                        checkbox = self.get_row_checkbox(row)
+                        if checkbox is not None:
+                            checkbox.setEnabled(False)
+                            checkbox.setToolTip(tip)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
     
     def uninstall_selected(self):
         selected_rows = self.package_table.selectionModel().selectedRows()

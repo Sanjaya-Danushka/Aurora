@@ -1127,6 +1127,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.console_label = QLabel("Console Output")
         self.console_label.setObjectName("sectionLabel")
         self.packages_panel_layout.addWidget(self.console_label)
+        # Hidden by default; shown via the bottom-right toggle
+        try:
+            self.console_label.setVisible(False)
+        except Exception:
+            pass
         
         self.console = QTextEdit()
         self.console.setReadOnly(True)
@@ -1136,6 +1141,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         except Exception:
             pass
         self.packages_panel_layout.addWidget(self.console)
+        try:
+            self.console.setVisible(False)
+        except Exception:
+            pass
         
         return panel
     
@@ -2059,6 +2068,34 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.loading_widget.set_message("Installing packages...")
             self.loading_widget.setVisible(True)
             self.loading_widget.start_animation()
+            try:
+                if hasattr(self, 'loading_container'):
+                    self.loading_container.setVisible(True)
+            except Exception:
+                pass
+            try:
+                if hasattr(self, 'large_search_box'):
+                    self.large_search_box.setVisible(False)
+            except Exception:
+                pass
+            try:
+                if hasattr(self, 'no_results_widget'):
+                    self.no_results_widget.setVisible(False)
+            except Exception:
+                pass
+            try:
+                self.package_table.setVisible(False)
+            except Exception:
+                pass
+            # Keep console accessible via toggle, but hide the panel by default
+            try:
+                if hasattr(self, 'console_toggle_btn'):
+                    self.console_toggle_btn.setVisible(True)
+                    self.console_toggle_btn.setToolTip("Show Console")
+                self.console_label.setVisible(False)
+                self.console.setVisible(False)
+            except Exception:
+                pass
             self.cancel_install_btn.setVisible(can_cancel)
         elif status == "success":
             self.loading_widget.set_message("Success")
@@ -2079,6 +2116,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def finish_installation_progress(self):
         self.loading_widget.setVisible(False)
         self.loading_widget.stop_animation()
+        try:
+            if hasattr(self, 'loading_container'):
+                self.loading_container.setVisible(False)
+        except Exception:
+            pass
+        try:
+            self.package_table.setVisible(True)
+        except Exception:
+            pass
         self.update_load_more_visibility()
     
     def update_load_more_visibility(self):

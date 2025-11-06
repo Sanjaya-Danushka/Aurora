@@ -2,7 +2,8 @@ import subprocess
 from PyQt6.QtCore import QTimer, QThread, QObject, pyqtSignal, Qt
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QLineEdit, QTableWidget, QHeaderView,
-    QWidget, QHBoxLayout, QCheckBox, QPushButton, QTableWidgetItem, QSizePolicy
+    QWidget, QHBoxLayout, QCheckBox, QPushButton, QTableWidgetItem, QSizePolicy,
+    QStyledItemDelegate, QStyle
 )
 
 
@@ -93,13 +94,54 @@ def manage_ignored(app):
     tbl.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
     tbl.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
     try:
-        tbl.verticalHeader().setDefaultSectionSize(44)
-        tbl.horizontalHeader().setMinimumSectionSize(44)
-        tbl.setColumnWidth(0, 56)
+        tbl.verticalHeader().setDefaultSectionSize(36)
+        tbl.horizontalHeader().setMinimumSectionSize(36)
+        tbl.setColumnWidth(0, 44)
+    except Exception:
+        pass
+    try:
+        tbl.verticalHeader().setHighlightSections(False)
+        tbl.horizontalHeader().setHighlightSections(False)
+    except Exception:
+        pass
+    try:
+        tbl.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        tbl.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        tbl.setStyleSheet(
+            """
+            QTableView { outline: none; }
+            QTableWidget { outline: none; }
+            QTableView::item:selected { background: transparent; }
+            QTableWidget::item:selected { background: transparent; }
+            QTableView::item:selected:active { background: transparent; border: none; }
+            QTableWidget::item:selected:active { background: transparent; border: none; }
+            QTableView::item:selected:!active { background: transparent; border: none; }
+            QTableWidget::item:selected:!active { background: transparent; border: none; }
+            QTableView::item:focus { outline: none; }
+            QTableWidget::item:focus { outline: none; }
+            QTableView::item:hover { background: transparent; }
+            QTableWidget::item:hover { background: transparent; }
+            QTableView::item { padding: 0px; margin: 0px; border: none; }
+            QTableWidget::item { padding: 0px; margin: 0px; border: none; }
+            """
+        )
+    except Exception:
+        pass
+    try:
+        tbl.setShowGrid(False)
     except Exception:
         pass
     tbl.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
     v.addWidget(tbl)
+    try:
+        class _NoFocusDelegate(QStyledItemDelegate):
+            def paint(self, painter, option, index):
+                if option.state & QStyle.StateFlag.State_HasFocus:
+                    option.state &= ~QStyle.StateFlag.State_HasFocus
+                super().paint(painter, option, index)
+        tbl.setItemDelegate(_NoFocusDelegate(tbl))
+    except Exception:
+        pass
     row = QWidget()
     h = QHBoxLayout(row)
     btn_unignore = QPushButton("Unignore Selected")
@@ -116,16 +158,21 @@ def manage_ignored(app):
         cb = QCheckBox()
         cb.setObjectName("ignoredCheckbox")
         cb.setCursor(Qt.CursorShape.PointingHandCursor)
-        cb.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        try:
+            cb.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        except Exception:
+            pass
+        cb.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         cb.setStyleSheet(
             """
-            QCheckBox#ignoredCheckbox { padding: 6px; }
+            QCheckBox#ignoredCheckbox { padding: 0px; margin: 0px; }
             QCheckBox#ignoredCheckbox::indicator {
-                width: 28px;
-                height: 28px;
-                border-radius: 0px;
+                width: 20px;
+                height: 20px;
+                border-radius: 3px;
                 border: 2px solid rgba(0, 191, 174, 0.4);
                 background-color: transparent;
+                margin: 0px;
             }
             QCheckBox#ignoredCheckbox::indicator:hover {
                 border-color: rgba(0, 191, 174, 0.8);
@@ -137,10 +184,18 @@ def manage_ignored(app):
             """
         )
         try:
-            cb.setMinimumSize(36, 36)
+            cb.setMinimumSize(24, 24)
         except Exception:
             pass
-        tbl.setCellWidget(i, 0, cb)
+        w = QWidget()
+        lay = QHBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        try:
+            lay.addWidget(cb, 0, Qt.AlignmentFlag.AlignCenter)
+        except Exception:
+            lay.addWidget(cb)
+        tbl.setCellWidget(i, 0, w)
         tbl.setItem(i, 1, QTableWidgetItem(name))
         tbl.setItem(i, 2, QTableWidgetItem("—"))
         tbl.setItem(i, 3, QTableWidgetItem("—"))
@@ -165,11 +220,15 @@ def manage_ignored(app):
     worker_thread.finished.connect(worker_thread.deleteLater)
     worker_thread.start()
 
+    try:
+        QTimer.singleShot(0, lambda: (tbl.clearSelection(), tbl.clearFocus()))
+    except Exception:
+        pass
+
     def on_cell_clicked(row, col):
-        if col == 0:
-            w = tbl.cellWidget(row, 0)
-            if isinstance(w, QCheckBox):
-                w.setChecked(not w.isChecked())
+        w = tbl.cellWidget(row, 0)
+        if isinstance(w, QCheckBox):
+            w.setChecked(not w.isChecked())
     try:
         tbl.cellClicked.connect(on_cell_clicked)
     except Exception:

@@ -1346,7 +1346,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             layout.addWidget(bundles_btn)
             tools_btn = self.create_toolbar_button(
                 os.path.join(icon_dir, "download.svg"),
-                "Update Tools",
+                "Onclick Update",
                 self.update_core_tools
             )
             help_btn = self.create_toolbar_button(
@@ -1411,7 +1411,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             )
             tools_btn = self.create_toolbar_button(
                 os.path.join(icon_dir, "download.svg"),
-                "Update Tools",
+                "Onclick Update",
                 self.update_core_tools
             )
             layout.addWidget(tools_btn)

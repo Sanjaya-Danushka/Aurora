@@ -83,7 +83,7 @@ class LargeSearchBox(QWidget):
         highlights_layout.setSpacing(18)
 
         highlights = [
-            ("🚀", "Instant multi-repo search", "Instant unified search"),
+            ("🚀", "Instant multi repo search", "Instant unified search"),
             ("⭐", "Curated results", "Trusted package picks"),
             ("⚙️", "Power user ready", "Advanced user control")
         ]

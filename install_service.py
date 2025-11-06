@@ -21,11 +21,7 @@ def install_packages(app, packages_by_source: dict):
         completed_sources = 0
 
         def update_progress_message(msg: str = ""):
-            if completed_sources == total_sources:
-                percentage = 100
-            else:
-                percentage = int((completed_sources / total_sources) * 100) if total_sources > 0 else 0
-            base_msg = f"Installing: {completed_packages}/{total_packages} packages ({percentage}%)"
+            base_msg = f"Installing: {completed_packages}/{total_packages} packages"
             if current_download_info and msg:
                 app.loading_widget.set_message(f"{base_msg}\n{current_download_info}")
             elif current_download_info:

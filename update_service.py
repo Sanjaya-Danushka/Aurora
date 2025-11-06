@@ -1,4 +1,5 @@
 import os
+import json
 import subprocess
 from threading import Thread
 from PyQt6.QtCore import QTimer
@@ -29,20 +30,66 @@ def update_packages(app, packages_by_source: dict):
                     worker.error.connect(app.log)
                     worker.run()
                 elif source == 'npm':
-                    env = os.environ.copy()
+                    # Determine where each package is installed and update in that scope
+                    env_user = os.environ.copy()
                     try:
                         npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
                         os.makedirs(npm_prefix, exist_ok=True)
-                        env['npm_config_prefix'] = npm_prefix
-                        env['NPM_CONFIG_PREFIX'] = npm_prefix
-                        env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
+                        env_user['npm_config_prefix'] = npm_prefix
+                        env_user['NPM_CONFIG_PREFIX'] = npm_prefix
+                        env_user['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env_user.get('PATH', '')
                     except Exception:
                         pass
-                    cmd = ["npm", "update", "-g"] + pkgs
-                    worker = CommandWorker(cmd, sudo=False, env=env)
-                    worker.output.connect(app.log)
-                    worker.error.connect(app.log)
-                    worker.run()
+                    env_sys = os.environ.copy()
+
+                    user_pkgs, sys_pkgs, unknown_pkgs = [], [], []
+                    for name in pkgs:
+                        placed = False
+                        try:
+                            r_user = subprocess.run(["npm", "ls", "-g", name, "--depth=0", "--json"], capture_output=True, text=True, env=env_user, timeout=30)
+                            if r_user.returncode in (0, 1) and r_user.stdout:
+                                try:
+                                    data = json.loads(r_user.stdout)
+                                    deps = (data.get('dependencies') or {}) if isinstance(data, dict) else {}
+                                    if name in deps:
+                                        user_pkgs.append(name)
+                                        placed = True
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        if placed:
+                            continue
+                        try:
+                            r_sys = subprocess.run(["npm", "ls", "-g", name, "--depth=0", "--json"], capture_output=True, text=True, timeout=30)
+                            if r_sys.returncode in (0, 1) and r_sys.stdout:
+                                try:
+                                    data = json.loads(r_sys.stdout)
+                                    deps = (data.get('dependencies') or {}) if isinstance(data, dict) else {}
+                                    if name in deps:
+                                        sys_pkgs.append(name)
+                                        placed = True
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        if not placed:
+                            # Default to user scope if location unknown
+                            user_pkgs.append(name)
+
+                    if user_pkgs:
+                        cmd_u = ["npm", "update", "-g"] + user_pkgs
+                        w_u = CommandWorker(cmd_u, sudo=False, env=env_user)
+                        w_u.output.connect(app.log)
+                        w_u.error.connect(app.log)
+                        w_u.run()
+                    if sys_pkgs:
+                        cmd_s = ["npm", "update", "-g"] + sys_pkgs
+                        # Use pkexec (sudo=True) for system-global updates
+                        w_s = CommandWorker(cmd_s, sudo=True, env=env_sys)
+                        w_s.output.connect(app.log)
+                        w_s.error.connect(app.log)
+                        w_s.run()
                 elif source == 'Local':
                     entries = { (e.get('id') or e.get('name')): e for e in app.load_local_update_entries() }
                     for token in pkgs:

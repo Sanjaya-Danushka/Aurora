@@ -1,5 +1,6 @@
 import subprocess
 from PyQt6.QtCore import QTimer
+from threading import Thread
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QLineEdit, QTableWidget, QHeaderView,
     QWidget, QHBoxLayout, QCheckBox, QPushButton, QTableWidgetItem
@@ -57,48 +58,6 @@ def manage_ignored(app):
     h.addWidget(btn_close)
     v.addWidget(row)
 
-    installed = {}
-    try:
-        r = subprocess.run(["pacman", "-Q"], capture_output=True, text=True, timeout=20)
-        if r.returncode == 0 and r.stdout:
-            for ln in r.stdout.strip().split('\n'):
-                ps = ln.split()
-                if len(ps) >= 2:
-                    installed[ps[0]] = ps[1]
-    except Exception:
-        pass
-    aur_set = set()
-    try:
-        r = subprocess.run(["pacman", "-Qm"], capture_output=True, text=True, timeout=10)
-        if r.returncode == 0 and r.stdout:
-            for ln in r.stdout.strip().split('\n'):
-                ps = ln.split()
-                if ps:
-                    aur_set.add(ps[0])
-    except Exception:
-        pass
-    new_versions = {}
-    try:
-        r = subprocess.run(["pacman", "-Qu"], capture_output=True, text=True, timeout=20)
-        if r.returncode == 0 and r.stdout:
-            for ln in r.stdout.strip().split('\n'):
-                if ' -> ' in ln:
-                    left, nv = ln.split(' -> ', 1)
-                    nm = left.split()[0]
-                    new_versions[nm] = nv.strip()
-    except Exception:
-        pass
-    try:
-        r = subprocess.run(["yay", "-Qua"], capture_output=True, text=True, timeout=20)
-        if r.returncode == 0 and r.stdout:
-            for ln in r.stdout.strip().split('\n'):
-                if ' -> ' in ln:
-                    left, nv = ln.split(' -> ', 1)
-                    nm = left.split()[0]
-                    new_versions[nm] = nv.strip()
-    except Exception:
-        pass
-
     tbl.setRowCount(len(ignored))
     for i, name in enumerate(ignored):
         cb = QCheckBox()
@@ -110,10 +69,62 @@ def manage_ignored(app):
         l.addStretch()
         tbl.setCellWidget(i, 0, w)
         tbl.setItem(i, 1, QTableWidgetItem(name))
-        src = "AUR" if name in aur_set else "pacman"
-        tbl.setItem(i, 2, QTableWidgetItem(src))
-        tbl.setItem(i, 3, QTableWidgetItem(installed.get(name, "")))
-        tbl.setItem(i, 4, QTableWidgetItem(new_versions.get(name, "")))
+        tbl.setItem(i, 2, QTableWidgetItem(""))
+        tbl.setItem(i, 3, QTableWidgetItem(""))
+        tbl.setItem(i, 4, QTableWidgetItem(""))
+
+    def finalize(installed, aur_set, new_versions):
+        for i, name in enumerate(ignored):
+            src = "AUR" if name in aur_set else "pacman"
+            tbl.setItem(i, 2, QTableWidgetItem(src))
+            tbl.setItem(i, 3, QTableWidgetItem(installed.get(name, "")))
+            tbl.setItem(i, 4, QTableWidgetItem(new_versions.get(name, "")))
+
+    def load_data():
+        installed = {}
+        try:
+            r = subprocess.run(["pacman", "-Q"], capture_output=True, text=True, timeout=20)
+            if r.returncode == 0 and r.stdout:
+                for ln in r.stdout.strip().split('\n'):
+                    ps = ln.split()
+                    if len(ps) >= 2:
+                        installed[ps[0]] = ps[1]
+        except Exception:
+            pass
+        aur_set = set()
+        try:
+            r = subprocess.run(["pacman", "-Qm"], capture_output=True, text=True, timeout=10)
+            if r.returncode == 0 and r.stdout:
+                for ln in r.stdout.strip().split('\n'):
+                    ps = ln.split()
+                    if ps:
+                        aur_set.add(ps[0])
+        except Exception:
+            pass
+        new_versions = {}
+        try:
+            r = subprocess.run(["pacman", "-Qu"], capture_output=True, text=True, timeout=20)
+            if r.returncode == 0 and r.stdout:
+                for ln in r.stdout.strip().split('\n'):
+                    if ' -> ' in ln:
+                        left, nv = ln.split(' -> ', 1)
+                        nm = left.split()[0]
+                        new_versions[nm] = nv.strip()
+        except Exception:
+            pass
+        try:
+            r = subprocess.run(["yay", "-Qua"], capture_output=True, text=True, timeout=20)
+            if r.returncode == 0 and r.stdout:
+                for ln in r.stdout.strip().split('\n'):
+                    if ' -> ' in ln:
+                        left, nv = ln.split(' -> ', 1)
+                        nm = left.split()[0]
+                        new_versions[nm] = nv.strip()
+        except Exception:
+            pass
+        QTimer.singleShot(0, lambda: finalize(installed, aur_set, new_versions))
+
+    Thread(target=load_data, daemon=True).start()
 
     def apply_filter(text):
         t = text.strip().lower()

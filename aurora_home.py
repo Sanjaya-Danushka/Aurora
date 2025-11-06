@@ -1003,7 +1003,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.toolbar_widget = QWidget()
         self.toolbar_layout = QVBoxLayout(self.toolbar_widget)
         self.toolbar_layout.setContentsMargins(0,0,0,0)
-        self.packages_panel_layout.addWidget(self.toolbar_widget)
+        # Keep toolbar fixed-height and top-aligned so it doesn't shift during loading
+        try:
+            self.toolbar_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        except Exception:
+            pass
+        self.packages_panel_layout.addWidget(self.toolbar_widget, 0, Qt.AlignmentFlag.AlignTop)
+        
+        # Large search box for discover page
+        self.large_search_box = LargeSearchBox()
+        self.large_search_box.search_requested.connect(self.on_large_search_requested)
+        self.packages_panel_layout.addWidget(self.large_search_box)
         
         # Loading spinner widget
         self.loading_widget = LoadingSpinner(message="Checking for updates...")
@@ -1025,11 +1035,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         loading_layout.addStretch()  # Right stretch to center
         
         self.packages_panel_layout.addWidget(loading_container)
-        
-        # Large search box for discover page
-        self.large_search_box = LargeSearchBox()
-        self.large_search_box.search_requested.connect(self.on_large_search_requested)
-        self.packages_panel_layout.addWidget(self.large_search_box)
         self.no_results_widget = QFrame()
         nr_layout = QVBoxLayout(self.no_results_widget)
         nr_layout.setContentsMargins(0, 40, 0, 40)

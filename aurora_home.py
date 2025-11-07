@@ -140,6 +140,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.search_timer.setSingleShot(True)
         self.search_timer.timeout.connect(self.perform_search)
         self.search_input.textChanged.connect(self.on_search_text_changed)
+        try:
+            self.search_input.returnPressed.connect(self.perform_search)
+        except Exception:
+            pass
         QTimer.singleShot(1500, self.run_first_run_checks)
 
     def on_large_search_requested(self, query):
@@ -148,10 +152,44 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.perform_search()
 
     def on_search_text_changed(self):
+        try:
+            if getattr(self, 'current_view', '') == "plugins":
+                # Immediate filtering for Plugins for a responsive feel
+                self.perform_search()
+                return
+        except Exception:
+            pass
         self.search_timer.start()
 
     def perform_search(self):
         query = self.search_input.text().strip()
+        # Plugins view: always filter regardless of text length
+        if getattr(self, 'current_view', '') == "plugins":
+            try:
+                installed_only = False
+                cats = []
+                if hasattr(self, 'plugins_sidebar') and self.plugins_sidebar:
+                    try:
+                        installed_only = (self.plugins_sidebar.group.checkedId() == 1)
+                    except Exception:
+                        installed_only = False
+                    try:
+                        cats = self.plugins_sidebar.get_selected_categories()
+                    except Exception:
+                        cats = []
+                if hasattr(self, 'plugins_view') and self.plugins_view:
+                    self.plugins_view.set_filter(query, installed_only, cats)
+                # Keep sidebar search box in sync with the top search
+                if hasattr(self, 'plugins_sidebar') and self.plugins_sidebar:
+                    try:
+                        self.plugins_sidebar.search.blockSignals(True)
+                        self.plugins_sidebar.search.setText(query)
+                    finally:
+                        self.plugins_sidebar.search.blockSignals(False)
+            except Exception:
+                pass
+            return
+
         if len(query) < 3:
             if self.current_view == "discover":
                 self.large_search_box.setVisible(True)
@@ -1678,6 +1716,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_more_btn.setVisible(False)
             self.package_table.setRowCount(0)
             self.header_info.setText("Search and discover new packages to install")
+            try:
+                self.search_input.setPlaceholderText("Search for packages")
+            except Exception:
+                pass
             # Removed verbose log: self.log("Type a package name to search in AUR and official repositories")
             # Hide console in Discover view
             try:
@@ -1715,6 +1757,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.header_info.setText("Create, import, export, and install bundles of packages across sources")
             self.package_table.setVisible(True)
             self.load_more_btn.setVisible(False)
+            try:
+                self.search_input.setPlaceholderText("Search for packages")
+            except Exception:
+                pass
             # Show console in non-settings views
             try:
                 self.console_label.setVisible(True)
@@ -1727,6 +1773,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             try:
                 self.loading_widget.setVisible(False)
                 self.loading_widget.stop_animation()
+            except Exception:
+                pass
+            try:
+                self.search_input.setPlaceholderText("Search extensions")
             except Exception:
                 pass
             self.large_search_box.setVisible(False)
@@ -1769,6 +1819,17 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             except Exception:
                 pass
             self.plugins_view.refresh_all()
+            # Sync sidebar search box with global search text (visual consistency)
+            try:
+                if hasattr(self, 'plugins_sidebar') and self.plugins_sidebar:
+                    q = self.search_input.text() if hasattr(self, 'search_input') else ""
+                    try:
+                        self.plugins_sidebar.search.blockSignals(True)
+                        self.plugins_sidebar.search.setText(q)
+                    finally:
+                        self.plugins_sidebar.search.blockSignals(False)
+            except Exception:
+                pass
 
             self.header_info.setText("Install and launch extensions like BleachBit and Timeshift")
             try:

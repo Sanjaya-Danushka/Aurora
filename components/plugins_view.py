@@ -588,22 +588,52 @@ class PluginsView(QWidget):
     def apply_filter(self):
         txt = self._filter_text
         only = self._installed_only
+        cats_lower = {c.lower() for c in self._categories}
+
+        visible_ids = []
         for spec in self.plugins:
-            card = self.cards.get(spec['id'])
-            if not card:
-                continue
+            pid = spec['id']
             name = (spec.get('name') or spec.get('id') or "").lower()
             desc = (spec.get('desc') or "").lower()
             cat = (spec.get('category') or "").lower()
             matches_txt = (not txt) or (txt in name) or (txt in desc)
-            if only:
-                is_inst = self.is_installed(spec)
-            else:
-                is_inst = True
-            matches_cat = (not self._categories) or (cat in {c.lower() for c in self._categories})
-            card.setVisible(matches_txt and is_inst and matches_cat)
+            is_inst = self.is_installed(spec) if only else True
+            matches_cat = (not cats_lower) or (cat in cats_lower)
+            ok = matches_txt and is_inst and matches_cat
+            card = self.cards.get(pid)
+            if card:
+                card.setVisible(ok)
+            if ok:
+                visible_ids.append(pid)
+
+        # Reflow grid to pack visible cards without gaps
+        self._rebuild_grid(visible_ids)
 
     def set_installing(self, plugin_id: str, installing: bool):
         card = self.cards.get(plugin_id)
         if card:
             card.set_installing(installing)
+
+    def _rebuild_grid(self, order_ids):
+        try:
+            # Detach all widgets from grid
+            for i in reversed(range(self.grid.count())):
+                item = self.grid.takeAt(i)
+                w = item.widget()
+                if w is not None:
+                    try:
+                        self.grid.removeWidget(w)
+                    except Exception:
+                        pass
+            cols = 3
+            idx = 0
+            for pid in order_ids:
+                card = self.cards.get(pid)
+                if not card:
+                    continue
+                row = idx // cols
+                col = idx % cols
+                self.grid.addWidget(card, row, col)
+                idx += 1
+        except Exception:
+            pass

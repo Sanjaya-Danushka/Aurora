@@ -29,7 +29,7 @@ class PluginsSidebar(QWidget):
 
         self.search = QLineEdit()
         self.search.setPlaceholderText("Search extensions")
-        self.search.textChanged.connect(self._emit)
+        self.search.textChanged.connect(lambda _text: self._emit())
         try:
             self.search.setClearButtonEnabled(True)
         except Exception:

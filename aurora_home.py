@@ -1831,13 +1831,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(True)
             if hasattr(self, 'sources_title_label'):
-                self.sources_title_label.setVisible(True)
+                self.sources_title_label.setVisible(False)
             self.update_installed_sources()
         elif view_id == "updates":
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(False)
             if hasattr(self, 'sources_title_label'):
-                self.sources_title_label.setVisible(True)
+                self.sources_title_label.setVisible(False)
         elif view_id == "discover":
             self.sources_section.setVisible(True)
             self.filters_section.setVisible(False)

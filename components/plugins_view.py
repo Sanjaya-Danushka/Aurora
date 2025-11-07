@@ -3,6 +3,7 @@ from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QIcon
 import os
 import shutil
+import re
 
 
 class PluginCard(QFrame):
@@ -144,7 +145,7 @@ class PluginsView(QWidget):
                 'desc': 'System cleaner to free disk space and guard your privacy.',
                 'pkg': 'bleachbit',
                 'cmd': 'bleachbit',
-                'icon': bb_icon if os.path.exists(bb_icon) else base_icon,
+                'icon': bb_icon,
                 'category': 'Cleaner',
             },
             {
@@ -153,7 +154,7 @@ class PluginsView(QWidget):
                 'desc': 'System restore utility for Linux.',
                 'pkg': 'timeshift',
                 'cmd': 'timeshift-gtk',
-                'icon': ts_icon if os.path.exists(ts_icon) else base_icon,
+                'icon': ts_icon,
                 'category': 'Backup',
             },
             # Cleaners / Storage
@@ -163,7 +164,7 @@ class PluginsView(QWidget):
                 'desc': 'Visualize disk usage and identify large folders/files.',
                 'pkg': 'baobab',
                 'cmd': 'baobab',
-                'icon': os.path.join(icons_dir, 'baobab.svg') if os.path.exists(os.path.join(icons_dir, 'baobab.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'baobab.svg'),
                 'category': 'Cleaner',
             },
             # Backup
@@ -173,7 +174,7 @@ class PluginsView(QWidget):
                 'desc': 'Simple backups for GNOME with cloud support.',
                 'pkg': 'deja-dup',
                 'cmd': 'deja-dup',
-                'icon': os.path.join(icons_dir, 'deja-dup.svg') if os.path.exists(os.path.join(icons_dir, 'deja-dup.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'deja-dup.svg'),
                 'category': 'Backup',
             },
             # System tools
@@ -183,7 +184,7 @@ class PluginsView(QWidget):
                 'desc': 'Partition editor for graphically managing disk partitions.',
                 'pkg': 'gparted',
                 'cmd': 'gparted',
-                'icon': os.path.join(icons_dir, 'gparted.svg') if os.path.exists(os.path.join(icons_dir, 'gparted.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'gparted.svg'),
                 'category': 'System',
             },
             {
@@ -192,7 +193,7 @@ class PluginsView(QWidget):
                 'desc': 'Manage disks and media — partition, format and benchmark.',
                 'pkg': 'gnome-disk-utility',
                 'cmd': 'gnome-disks',
-                'icon': os.path.join(icons_dir, 'gnome-disks.svg') if os.path.exists(os.path.join(icons_dir, 'gnome-disks.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'gnome-disks.svg'),
                 'category': 'System',
             },
             {
@@ -201,7 +202,7 @@ class PluginsView(QWidget):
                 'desc': 'Advanced audio mixer for PulseAudio.',
                 'pkg': 'pavucontrol',
                 'cmd': 'pavucontrol',
-                'icon': os.path.join(icons_dir, 'pavucontrol.svg') if os.path.exists(os.path.join(icons_dir, 'pavucontrol.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'pavucontrol.svg'),
                 'category': 'System',
             },
             {
@@ -210,7 +211,7 @@ class PluginsView(QWidget):
                 'desc': 'Configure printers and manage print jobs.',
                 'pkg': 'system-config-printer',
                 'cmd': 'system-config-printer',
-                'icon': os.path.join(icons_dir, 'printer.svg') if os.path.exists(os.path.join(icons_dir, 'printer.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'printer.svg'),
                 'category': 'System',
             },
             # Monitors
@@ -220,7 +221,7 @@ class PluginsView(QWidget):
                 'desc': 'Modern resource monitor for CPU, memory, disks, network.',
                 'pkg': 'btop',
                 'cmd': 'btop',
-                'icon': os.path.join(icons_dir, 'btop.svg') if os.path.exists(os.path.join(icons_dir, 'btop.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'btop.svg'),
                 'category': 'Monitor',
             },
             {
@@ -229,7 +230,7 @@ class PluginsView(QWidget):
                 'desc': 'Interactive process viewer and system monitor.',
                 'pkg': 'htop',
                 'cmd': 'htop',
-                'icon': os.path.join(icons_dir, 'htop.svg') if os.path.exists(os.path.join(icons_dir, 'htop.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'htop.svg'),
                 'category': 'Monitor',
             },
             {
@@ -238,7 +239,7 @@ class PluginsView(QWidget):
                 'desc': 'Graphical system monitor for processes and resources.',
                 'pkg': 'gnome-system-monitor',
                 'cmd': 'gnome-system-monitor',
-                'icon': os.path.join(icons_dir, 'system-monitor.svg') if os.path.exists(os.path.join(icons_dir, 'system-monitor.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'system-monitor.svg'),
                 'category': 'Monitor',
             },
             # GPU
@@ -248,7 +249,7 @@ class PluginsView(QWidget):
                 'desc': 'Configure NVIDIA drivers and GPU options.',
                 'pkg': 'nvidia-settings',
                 'cmd': 'nvidia-settings',
-                'icon': os.path.join(icons_dir, 'nvidia.svg') if os.path.exists(os.path.join(icons_dir, 'nvidia.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'nvidia.svg'),
                 'category': 'GPU',
             },
             {
@@ -257,7 +258,7 @@ class PluginsView(QWidget):
                 'desc': 'NVIDIA/AMD Intel GPU process monitor (requires supported GPU).',
                 'pkg': 'nvtop',
                 'cmd': 'nvtop',
-                'icon': os.path.join(icons_dir, 'nvtop.svg') if os.path.exists(os.path.join(icons_dir, 'nvtop.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'nvtop.svg'),
                 'category': 'GPU',
             },
             # Utility
@@ -267,7 +268,7 @@ class PluginsView(QWidget):
                 'desc': 'Scan documents and photos with a simple interface.',
                 'pkg': 'simple-scan',
                 'cmd': 'simple-scan',
-                'icon': os.path.join(icons_dir, 'simple-scan.svg') if os.path.exists(os.path.join(icons_dir, 'simple-scan.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'simple-scan.svg'),
                 'category': 'Utility',
             },
             {
@@ -276,7 +277,7 @@ class PluginsView(QWidget):
                 'desc': 'Create and extract archives (zip, tar, etc.).',
                 'pkg': 'file-roller',
                 'cmd': 'file-roller',
-                'icon': os.path.join(icons_dir, 'archive.svg') if os.path.exists(os.path.join(icons_dir, 'archive.svg')) else base_icon,
+                'icon': os.path.join(icons_dir, 'archive.svg'),
                 'category': 'Utility',
             },
         ]
@@ -323,12 +324,114 @@ class PluginsView(QWidget):
 
     def _icon_for(self, spec):
         try:
+            icons_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins"))
             path = spec.get('icon')
-            if not path or not os.path.exists(path):
-                path = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins", "plugins.svg")
-            return self.get_icon_callback(os.path.normpath(path), 24)
+            if path and os.path.exists(path):
+                return self.get_icon_callback(os.path.normpath(path), 36)
+
+            # Try to resolve using available files (supports svg/png/jpg/jpeg) with aliases
+            resolved = self._find_plugin_icon_file(spec)
+            if resolved and os.path.exists(resolved):
+                return self.get_icon_callback(os.path.normpath(resolved), 36)
+
+            # Fallback to default plugin icon
+            fallback = os.path.join(icons_dir, "plugins.svg")
+            return self.get_icon_callback(os.path.normpath(fallback), 36)
         except Exception:
             return QIcon()
+
+    def _normalize_name(self, s: str) -> str:
+        try:
+            return re.sub(r'[^a-z0-9]', '', (s or '').lower())
+        except Exception:
+            s = (s or '').lower()
+            return s.replace('-', '').replace('_', '').replace(' ', '')
+
+    def _candidate_aliases(self, spec) -> list:
+        pid = (spec.get('id') or '')
+        name = (spec.get('name') or '')
+        aliases = []
+
+        def add(x):
+            if x and x not in aliases:
+                aliases.append(x)
+
+        # Base identifiers
+        add(pid)
+        add(name)
+        add(pid.replace('-', ''))
+        add(pid.replace('-', '_'))
+        add(pid.replace('_', ''))
+        add((name or '').replace(' ', ''))
+        add((name or '').replace(' ', '-').lower())
+        add((name or '').replace(' ', '').lower())
+
+        # Explicit aliases for known mismatches and alt names
+        alias_map = {
+            'bleachbit': ['BleachBit', 'bleachbit'],
+            'timeshift': ['timeshift'],
+            'baobab': ['diskusageanalyzer', 'baobab'],
+            'deja-dup': ['dejadup', 'DejaDup'],
+            'gparted': ['gparted'],
+            'gnome-disk-utility': ['gnome-disks', 'gnomedisks', 'gnomeDis'],
+            'pavucontrol': ['pavucontrol', 'pulseaudio'],
+            'system-config-printer': ['printer', 'printers'],
+            'btop': ['btop'],
+            'htop': ['htop'],
+            'gnome-system-monitor': ['system-monitor', 'gnomesystemmonitor', 'gnomeSystemMonitor'],
+            'simple-scan': ['simple-scan', 'documentscanner'],
+            'file-roller': ['file-roller', 'archive', 'achive', 'archivemanager', 'archiver'],
+            'nvidia-settings': ['nvidia-settings', 'nvidia', 'nvideasettings', 'nvidiasettings'],
+            'nvtop': ['nvtop'],
+        }
+        for a in alias_map.get(pid, []):
+            add(a)
+
+        return aliases
+
+    def _find_plugin_icon_file(self, spec):
+        icons_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins"))
+        try:
+            files = []
+            try:
+                files = os.listdir(icons_dir)
+            except Exception:
+                files = []
+            if not files:
+                return None
+
+            # Build index by normalized stem per extension, prefer svg, then png, jpeg, jpg
+            exts = ['.svg', '.png', '.jpeg', '.jpg']
+            index = {e: {} for e in exts}
+            for fname in files:
+                path = os.path.join(icons_dir, fname)
+                if not os.path.isfile(path):
+                    continue
+                ext = os.path.splitext(fname)[1].lower()
+                if ext not in index:
+                    continue
+                stem = os.path.splitext(fname)[0]
+                key = self._normalize_name(stem)
+                # Do not overwrite existing mapping for same key/ext to keep first-found
+                index[ext].setdefault(key, path)
+
+            candidates = [self._normalize_name(a) for a in self._candidate_aliases(spec) if a]
+
+            # Exact match by preference order
+            for ext in exts:
+                for key in candidates:
+                    if key in index[ext]:
+                        return index[ext][key]
+
+            # Fallback: partial contains match (still following ext preference)
+            for ext in exts:
+                for key in candidates:
+                    for k2, p2 in index[ext].items():
+                        if key and (k2.startswith(key) or key in k2):
+                            return p2
+            return None
+        except Exception:
+            return None
 
     def is_installed(self, spec):
         cmd = spec.get('cmd')

@@ -86,7 +86,8 @@ class PluginCard(QFrame):
         self.setObjectName("pluginCard")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet(self._style())
-        self.setMinimumHeight(128)
+        # Fix height so all cards are uniform regardless of content/state
+        self.setFixedHeight(148)
         # Prevent vertical stretch so grid vertical spacing is visible
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
 
@@ -387,8 +388,17 @@ class PluginsView(QWidget):
             grid_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         except Exception:
             pass
+        try:
+            self.grid.setAlignment(Qt.AlignmentFlag.AlignTop)
+        except Exception:
+            pass
 
         col_count = 3
+        try:
+            for i in range(col_count):
+                self.grid.setColumnStretch(i, 1)
+        except Exception:
+            pass
         for idx, spec in enumerate(self.plugins):
             installed = self.is_installed(spec)
             icon = self._icon_for(spec)

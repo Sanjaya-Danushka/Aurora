@@ -344,7 +344,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def create_sidebar(self):
         sidebar = QWidget()
-        sidebar.setFixedWidth(180)  # Further reduced from 200
+        sidebar.setFixedWidth(220)  # Increased to accommodate larger logo and text
         sidebar.setMinimumHeight(650)
         sidebar.setObjectName("sidebar")
         
@@ -355,44 +355,56 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Header
         header_widget = QWidget()
         header_layout = QHBoxLayout(header_widget)
-        header_layout.setContentsMargins(5, 5, 5, 5)  # Add some padding
-        header_layout.setSpacing(10)  # Increase spacing
+        header_layout.setContentsMargins(8, 8, 8, 8)  # Add padding for better spacing
+        header_layout.setSpacing(12)  # Spacing between logo and text
         
-        # Logo on the left - slightly larger for clarity
+        # Logo on the left - larger and more prominent
         logo_label = QLabel()
         logo_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "logo1.png")
         try:
             pixmap = QPixmap(logo_path)
             if not pixmap.isNull():
-                # Scale logo to fit nicely in sidebar (56px wide for better fit)
-                scaled_pixmap = pixmap.scaledToWidth(56, Qt.TransformationMode.SmoothTransformation)
+                # Scale logo to 64px for better balance with text
+                scaled_pixmap = pixmap.scaledToWidth(64, Qt.TransformationMode.SmoothTransformation)
                 logo_label.setPixmap(scaled_pixmap)
             else:
                 logo_label.setText("🖥️")
-                logo_label.setStyleSheet("font-size: 28px; color: white;")
+                logo_label.setStyleSheet("font-size: 32px; color: white;")
         except:
             logo_label.setText("🖥️")
-            logo_label.setStyleSheet("font-size: 28px; color: white;")
+            logo_label.setStyleSheet("font-size: 32px; color: white;")
         
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo_label.setFixedWidth(56)
+        logo_label.setFixedWidth(64)
         header_layout.addWidget(logo_label)
         
         # Text container on the right - expanded to take remaining space
         text_widget = QWidget()
         text_layout = QVBoxLayout(text_widget)
-        text_layout.setContentsMargins(0, 0, 0, 0)
-        text_layout.setSpacing(0)  # Tight spacing
+        text_layout.setContentsMargins(4, 0, 0, 0)  # Minimal left padding
+        text_layout.setSpacing(2)  # Minimal spacing between title and subtitle
         
-        # Title - ensure it's visible with proper contrast
+        # Title - larger and more prominent
         title_label = QLabel("NeoArch")
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: white; background: transparent;")
+        title_label.setStyleSheet("""
+            font-size: 20px; 
+            font-weight: 700; 
+            color: #FFFFFF; 
+            background: transparent;
+            letter-spacing: 0.3px;
+        """)
         title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         text_layout.addWidget(title_label)
         
-        # Subtitle - line by line
-        subtitle_label = QLabel("Elevate Your\nArch Experience")
-        subtitle_label.setStyleSheet("font-size: 10px; color: rgba(255, 255, 255, 0.9); background: transparent; line-height: 1.1;")
+        # Subtitle - improved visibility and size
+        subtitle_label = QLabel("Elevate Your Arch Experience")
+        subtitle_label.setStyleSheet("""
+            font-size: 10px; 
+            color: #E0E0E0; 
+            background: transparent; 
+            line-height: 1.2;
+            font-weight: 400;
+        """)
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         subtitle_label.setWordWrap(True)  # Allow wrapping for multi-line text
         text_layout.addWidget(subtitle_label)

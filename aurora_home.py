@@ -1627,6 +1627,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     self.console_toggle_btn.setToolTip("Show Console")
             except Exception:
                 pass
+            try:
+                self.loading_widget.set_message("Loading installed packages...")
+                self.loading_widget.setVisible(True)
+                self.loading_widget.start_animation()
+                if hasattr(self, 'loading_container'):
+                    self.loading_container.setVisible(True)
+            except Exception:
+                pass
+            try:
+                self.package_table.setVisible(False)
+            except Exception:
+                pass
             self.load_installed_packages()
         elif view_id == "discover":
             self.large_search_box.setVisible(True)

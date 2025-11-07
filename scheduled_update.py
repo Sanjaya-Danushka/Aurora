@@ -234,12 +234,12 @@ class ScheduledUpdater:
                 lines = result.stdout.strip().split('\n')
                 snapshot_count = sum(1 for line in lines if line.strip() and not line.startswith('Num') and not line.startswith('---'))
 
-                # If we have 2 or more snapshots, delete oldest ones to keep only 1
-                if snapshot_count >= 2:
-                    delete_result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "1"],
+                # Keep at most 2 snapshots: delete all but the 2 most recent
+                if snapshot_count > 2:
+                    delete_result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "2"],
                                                  capture_output=True, text=True, timeout=300)
                     if delete_result.returncode == 0:
-                        print("Cleaned up old snapshots (keeping latest)")
+                        print("Cleaned up old snapshots (kept latest 2)")
                     else:
                         print(f"Failed to clean up snapshots: {delete_result.stderr}")
         except Exception as e:

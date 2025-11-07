@@ -3717,72 +3717,78 @@ def on_tick(app):
 import time
 import subprocess
 import os
-from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QMessageBox
+import json
 
 _last_update = 0
 _last_check = 0
+_state_file = os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'last_update.json')
+
+def _load_state():
+    try:
+        with open(_state_file, 'r') as f:
+            d = json.load(f)
+            return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def _save_state(data):
+    try:
+        os.makedirs(os.path.dirname(_state_file), exist_ok=True)
+        with open(_state_file, 'w') as f:
+            json.dump(data, f)
+    except Exception:
+        pass
+
+_state = _load_state()
+_last_update = float(_state.get('last_update', 0) or 0)
+_last_check = float(_state.get('last_check', 0) or 0)
 
 def on_tick(app):
-    global _last_update, _last_check
+    global _last_update, _last_check, _state
     try:
         if not app.settings.get('auto_update_enabled', False):
             return
-        
         days = int(app.settings.get('auto_update_interval_days', 7))
         interval_seconds = days * 24 * 3600
-        
         now = time.time()
-        if _last_check and now - _last_check < 3600:  # Check once per hour
+        if _last_check and now - _last_check < 3600:
             return
-        
         _last_check = now
-        
-        # Check if it's time for update
+        _state['last_check'] = _last_check
+        _save_state(_state)
         if _last_update and now - _last_update < interval_seconds:
             return
-        
-        # Ask user permission for update
-        reply = QMessageBox.question(app, "Scheduled Update", 
-                                   f"It's been {days} days since the last update.\n\n"
-                                   "Would you like to update your system now?\n\n"
-                                   "This will update packages and create snapshots if enabled.",
-                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                                   QMessageBox.StandardButton.Yes)
-        
+        from PyQt6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(app, "Scheduled Update",
+            f"It's been {days} days since the last update.\n\n"
+            "Would you like to update your system now?\n\n"
+            "This will update packages and create snapshots if enabled.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes)
         if reply != QMessageBox.StandardButton.Yes:
-            # User declined, reset check timer but don't update last_update
             return
-        
         _last_update = now
-        
-        # Create snapshot BEFORE updates if enabled
+        _state['last_update'] = _last_update
+        _save_state(_state)
         if app.settings.get('snapshot_before_update', False):
             try:
                 if app.cmd_exists("timeshift"):
-                    # Count existing snapshots and clean up if needed
                     try:
                         result = subprocess.run(["timeshift", "--list"], capture_output=True, text=True, timeout=30)
                         if result.returncode == 0:
                             lines = result.stdout.strip().split('\n')
                             snapshot_count = sum(1 for line in lines if line.strip() and not line.startswith('Num') and not line.startswith('---'))
-                            
-                            # If we have 2 or more snapshots, delete oldest ones to keep only 1
-                            if snapshot_count >= 2:
-                                delete_result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "1"], 
-                                                             capture_output=True, text=True, timeout=300)
+                            if snapshot_count > 2:
+                                delete_result = subprocess.run(["pkexec", "timeshift", "--delete-all", "--skip", "2"], capture_output=True, text=True, timeout=300)
                                 if delete_result.returncode == 0:
-                                    app.log("Auto-update: Cleaned up old snapshots (keeping latest)")
+                                    app.log("Auto-update: Cleaned up old snapshots (kept latest 2)")
                                 else:
                                     app.log(f"Auto-update: Failed to clean up snapshots: {delete_result.stderr}")
                     except Exception as e:
                         app.log(f"Auto-update: Error checking snapshots: {e}")
-                    
-                    # Create snapshot before updates
                     timestamp = subprocess.run(["date", "+%Y-%m-%d_%H-%M-%S"], capture_output=True, text=True).stdout.strip()
                     comment = f"NeoArch pre-update snapshot {timestamp}"
-                    result = subprocess.run(["pkexec", "timeshift", "--create", "--comments", comment], 
-                                          capture_output=True, text=True, timeout=300)
+                    result = subprocess.run(["pkexec", "timeshift", "--create", "--comments", comment], capture_output=True, text=True, timeout=300)
                     if result.returncode == 0:
                         app.log(f"Auto-update: Pre-update snapshot created: {comment}")
                         app.show_message.emit("Snapshot", f"Pre-update snapshot created: {comment}")
@@ -3790,16 +3796,11 @@ def on_tick(app):
                         app.log(f"Auto-update: Failed to create pre-update snapshot: {result.stderr}")
             except Exception as e:
                 app.log(f"Auto-update: Pre-update snapshot creation failed: {e}")
-        
-        # Perform updates
         update_success = False
         try:
             app.log("Auto-update: Starting scheduled system updates...")
-            
-            # Update pacman packages
             if app.cmd_exists("pacman"):
-                result = subprocess.run(["pkexec", "pacman", "-Syu", "--noconfirm"], 
-                                      capture_output=True, text=True, timeout=1800)
+                result = subprocess.run(["pkexec", "pacman", "-Syu", "--noconfirm"], capture_output=True, text=True, timeout=1800)
                 if result.returncode == 0:
                     app.log("Auto-update: Pacman updates completed successfully")
                     update_success = True
@@ -3807,13 +3808,10 @@ def on_tick(app):
                 else:
                     app.log(f"Auto-update: Pacman update failed: {result.stderr}")
                     app.show_message.emit("Auto Update", f"Pacman update failed: {result.stderr}")
-            
-            # Update AUR packages if yay is available
             if app.cmd_exists("yay"):
                 try:
                     env, _ = app.prepare_askpass_env()
-                    result = subprocess.run(["yay", "-Syu", "--noconfirm", "--sudoflags", "-A"], 
-                                          capture_output=True, text=True, timeout=1800, env=env)
+                    result = subprocess.run(["yay", "-Syu", "--noconfirm", "--sudoflags", "-A"], capture_output=True, text=True, timeout=1800, env=env)
                     if result.returncode == 0:
                         app.log("Auto-update: AUR updates completed successfully")
                         update_success = True
@@ -3821,14 +3819,11 @@ def on_tick(app):
                         app.log(f"Auto-update: AUR update failed: {result.stderr}")
                 except Exception as e:
                     app.log(f"Auto-update: AUR update error: {e}")
-            
-            # Update Flatpak
             if app.cmd_exists("flatpak"):
                 scopes = [["--user"], ["--system"]] if app.cmd_exists("sudo") else [["--user"]]
                 for scope in scopes:
                     try:
-                        result = subprocess.run(["flatpak"] + scope + ["update", "-y"], 
-                                              capture_output=True, text=True, timeout=900)
+                        result = subprocess.run(["flatpak"] + scope + ["update", "-y"], capture_output=True, text=True, timeout=900)
                         if result.returncode == 0:
                             app.log(f"Auto-update: Flatpak {scope[0]} updates completed")
                             update_success = True
@@ -3836,8 +3831,6 @@ def on_tick(app):
                             app.log(f"Auto-update: Flatpak {scope[0]} update failed: {result.stderr}")
                     except Exception as e:
                         app.log(f"Auto-update: Flatpak {scope[0]} update error: {e}")
-            
-            # Update npm global packages
             if app.cmd_exists("npm"):
                 try:
                     env = os.environ.copy()
@@ -3846,9 +3839,7 @@ def on_tick(app):
                     env['npm_config_prefix'] = npm_prefix
                     env['NPM_CONFIG_PREFIX'] = npm_prefix
                     env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
-                    
-                    result = subprocess.run(["npm", "update", "-g"], 
-                                          capture_output=True, text=True, timeout=600, env=env)
+                    result = subprocess.run(["npm", "update", "-g"], capture_output=True, text=True, timeout=600, env=env)
                     if result.returncode == 0:
                         app.log("Auto-update: NPM global packages updated")
                         update_success = True
@@ -3856,20 +3847,28 @@ def on_tick(app):
                         app.log(f"Auto-update: NPM update failed: {result.stderr}")
                 except Exception as e:
                     app.log(f"Auto-update: NPM update error: {e}")
-                    
         except Exception as e:
             app.log(f"Auto-update: General error: {e}")
-        
         if update_success:
             app.show_message.emit("Auto Update", f"System update completed successfully! Next check in {days} days.")
         else:
             app.show_message.emit("Auto Update", "Some updates failed. Check the console for details.")
+    except Exception:
+        pass
                 """.strip()
             ),
         }
         for fname, code in defaults.items():
             fpath = os.path.join(user_dir, fname)
-            if not os.path.exists(fpath):
+            write_needed = True
+            if os.path.exists(fpath):
+                try:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        existing = f.read()
+                    write_needed = existing.strip() != (code + "\n").strip()
+                except Exception:
+                    write_needed = True
+            if write_needed:
                 try:
                     with open(fpath, 'w', encoding='utf-8') as f:
                         f.write(code + "\n")

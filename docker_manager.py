@@ -4,7 +4,8 @@ import os
 import subprocess
 from threading import Thread
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-                             QListWidget, QListWidgetItem, QDialog, QLineEdit, QMessageBox)
+                             QListWidget, QListWidgetItem, QDialog, QLineEdit, QMessageBox,
+                             QPlainTextEdit, QComboBox, QCheckBox)
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer
 from PyQt6.QtGui import QPixmap, QPainter, QIcon, QColor
 from PyQt6.QtSvg import QSvgRenderer
@@ -201,112 +202,232 @@ class DockerManager(QObject):
         self.load_running_containers()
 
     def install_from_docker(self):
-        """Create a dialog to ask for Docker image name/tag"""
+        self.show_advanced_run_dialog()
+
+    def show_advanced_run_dialog(self):
+        import shlex
         dialog = QDialog()
         dialog.setWindowTitle("Run Container from Docker Image")
         dialog.setModal(True)
-        dialog.setStyleSheet("""
-            QDialog {
-                background-color: #1E1E1E;
-                color: #F0F0F0;
-                border: 1px solid rgba(0, 191, 174, 0.2);
-            }
-        """)
-
+        dialog.setStyleSheet("QDialog { background-color: #1E1E1E; color: #F0F0F0; border: 1px solid rgba(0, 191, 174, 0.2); }")
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-
-        # Title
+        layout.setSpacing(12)
         title = QLabel("Run Application from Docker Image")
         title.setStyleSheet("font-size: 16px; font-weight: bold; color: #00BFAE;")
         layout.addWidget(title)
-
-        # Description
-        desc = QLabel("Enter the Docker image name and tag to run the container:")
-        desc.setWordWrap(True)
-        layout.addWidget(desc)
-
-        # Image input
         image_input = QLineEdit()
-        image_input.setPlaceholderText("nginx:latest or user/myapp:v1.0")
-        image_input.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(42, 45, 51, 0.8);
-                color: #F0F0F0;
-                border: 2px solid rgba(0, 191, 174, 0.2);
-                border-radius: 6px;
-                padding: 8px 12px;
-                font-size: 14px;
-            }
-            QLineEdit:focus {
-                border-color: #00BFAE;
-            }
-        """)
+        image_input.setPlaceholderText("nginx:latest or user/app:v1.0")
+        image_input.setStyleSheet("QLineEdit { background-color: rgba(42,45,51,0.8); color:#F0F0F0; border:2px solid rgba(0,191,174,0.2); border-radius:6px; padding:8px 12px; font-size:14px; } QLineEdit:focus { border-color:#00BFAE; }")
+        layout.addWidget(QLabel("Image"))
         layout.addWidget(image_input)
-
-        # Port mapping input
-        port_layout = QHBoxLayout()
-        port_layout.addWidget(QLabel("Port mapping (optional):"))
-        port_input = QLineEdit()
-        port_input.setPlaceholderText("8080:80")
-        port_input.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(42, 45, 51, 0.8);
-                color: #F0F0F0;
-                border: 2px solid rgba(0, 191, 174, 0.2);
-                border-radius: 6px;
-                padding: 6px 10px;
-                font-size: 12px;
-            }
-            QLineEdit:focus {
-                border-color: #00BFAE;
-            }
-        """)
-        port_layout.addWidget(port_input)
-        layout.addLayout(port_layout)
-
-        # Buttons
-        buttons_layout = QHBoxLayout()
-        buttons_layout.addStretch()
-
+        name_input = QLineEdit()
+        name_input.setPlaceholderText("optional container name")
+        name_input.setStyleSheet("QLineEdit { background-color: rgba(42,45,51,0.8); color:#F0F0F0; border:2px solid rgba(0,191,174,0.2); border-radius:6px; padding:6px 10px; font-size:12px; } QLineEdit:focus { border-color:#00BFAE; }")
+        layout.addWidget(QLabel("Name"))
+        layout.addWidget(name_input)
+        ports_edit = QPlainTextEdit()
+        ports_edit.setPlaceholderText("8080:80\n127.0.0.1:2222:22/tcp")
+        ports_edit.setFixedHeight(70)
+        ports_edit.setStyleSheet("QPlainTextEdit { background-color: rgba(42,45,51,0.8); color:#F0F0F0; border:2px solid rgba(0,191,174,0.2); border-radius:6px; }")
+        layout.addWidget(QLabel("Ports (one per line: host:container[/proto])"))
+        layout.addWidget(ports_edit)
+        vols_edit = QPlainTextEdit()
+        vols_edit.setPlaceholderText("/host/path:/container/path:ro\n~/data:/var/lib/data:rw")
+        vols_edit.setFixedHeight(80)
+        vols_edit.setStyleSheet("QPlainTextEdit { background-color: rgba(42,45,51,0.8); color:#F0F0F0; border:2px solid rgba(0,191,174,0.2); border-radius:6px; }")
+        layout.addWidget(QLabel("Volumes (one per line: host:container[:ro|rw])"))
+        layout.addWidget(vols_edit)
+        env_edit = QPlainTextEdit()
+        env_edit.setPlaceholderText("KEY=value\nMODE=prod")
+        env_edit.setFixedHeight(80)
+        env_edit.setStyleSheet("QPlainTextEdit { background-color: rgba(42,45,51,0.8); color:#F0F0F0; border:2px solid rgba(0,191,174,0.2); border-radius:6px; }")
+        layout.addWidget(QLabel("Environment (one per line: KEY=VALUE)"))
+        layout.addWidget(env_edit)
+        opt_row = QHBoxLayout()
+        restart_combo = QComboBox()
+        restart_combo.addItems(["no", "always", "unless-stopped", "on-failure"])
+        detach_chk = QCheckBox("Detach")
+        detach_chk.setChecked(True)
+        priv_chk = QCheckBox("Privileged")
+        gpu_chk = QCheckBox("GPU")
+        opt_row.addWidget(QLabel("Restart"))
+        opt_row.addWidget(restart_combo)
+        opt_row.addStretch()
+        opt_row.addWidget(detach_chk)
+        opt_row.addWidget(priv_chk)
+        opt_row.addWidget(gpu_chk)
+        layout.addLayout(opt_row)
+        cmd_input = QLineEdit()
+        cmd_input.setPlaceholderText("optional command and args")
+        cmd_input.setStyleSheet("QLineEdit { background-color: rgba(42,45,51,0.8); color:#F0F0F0; border:2px solid rgba(0,191,174,0.2); border-radius:6px; padding:6px 10px; font-size:12px; } QLineEdit:focus { border-color:#00BFAE; }")
+        layout.addWidget(QLabel("Command"))
+        layout.addWidget(cmd_input)
+        preview = QPlainTextEdit()
+        preview.setReadOnly(True)
+        preview.setFixedHeight(80)
+        preview.setStyleSheet("QPlainTextEdit { background-color: rgba(42,45,51,0.6); color:#CFCFCF; border:1px solid rgba(0,191,174,0.15); border-radius:6px; }")
+        layout.addWidget(QLabel("Preview"))
+        layout.addWidget(preview)
+        def build_preview():
+            image = image_input.text().strip()
+            name = name_input.text().strip()
+            cmd = ["docker", "run"]
+            if detach_chk.isChecked():
+                cmd.append("-d")
+            if name:
+                cmd += ["--name", name]
+            rp = restart_combo.currentText()
+            if rp != "no":
+                cmd += ["--restart", rp]
+            if priv_chk.isChecked():
+                cmd.append("--privileged")
+            if gpu_chk.isChecked():
+                cmd += ["--gpus", "all"]
+            for ln in ports_edit.toPlainText().splitlines():
+                t = ln.strip()
+                if t:
+                    cmd += ["-p", t]
+            for ln in vols_edit.toPlainText().splitlines():
+                t = ln.strip()
+                if t:
+                    cmd += ["-v", t]
+            for ln in env_edit.toPlainText().splitlines():
+                t = ln.strip()
+                if t:
+                    cmd += ["-e", t]
+            if image:
+                cmd.append(image)
+            extra = cmd_input.text().strip()
+            if extra:
+                try:
+                    cmd += shlex.split(extra)
+                except Exception:
+                    cmd.append(extra)
+            preview.setPlainText(" ".join(shlex.quote(x) for x in cmd))
+        for w in [image_input, name_input, ports_edit, vols_edit, env_edit, restart_combo, detach_chk, priv_chk, gpu_chk, cmd_input]:
+            try:
+                if hasattr(w, 'textChanged'):
+                    w.textChanged.connect(build_preview)
+                elif hasattr(w, 'currentIndexChanged'):
+                    w.currentIndexChanged.connect(build_preview)
+                elif hasattr(w, 'stateChanged'):
+                    w.stateChanged.connect(build_preview)
+            except Exception:
+                pass
+        build_preview()
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
         cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(dialog.reject)
-        cancel_btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(42, 45, 51, 0.6);
-                color: #F0F0F0;
-                border: 1px solid rgba(0, 191, 174, 0.2);
-                border-radius: 4px;
-                padding: 8px 16px;
-            }
-            QPushButton:hover {
-                background-color: rgba(42, 45, 51, 0.8);
-            }
-        """)
-        buttons_layout.addWidget(cancel_btn)
-
+        btn_row.addWidget(cancel_btn)
         run_btn = QPushButton("Run Container")
         run_btn.setDefault(True)
-        run_btn.clicked.connect(lambda: self.proceed_docker_run(image_input.text().strip(), port_input.text().strip(), dialog))
-        run_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #00BFAE;
-                color: #1E1E1E;
-                border: none;
-                border-radius: 4px;
-                padding: 8px 16px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #00C4B0;
-            }
-        """)
-        buttons_layout.addWidget(run_btn)
-
-        layout.addLayout(buttons_layout)
-
+        def on_run():
+            image = image_input.text().strip()
+            name = name_input.text().strip()
+            ports = [ln.strip() for ln in ports_edit.toPlainText().splitlines() if ln.strip()]
+            vols = [ln.strip() for ln in vols_edit.toPlainText().splitlines() if ln.strip()]
+            envs = [ln.strip() for ln in env_edit.toPlainText().splitlines() if ln.strip()]
+            rp = restart_combo.currentText().strip()
+            detach = detach_chk.isChecked()
+            priv = priv_chk.isChecked()
+            gpu = gpu_chk.isChecked()
+            extra = cmd_input.text().strip()
+            self.proceed_advanced_run(image, name, ports, vols, envs, rp, detach, priv, gpu, extra, dialog)
+        run_btn.clicked.connect(on_run)
+        btn_row.addWidget(run_btn)
+        layout.addLayout(btn_row)
         dialog.exec()
+
+    def ensure_image_local(self, image):
+        try:
+            r = subprocess.run(["docker", "image", "inspect", image], capture_output=True, text=True, timeout=30)
+            if r.returncode == 0:
+                return True
+        except Exception:
+            pass
+        self.log_signal.emit(f"Pulling image: {image}")
+        try:
+            p = subprocess.Popen(["docker", "pull", image], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            while True:
+                line = p.stdout.readline() if p.stdout else ""
+                if not line and p.poll() is not None:
+                    break
+                if line:
+                    self.log_signal.emit(line.strip())
+            _, err = p.communicate()
+            if p.returncode != 0:
+                if err:
+                    self.log_signal.emit(err.strip())
+                self.show_message.emit("Docker Pull Failed", f"Failed to pull {image}")
+                return False
+            self.show_message.emit("Docker", f"Pulled {image}")
+            return True
+        except Exception as e:
+            self.log_signal.emit(str(e))
+            self.show_message.emit("Docker Pull Failed", str(e))
+            return False
+
+    def proceed_advanced_run(self, image, name, ports, vols, envs, restart_policy, detach, privileged, use_gpu, extra_cmd, dialog):
+        import shlex
+        if not image:
+            QMessageBox.warning(None, "Invalid Image", "Please enter a valid Docker image name.")
+            return
+        dialog.accept()
+        self.log_signal.emit(f"Starting Docker container from image: {image}")
+        def run_thread():
+            try:
+                if not self.ensure_image_local(image):
+                    return
+                cmd = ["docker", "run"]
+                if detach:
+                    cmd.append("-d")
+                if name:
+                    cmd += ["--name", name]
+                if restart_policy and restart_policy != "no":
+                    cmd += ["--restart", restart_policy]
+                if privileged:
+                    cmd.append("--privileged")
+                if use_gpu:
+                    cmd += ["--gpus", "all"]
+                for p in ports:
+                    cmd += ["-p", p]
+                for v in vols:
+                    hv = v
+                    try:
+                        parts = v.split(":")
+                        if len(parts) >= 2:
+                            host = os.path.expanduser(parts[0])
+                            cont = parts[1]
+                            mode = parts[2] if len(parts) > 2 else None
+                            hv = host + ":" + cont + (":" + mode if mode else "")
+                    except Exception:
+                        hv = v
+                    cmd += ["-v", hv]
+                for e in envs:
+                    cmd += ["-e", e]
+                cmd.append(image)
+                if extra_cmd:
+                    try:
+                        cmd += shlex.split(extra_cmd)
+                    except Exception:
+                        cmd.append(extra_cmd)
+                self.log_signal.emit("Running command: " + " ".join(shlex.quote(x) for x in cmd))
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                if result.returncode == 0:
+                    cid = (result.stdout or "").strip()
+                    if cid:
+                        self.log_signal.emit(f"Container started: {cid}")
+                    self.show_message.emit("Container Started", f"Started container from {image}")
+                    self.load_running_containers()
+                else:
+                    self.log_signal.emit((result.stderr or "Failed").strip())
+                    self.show_message.emit("Container Start Failed", (result.stderr or "Failed").strip())
+            except Exception as e:
+                self.log_signal.emit(f"Error running Docker container: {str(e)}")
+                self.show_message.emit("Container Start Failed", f"Error: {str(e)}")
+        Thread(target=run_thread, daemon=True).start()
 
     def proceed_docker_run(self, image_name, port_mapping, dialog):
         """Handle the actual Docker container running process"""

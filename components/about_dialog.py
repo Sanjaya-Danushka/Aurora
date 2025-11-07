@@ -102,9 +102,16 @@ class AboutDialog(QDialog):
 
         proj = QLabel("NeoArch")
         proj.setObjectName("projectName")
-        text_col.addWidget(proj)
+        proj_row = QHBoxLayout()
+        proj_row.setSpacing(8)
+        proj_row.addWidget(proj)
+        beta_chip = QLabel("BETA")
+        beta_chip.setObjectName("betaChip")
+        proj_row.addWidget(beta_chip)
+        proj_row.addStretch()
+        text_col.addLayout(proj_row)
 
-        version = QLabel("Version: 1.0")
+        version = QLabel("Version: 1.0 (Beta)")
         version.setObjectName("versionLabel")
         text_col.addWidget(version)
 
@@ -208,17 +215,27 @@ class AboutDialog(QDialog):
 
         qr_row = QHBoxLayout()
         qr_row.setSpacing(16)
+        qr_tile = QFrame()
+        qr_tile.setObjectName("qrTile")
+        qr_tile_l = QVBoxLayout(qr_tile)
+        qr_tile_l.setContentsMargins(12, 12, 12, 12)
+        qr_tile_l.setSpacing(0)
         qr_label = QLabel()
-        qr_label.setObjectName("qrBox")
-        qr_label.setFixedSize(164, 164)
+        qr_label.setObjectName("qrImg")
+        qr_label.setMinimumSize(200, 200)
+        qr_label.setScaledContents(False)
+        qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         qr_path = os.path.join(os.path.dirname(__file__), "..", "assets", "about", "sponsor.png")
         qr_path = os.path.normpath(qr_path)
         if os.path.exists(qr_path):
             pm = QPixmap(qr_path)
             if not pm.isNull():
-                pm = pm.scaled(164, 164, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                target = 240
+                pm = pm.scaled(target, target, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
                 qr_label.setPixmap(pm)
-        qr_row.addWidget(qr_label, 0, Qt.AlignmentFlag.AlignTop)
+                qr_label.setFixedSize(pm.size())
+        qr_tile_l.addWidget(qr_label, 0, Qt.AlignmentFlag.AlignCenter)
+        qr_row.addWidget(qr_tile, 0, Qt.AlignmentFlag.AlignTop)
 
         text_col = QVBoxLayout()
         sponsor_page = QLabel("Buy me a coffee")
@@ -287,6 +304,7 @@ class AboutDialog(QDialog):
             "QLabel#devName { color: #F6F7FB; font-size: 15px; font-weight: 600; }"
             "QLabel#links { color: #8EDBD4; }"
             "QLabel#footerTag { color: #AEB4C2; margin-top: 8px; }"
+            "QLabel#betaChip { color: #FFD369; background-color: rgba(255,193,7,0.14); border: 1px solid rgba(255,193,7,0.42); border-radius: 10px; padding: 2px 8px; font-weight: 700; letter-spacing: 0.6px; }"
             "QFrame#avatarWrap {"
             "  background: qradialgradient(cx:0.5, cy:0.5, radius:0.7,"
             "    stop:0 rgba(0,191,174,0.55), stop:0.6 rgba(0,191,174,0.18), stop:1 rgba(0,191,174,0.04));"
@@ -294,5 +312,6 @@ class AboutDialog(QDialog):
             "}"
             "QFrame#vsep { background-color: rgba(255,255,255,0.08); min-width:1px; max-width:1px; }"
             "QLabel#avatarImg { border-radius: 48px; }"
-            "QLabel#qrBox { background: #FFFFFF; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 8px; }"
+            "QFrame#qrTile { background: #FFFFFF; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; }"
+            "QLabel#qrImg { background: transparent; }"
         )

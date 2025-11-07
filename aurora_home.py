@@ -1857,6 +1857,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.console.setVisible(True)
             except Exception:
                 pass
+            try:
+                if hasattr(self, 'console_toggle_btn'):
+                    self.console_toggle_btn.setVisible(True)
+                    try:
+                        showing = self.console.isVisible()
+                    except Exception:
+                        showing = True
+                    self.console_toggle_btn.setToolTip("Hide Console" if showing else "Show Console")
+            except Exception:
+                pass
             QTimer.singleShot(0, self.refresh_bundles_table)
         elif view_id == "plugins":
             # Show plugins view with tabs, hide others

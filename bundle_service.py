@@ -4,6 +4,7 @@ import subprocess
 from threading import Thread
 from workers import CommandWorker
 from PyQt6.QtWidgets import QFileDialog, QTableWidgetItem, QLabel
+import install_service
 
 
 def add_selected_to_bundle(app):
@@ -139,48 +140,16 @@ def install_bundle(app):
     if not app.bundle_items:
         app._show_message("Install Bundle", "Bundle is empty")
         return
-    items = list(app.bundle_items)
-
-    def run():
-        try:
-            by_src = {}
-            for it in items:
-                src = it.get('source') or 'pacman'
-                name = it.get('name') or ''
-                pkg_id = it.get('id') or name
-                if not name:
-                    continue
-                by_src.setdefault(src, []).append(pkg_id if src == 'Flatpak' else name)
-            for src, lst in by_src.items():
-                if not lst:
-                    continue
-                if src == 'pacman':
-                    cmd = ["pacman", "-S", "--noconfirm"] + lst
-                    w = CommandWorker(cmd, sudo=True)
-                    w.output.connect(app.log); w.error.connect(app.log); w.run()
-                elif src == 'AUR':
-                    env, _ = app.prepare_askpass_env()
-                    cmd = ["yay", "-S", "--noconfirm", "--sudoflags", "-A"] + lst
-                    w = CommandWorker(cmd, sudo=False, env=env)
-                    w.output.connect(app.log); w.error.connect(app.log); w.run()
-                elif src == 'Flatpak':
-                    cmd = ["flatpak", "install", "-y", "--noninteractive"] + lst
-                    w = CommandWorker(cmd, sudo=False)
-                    w.output.connect(app.log); w.error.connect(app.log); w.run()
-                elif src == 'npm':
-                    env = os.environ.copy()
-                    try:
-                        npm_prefix = os.path.join(os.path.expanduser('~'), '.npm-global')
-                        os.makedirs(npm_prefix, exist_ok=True)
-                        env['npm_config_prefix'] = npm_prefix
-                        env['NPM_CONFIG_PREFIX'] = npm_prefix
-                        env['PATH'] = os.path.join(npm_prefix, 'bin') + os.pathsep + env.get('PATH', '')
-                    except Exception:
-                        pass
-                    cmd = ["npm", "install", "-g"] + lst
-                    w = CommandWorker(cmd, sudo=False, env=env)
-                    w.output.connect(app.log); w.error.connect(app.log); w.run()
-            app.show_message.emit("Install Bundle", f"Installed {sum(len(v) for v in by_src.values())} package(s)")
-        except Exception as e:
-            app.log(f"Bundle install error: {str(e)}")
-    Thread(target=run, daemon=True).start()
+    by_src = {}
+    for it in list(app.bundle_items):
+        src = it.get('source') or 'pacman'
+        name = it.get('name') or ''
+        pkg_id = it.get('id') or name
+        if not name:
+            continue
+        token = pkg_id if src == 'Flatpak' else name
+        by_src.setdefault(src, []).append(token)
+    if not by_src:
+        app._show_message("Install Bundle", "No valid items to install")
+        return
+    install_service.install_packages(app, by_src)

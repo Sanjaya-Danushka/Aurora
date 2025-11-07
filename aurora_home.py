@@ -1723,7 +1723,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             "updates": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "update12.svg"), "Software Updates", ""),
             "installed": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "installed.svg"), "Installed Packages", ""),
             "discover": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "search.svg"), "Discover Packages", "Search and discover new packages to install"),
-            "bundles": ("📋 Package Bundles", "Manage package bundles"),
+            "bundles": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "bundle.svg"), "Package Bundles", "Manage package bundles"),
             "plugins": (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins", "plugins.svg"), "Plugins", "Extensions and system tools"),
             "settings": (os.path.join(os.path.dirname(__file__), "assets", "icons", "settings.svg"), "Settings", "Configure NeoArch settings and plugins"),
         }

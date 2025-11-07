@@ -6,6 +6,76 @@ import shutil
 import re
 
 
+class ElideLabel(QLabel):
+    def __init__(self, text="", parent=None, max_lines=2):
+        super().__init__(text, parent)
+        self._full_text = text or ""
+        self._max_lines = max(1, int(max_lines))
+        try:
+            self.setWordWrap(True)
+            self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        except Exception:
+            pass
+
+    def set_max_lines(self, n):
+        try:
+            self._max_lines = max(1, int(n))
+        except Exception:
+            self._max_lines = 1
+        self._apply_elide()
+
+    def setText(self, text):
+        self._full_text = text or ""
+        self._apply_elide()
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._apply_elide()
+
+    def _apply_elide(self):
+        try:
+            fm = self.fontMetrics()
+            width = max(0, self.width())
+            if width <= 0:
+                QLabel.setText(self, self._full_text)
+                return
+            if self._max_lines <= 1:
+                el = fm.elidedText(self._full_text, Qt.TextElideMode.ElideRight, width)
+                QLabel.setText(self, el)
+                return
+            words = (self._full_text or "").split()
+            lines = []
+            current = ""
+            i = 0
+            while i < len(words):
+                w = words[i]
+                trial = (current + " " + w).strip()
+                if fm.horizontalAdvance(trial) <= width:
+                    current = trial
+                    i += 1
+                else:
+                    if current:
+                        lines.append(current)
+                    else:
+                        lines.append(fm.elidedText(w, Qt.TextElideMode.ElideRight, width))
+                        i += 1
+                    current = ""
+                if len(lines) == self._max_lines - 1:
+                    remaining = " ".join(words[i:])
+                    last = (current + (" " if current and remaining else "") + remaining).strip()
+                    el = fm.elidedText(last, Qt.TextElideMode.ElideRight, width)
+                    lines.append(el)
+                    current = ""
+                    break
+            if current and len(lines) < self._max_lines:
+                lines.append(current)
+            QLabel.setText(self, "\n".join(lines[: self._max_lines]))
+        except Exception:
+            try:
+                QLabel.setText(self, self._full_text)
+            except Exception:
+                pass
+
 class PluginCard(QFrame):
     def __init__(self, spec: dict, icon: QIcon, installed: bool, on_install, on_open, on_uninstall, parent=None):
         super().__init__(parent)
@@ -36,13 +106,18 @@ class PluginCard(QFrame):
         layout.addWidget(self.icon_label)
 
         text_col = QVBoxLayout()
-        title = QLabel(spec.get('name', spec.get('id')))
+        title_text = spec.get('name', spec.get('id'))
+        title = ElideLabel(title_text, self, max_lines=1)
         title.setObjectName("pluginTitle")
-        desc = QLabel(spec.get('desc', ""))
-        desc.setObjectName("pluginDesc")
-        desc.setWordWrap(True)
         try:
-            desc.setMaximumHeight(48)
+            title.setToolTip(title_text)
+        except Exception:
+            pass
+        desc_text = spec.get('desc', "")
+        desc = ElideLabel(desc_text, self, max_lines=2)
+        desc.setObjectName("pluginDesc")
+        try:
+            desc.setToolTip(desc_text)
         except Exception:
             pass
         text_col.addWidget(title)
@@ -307,7 +382,7 @@ class PluginsView(QWidget):
         self.grid = QGridLayout(grid_container)
         self.grid.setContentsMargins(12, 12, 12, 12)
         self.grid.setHorizontalSpacing(12)
-        self.grid.setVerticalSpacing(48)
+        self.grid.setVerticalSpacing(36)
         try:
             grid_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         except Exception:
@@ -331,8 +406,22 @@ class PluginsView(QWidget):
             self.grid.addWidget(card, row, col)
             self.cards[spec['id']] = card
 
-        layout.addWidget(grid_container)
-        layout.addStretch()
+        scroll_root = QWidget()
+        s_layout = QVBoxLayout(scroll_root)
+        s_layout.setContentsMargins(0, 0, 0, 0)
+        s_layout.setSpacing(0)
+        s_layout.addWidget(grid_container)
+        s_layout.addStretch()
+
+        scroll = QScrollArea()
+        try:
+            scroll.setWidgetResizable(True)
+            scroll.setFrameShape(QFrame.Shape.NoFrame)
+        except Exception:
+            pass
+        scroll.setWidget(scroll_root)
+
+        layout.addWidget(scroll)
 
     def _icon_for(self, spec):
         try:

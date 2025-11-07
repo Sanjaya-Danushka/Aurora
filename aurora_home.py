@@ -724,30 +724,35 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             pass
 
         try:
-            pixmap = QPixmap(size, size)
-            if pixmap.isNull() or not pixmap.size().isValid():
-                return QIcon()
-
-            pixmap.fill(Qt.GlobalColor.transparent)
-
-            painter = QPainter(pixmap)
-            if not painter.isActive():
-                return QIcon()
-
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
-            renderer = QSvgRenderer(icon_path)
-            if renderer.isValid():
-                renderer.render(painter, QRectF(pixmap.rect()))
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("white"))
-                painter.end()
-                icon = QIcon(pixmap)
-            else:
-                # Fallback: try to load as regular icon
-                painter.end()
+            ext = os.path.splitext(icon_path)[1].lower()
+            if ext != ".svg":
+                # Directly load raster images to avoid QSvgRenderer warnings
                 icon = QIcon(icon_path)
+            else:
+                pixmap = QPixmap(size, size)
+                if pixmap.isNull() or not pixmap.size().isValid():
+                    return QIcon()
+
+                pixmap.fill(Qt.GlobalColor.transparent)
+
+                painter = QPainter(pixmap)
+                if not painter.isActive():
+                    return QIcon()
+
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+                renderer = QSvgRenderer(icon_path)
+                if renderer.isValid():
+                    renderer.render(painter, QRectF(pixmap.rect()))
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(pixmap.rect(), QColor("white"))
+                    painter.end()
+                    icon = QIcon(pixmap)
+                else:
+                    # Fallback: try to load as regular icon
+                    painter.end()
+                    icon = QIcon(icon_path)
 
             try:
                 if isinstance(getattr(self, "_icon_cache", None), dict):

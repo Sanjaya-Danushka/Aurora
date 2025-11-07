@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QScrollArea, QCheckBox, QListWidget, QListWidgetItem, QSizePolicy,
                              QDialog, QTabWidget, QGroupBox, QGridLayout, QRadioButton, QSpinBox)
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QSize, QTimer, QRectF, QItemSelectionModel, qInstallMessageHandler, QtMsgType
-from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter
+from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter, QImage
 from PyQt6.QtSvg import QSvgRenderer
 from collections import Counter
 
@@ -54,10 +54,84 @@ def _qt_msg_handler(mode, context, message):
 
 qInstallMessageHandler(_qt_msg_handler)
 
+try:
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
+except Exception:
+    pass
 app = QApplication(sys.argv)
-icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "logo1.png")
+
+def _build_window_icon(icon_path: str) -> QIcon:
+    try:
+        icon = QIcon()
+        if not os.path.exists(icon_path):
+            return icon
+        ext = os.path.splitext(icon_path)[1].lower()
+        sizes = (16, 24, 32, 48, 64, 96, 128, 192, 256, 512)
+        if ext == ".svg":
+            renderer = QSvgRenderer(icon_path)
+            if renderer.isValid():
+                for sz in sizes:
+                    pm = QPixmap(sz, sz)
+                    pm.fill(Qt.GlobalColor.transparent)
+                    p = QPainter(pm)
+                    renderer.render(p)
+                    p.end()
+                    icon.addPixmap(pm)
+                return icon
+            # Fallback to loading as regular icon
+            return QIcon(icon_path)
+        # Raster path
+        base = QPixmap(icon_path)
+        if base.isNull():
+            return QIcon(icon_path)
+        # Trim transparent padding so glyph fills the icon box better
+        try:
+            img = base.toImage().convertToFormat(QImage.Format.Format_ARGB32)
+            w, h = img.width(), img.height()
+            min_x, min_y = w, h
+            max_x, max_y = -1, -1
+            for y in range(h):
+                for x in range(w):
+                    if img.pixelColor(x, y).alpha() > 0:
+                        if x < min_x: min_x = x
+                        if y < min_y: min_y = y
+                        if x > max_x: max_x = x
+                        if y > max_y: max_y = y
+            if max_x >= min_x and max_y >= min_y:
+                base = base.copy(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
+        except Exception:
+            pass
+        for sz in sizes:
+            try:
+                pm = base.scaled(sz, sz, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                icon.addPixmap(pm)
+            except Exception:
+                pass
+        try:
+            icon.addPixmap(base)
+        except Exception:
+            pass
+        return icon
+    except Exception:
+        return QIcon(icon_path)
+
+def _get_brand_icon_path():
+    base_dir = os.path.dirname(__file__)
+    candidates = [
+        os.path.join(base_dir, "assets", "icons", "brand", "neoarch.svg"),
+        os.path.join(base_dir, "assets", "icons", "brand", "neoarch.png"),
+        os.path.join(base_dir, "assets", "icons", "discover", "logo.svg"),
+        os.path.join(base_dir, "assets", "icons", "discover", "logo1.svg"),
+        os.path.join(base_dir, "assets", "icons", "discover", "logo1.png"),
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return candidates[-1]
+
+icon_path = _get_brand_icon_path()
 if os.path.exists(icon_path):
-    app.setWindowIcon(QIcon(icon_path))
+    app.setWindowIcon(_build_window_icon(icon_path))
 
 class ArchPkgManagerUniGetUI(QMainWindow):
     packages_ready = pyqtSignal(list)
@@ -75,9 +149,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.setMinimumSize(1200, 800)  # Set minimum size
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setStyleSheet(Styles.get_dark_stylesheet())
-        icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "logo1.png")
+        icon_path = _get_brand_icon_path()
         if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
+            self.setWindowIcon(_build_window_icon(icon_path))
         # self.set_minimal_icon()
         
         self.current_view = "discover"
@@ -284,14 +358,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         header_layout.setContentsMargins(5, 5, 5, 5)  # Add some padding
         header_layout.setSpacing(10)  # Increase spacing
         
-        # Logo on the left - smaller to fit better
+        # Logo on the left - slightly larger for clarity
         logo_label = QLabel()
         logo_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "logo1.png")
         try:
             pixmap = QPixmap(logo_path)
             if not pixmap.isNull():
-                # Scale logo to fit nicely in sidebar (45px wide for better fit)
-                scaled_pixmap = pixmap.scaledToWidth(45, Qt.TransformationMode.SmoothTransformation)
+                # Scale logo to fit nicely in sidebar (56px wide for better fit)
+                scaled_pixmap = pixmap.scaledToWidth(56, Qt.TransformationMode.SmoothTransformation)
                 logo_label.setPixmap(scaled_pixmap)
             else:
                 logo_label.setText("🖥️")
@@ -301,7 +375,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             logo_label.setStyleSheet("font-size: 28px; color: white;")
         
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo_label.setFixedWidth(45)  # Smaller for more text space
+        logo_label.setFixedWidth(56)
         header_layout.addWidget(logo_label)
         
         # Text container on the right - expanded to take remaining space
@@ -892,6 +966,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Icon label (hidden by default)
         self.header_icon = QLabel()
+        try:
+            self.header_icon.setFixedSize(32, 32)
+        except Exception:
+            pass
         self.header_icon.setVisible(False)
         layout.addWidget(self.header_icon)
         
@@ -1641,7 +1719,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         header_data = headers.get(view_id, ("NeoArch", ""))
         if len(header_data) == 3:  # Icon, title, subtitle
             icon_path, title, subtitle = header_data
-            self.header_icon.setPixmap(self.get_svg_icon(icon_path, 24).pixmap(24, 24))
+            self.header_icon.setPixmap(self.get_svg_icon(icon_path, 32).pixmap(32, 32))
             self.header_icon.setVisible(True)
             self.header_label.setText(title)
             self.header_info.setText(subtitle)

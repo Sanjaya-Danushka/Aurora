@@ -66,10 +66,4 @@ def apply_update_filters(app):
     app.current_page = 0
     app.package_table.setRowCount(0)
     app.display_page()
-    try:
-        app.log(
-            f"Filtered to {len(filtered)} packages "
-            f"(pacman: {show_pacman}, AUR: {show_aur}, Flatpak: {show_flatpak}, npm: {show_npm}, Local: {show_local})"
-        )
-    except Exception:
-        pass
+    

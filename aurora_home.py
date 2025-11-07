@@ -1885,7 +1885,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def on_filter_selection_changed(self, filter_states):
         """Handle changes in filter selection"""
-        self.log(f"Filter selection changed: {filter_states}")
         # Apply filtering based on current view
         if self.current_view == "installed":
             self.apply_filters()
@@ -2129,7 +2128,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.on_installed_source_changed(states)
             except Exception:
                 pass
-        self.log(f"Loaded {len(packages)} packages total. Showing first 10...")
+        
         
         # Hide loading spinner, stop animation, and show packages table
         self.loading_widget.setVisible(False)
@@ -2528,8 +2527,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             if has_more:
                 remaining = len(self.search_results) - end
                 self.load_more_btn.setText(f"📥 Load More ({remaining} remaining)")
-            
-            self.log(f"Found {len(self.search_results)} packages matching '{query}'. Showing first 10...")
             if self.current_view == "updates":
                 # Use search result count for matched in header
                 try:
@@ -2824,8 +2821,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Provide feedback if no results match
         if not filtered:
             self.header_info.setText(f"No packages found matching '{query}'.")
-            if packages is not None:
-                self.log(f"No packages found matching '{query}'.")
             self.package_table.setVisible(False)
             if hasattr(self, 'no_results_widget'):
                 self.no_results_desc.setText(f"No packages found matching '{query}'.")
@@ -2833,8 +2828,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         else:
             count = len(filtered)
             self.header_info.setText(f"{count} packages were found, {count} of which match the specified filters")
-            if packages is not None:
-                self.log(f"Found {count} packages matching '{query}'. Showing first 10...")
             if hasattr(self, 'no_results_widget'):
                 self.no_results_widget.setVisible(False)
             self.package_table.setVisible(True)

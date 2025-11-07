@@ -159,9 +159,24 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.load_more_btn.setVisible(False)
                 if hasattr(self, 'no_results_widget'):
                     self.no_results_widget.setVisible(False)
-            self.package_table.setRowCount(0)
-            self.header_info.setText("Search and discover new packages to install")
-            # Removed verbose log message: "Type a package name to search in AUR and official repositories"
+                self.package_table.setRowCount(0)
+                self.header_info.setText("Search and discover new packages to install")
+            elif self.current_view == "installed":
+                try:
+                    if hasattr(self, 'no_results_widget'):
+                        self.no_results_widget.setVisible(False)
+                except Exception:
+                    pass
+                self.apply_filters()
+                self.package_table.setVisible(True)
+            elif self.current_view == "updates":
+                try:
+                    if hasattr(self, 'no_results_widget'):
+                        self.no_results_widget.setVisible(False)
+                except Exception:
+                    pass
+                self.apply_update_filters()
+                self.package_table.setVisible(True)
             return
         if self.current_view == "discover":
             self.large_search_box.setVisible(False)
@@ -2478,10 +2493,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.load_more_btn.setVisible(False)
                 if hasattr(self, 'no_results_widget'):
                     self.no_results_widget.setVisible(False)
-            self.package_table.setRowCount(0)
-            self.header_info.setText("Search and discover new packages to install")
-            # Removed verbose log message: "Type a package name to search in AUR and official repositories"
-            return
+                self.package_table.setRowCount(0)
+                self.header_info.setText("Search and discover new packages to install")
+            elif self.current_view == "installed":
+                self.apply_filters()
+                return
+            elif self.current_view == "updates":
+                self.apply_update_filters()
+                return
+            else:
+                return
         
         if self.current_view == "discover":
             self.search_discover_packages(query)

@@ -25,15 +25,15 @@ class PluginCard(QFrame):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(10)
 
-        icon_label = QLabel()
+        self.icon_label = QLabel()
         try:
             if icon and not icon.isNull():
-                icon_label.setPixmap(icon.pixmap(36, 36))
+                self.icon_label.setPixmap(icon.pixmap(36, 36))
             else:
-                icon_label.setText("🧩")
+                self.icon_label.setText("🧩")
         except Exception:
-            icon_label.setText("🧩")
-        layout.addWidget(icon_label)
+            self.icon_label.setText("🧩")
+        layout.addWidget(self.icon_label)
 
         text_col = QVBoxLayout()
         title = QLabel(spec.get('name', spec.get('id')))
@@ -62,6 +62,18 @@ class PluginCard(QFrame):
         layout.addLayout(btn_col)
 
         self.update_state(installed)
+
+    def update_icon(self, icon: QIcon):
+        try:
+            if icon and not icon.isNull():
+                self.icon_label.setPixmap(icon.pixmap(36, 36))
+            else:
+                self.icon_label.setText("🧩")
+        except Exception:
+            try:
+                self.icon_label.setText("🧩")
+            except Exception:
+                pass
 
     def update_state(self, installed: bool):
         self.status_label.setText("Installed" if installed else "Not installed")
@@ -184,7 +196,7 @@ class PluginsView(QWidget):
                 'desc': 'Partition editor for graphically managing disk partitions.',
                 'pkg': 'gparted',
                 'cmd': 'gparted',
-                'icon': os.path.join(icons_dir, 'gparted.svg'),
+                'icon': os.path.join(icons_dir, 'gparted.jpeg'),
                 'category': 'System',
             },
             {
@@ -193,7 +205,7 @@ class PluginsView(QWidget):
                 'desc': 'Manage disks and media — partition, format and benchmark.',
                 'pkg': 'gnome-disk-utility',
                 'cmd': 'gnome-disks',
-                'icon': os.path.join(icons_dir, 'gnome-disks.svg'),
+                'icon': os.path.join(icons_dir, 'gnomedisk.jpeg'),
                 'category': 'System',
             },
             {
@@ -239,7 +251,7 @@ class PluginsView(QWidget):
                 'desc': 'Graphical system monitor for processes and resources.',
                 'pkg': 'gnome-system-monitor',
                 'cmd': 'gnome-system-monitor',
-                'icon': os.path.join(icons_dir, 'system-monitor.svg'),
+                'icon': os.path.join(icons_dir, 'gnomesystem.jpeg'),
                 'category': 'Monitor',
             },
             # GPU
@@ -454,6 +466,11 @@ class PluginsView(QWidget):
             card = self.cards.get(spec['id'])
             if not card:
                 continue
+            try:
+                new_icon = self._icon_for(spec)
+                card.update_icon(new_icon)
+            except Exception:
+                pass
             card.update_state(self.is_installed(spec))
         self.apply_filter()
 

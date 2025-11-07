@@ -2080,13 +2080,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.source_card.source_changed.connect(self.on_source_selection_changed)
         self.source_card.search_mode_changed.connect(self.on_search_mode_changed)
         
-        # Add the four main sources
+        # Add the four main sources (exclude Local from Discover)
         sources = [
             ("pacman", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "pacman.svg")),
             ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg")),
             ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
             ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg")),
-            ("Local", os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg")),
         ]
         
         for source_name, icon_path in sources:

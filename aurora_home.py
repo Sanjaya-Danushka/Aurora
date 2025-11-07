@@ -1619,6 +1619,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.setVisible(False)
             self.load_updates()
         elif view_id == "installed":
+            try:
+                self.console_label.setVisible(False)
+                self.console.setVisible(False)
+                if hasattr(self, 'console_toggle_btn'):
+                    self.console_toggle_btn.setVisible(True)
+                    self.console_toggle_btn.setToolTip("Show Console")
+            except Exception:
+                pass
             self.load_installed_packages()
         elif view_id == "discover":
             self.large_search_box.setVisible(True)
@@ -1749,7 +1757,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         except Exception:
             pass
         # Other views: ensure console visible (not in settings/plugins/discover)
-        if view_id not in ("settings", "plugins", "discover"):
+        if view_id in ("bundles",):
             try:
                 self.console_label.setVisible(True)
                 self.console.setVisible(True)
@@ -2107,7 +2115,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.package_table.setVisible(True)
         # Show console toggle button for updates view like Discover
         try:
-            if self.current_view == "updates" and hasattr(self, 'console_toggle_btn'):
+            if self.current_view in ("updates", "installed") and hasattr(self, 'console_toggle_btn'):
                 self.console_toggle_btn.setVisible(True)
                 self.console_toggle_btn.setToolTip("Show Console")
         except Exception:
@@ -2131,7 +2139,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             pass
         self.package_table.setVisible(True)
         try:
-            if self.current_view == "updates" and hasattr(self, 'console_toggle_btn'):
+            if self.current_view in ("updates", "installed") and hasattr(self, 'console_toggle_btn'):
                 self.console_toggle_btn.setVisible(True)
                 self.console_toggle_btn.setToolTip("Show Console")
         except Exception:

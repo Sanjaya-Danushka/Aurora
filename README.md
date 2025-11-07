@@ -21,17 +21,29 @@ Aurora is a modern, user-friendly package manager designed specifically for Arch
 
 ### Install Dependencies
 
-```bash
-# Install system dependencies
-sudo pacman -S python python-pip git flatpak nodejs npm
+Option A — Recommended (Arch packages)
 
-# Install Python dependencies
+```bash
+# Install system packages from official repos
+sudo pacman -S --needed python python-pyqt6 python-requests qt6-svg git flatpak nodejs npm
+```
+
+Option B — Use a Python virtual environment
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements_pyqt.txt
 ```
+
+Note: On Arch, using system `pip` often triggers the "externally-managed-environment" error. Prefer Option A (pacman) or install into a virtual environment (Option B). Alternatively, you can install apps with `pipx` (`sudo pacman -S python-pipx`) which manages a dedicated venv for each app.
 
 ### Run Aurora
 
 ```bash
+# If you created a virtual environment
+source .venv/bin/activate  # skip if not using a venv
+
 python aurora_home.py
 ```
 

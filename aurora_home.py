@@ -1853,18 +1853,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 pass
             # Show console in non-settings views
             try:
-                self.console_label.setVisible(True)
-                self.console.setVisible(True)
+                self.console_label.setVisible(False)
+                self.console.setVisible(False)
             except Exception:
                 pass
             try:
                 if hasattr(self, 'console_toggle_btn'):
                     self.console_toggle_btn.setVisible(True)
-                    try:
-                        showing = self.console.isVisible()
-                    except Exception:
-                        showing = True
-                    self.console_toggle_btn.setToolTip("Hide Console" if showing else "Show Console")
+                    self.console_toggle_btn.setToolTip("Show Console")
             except Exception:
                 pass
             QTimer.singleShot(0, self.refresh_bundles_table)
@@ -1962,7 +1958,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         except Exception:
             pass
         # Other views: ensure console visible (not in settings/plugins/discover)
-        if view_id in ("bundles",):
+        if view_id in ("",):
             try:
                 self.console_label.setVisible(True)
                 self.console.setVisible(True)

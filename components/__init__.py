@@ -12,6 +12,7 @@ from .plugins_sidebar import PluginsSidebar
 from .settings_general import GeneralSettingsWidget
 from .settings_auto_update import AutoUpdateSettingsWidget
 from .settings_plugins import PluginsSettingsWidget
+from .about_dialog import AboutDialog
 
 __all__ = ['SourceItem', 'SourceCard', 'FilterCard', 'LargeSearchBox', 'LoadingSpinner', 'PluginsView', 'PluginsSidebar',
-           'GeneralSettingsWidget', 'AutoUpdateSettingsWidget', 'PluginsSettingsWidget']
+           'GeneralSettingsWidget', 'AutoUpdateSettingsWidget', 'PluginsSettingsWidget', 'AboutDialog']

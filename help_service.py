@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
+from components.about_dialog import AboutDialog
 
 
 def _make_text_tab(text: str) -> QWidget:
@@ -235,82 +236,5 @@ def show_help(parent, current_view: str):
 
 
 def show_about(parent):
-    dlg = QDialog(parent)
-    dlg.setWindowTitle("About NeoArch")
-    dlg.setModal(True)
-    dlg.setMinimumSize(720, 520)
-
-    icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg")
-    if os.path.exists(icon_path):
-        dlg.setWindowIcon(QIcon(icon_path))
-
-    root = QVBoxLayout(dlg)
-    header = QLabel("NeoArch — Elevate Your Arch Experience")
-    header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    header.setStyleSheet("font-size: 18px; font-weight: 600;")
-    root.addWidget(header)
-
-    tabs = QTabWidget()
-
-    about_text = (
-        "NeoArch is a graphical package manager for Arch Linux with AUR support.\n\n"
-        "Version: 1.0\n\n"
-        "Sources supported include pacman, AUR, Flatpak, npm, and custom Git/Docker installs.\n"
-        "Use Bundles to curate sets of packages. Manage extensions via Plugins."
-    )
-    tabs.addTab(_make_text_tab(about_text), "About")
-
-    features_text = (
-        "🌟 Key Features That Make NeoArch Special\n\n"
-        "📦 UNIFIED PACKAGE MANAGEMENT:\n"
-        "• Search across pacman, AUR, Flatpak, and npm in one interface\n"
-        "• No need to remember different commands for different sources\n"
-        "• Smart search that understands what you're looking for\n\n"
-        "🚀 EASY INSTALLATION:\n"
-        "• One-click installs with progress tracking\n"
-        "• Install from GitHub repositories directly\n"
-        "• Docker container setup made simple\n"
-        "• Automatic permission handling (no sudo needed)\n\n"
-        "🎁 BUNDLE SYSTEM:\n"
-        "• Create collections of your favorite software\n"
-        "• Share setups with friends or across computers\n"
-        "• Perfect for developers, gamers, or any themed setup\n\n"
-        "🔄 SMART UPDATE MANAGEMENT:\n"
-        "• See all updates from all sources in one place\n"
-        "• Ignore unwanted updates (beta versions, etc.)\n"
-        "• Automatic snapshots before major updates\n\n"
-        "🔌 PLUGIN ECOSYSTEM:\n"
-        "• Pre-configured system tools and utilities\n"
-        "• One-click install and launch\n"
-        "• BleachBit, Timeshift, and many more\n\n"
-        "🛡️ SAFETY & RELIABILITY:\n"
-        "• Timeshift integration for system snapshots\n"
-        "• Cancel installations safely anytime\n"
-        "• Detailed logs for troubleshooting\n"
-        "• Automatic Flatpak repository setup"
-    )
-    tabs.addTab(_make_text_tab(features_text), "Features")
-
-    sys_text = (
-        f"Python: {platform.python_version()}\n"
-        f"OS: {platform.system()} {platform.release()}\n"
-        f"Machine: {platform.machine()}\n"
-    )
-    tabs.addTab(_make_text_tab(sys_text), "System")
-
-    license_text = (
-        "License: Open source. See project repository for details.\n\n"
-        "Acknowledgements: Built with PyQt6 and other open-source components."
-    )
-    tabs.addTab(_make_text_tab(license_text), "License")
-
-    root.addWidget(tabs)
-
-    btns = QHBoxLayout()
-    btns.addStretch()
-    ok_btn = QPushButton("OK")
-    ok_btn.clicked.connect(dlg.accept)
-    btns.addWidget(ok_btn)
-    root.addLayout(btns)
-
+    dlg = AboutDialog(parent)
     dlg.exec()

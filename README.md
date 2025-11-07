@@ -2,6 +2,10 @@
 
 Aurora is a modern, user-friendly package manager designed specifically for Arch Linux. It provides an intuitive graphical interface for managing packages from multiple sources including pacman, AUR, Flatpak, and npm.
 
+
+<img width="1236" height="851" alt="Screenshot" src="https://github.com/user-attachments/assets/fd068b88-d104-4145-a6ab-1769a2fa4d68" />
+
+
 ## Features
 
 - **Multi-source package management**: Support for pacman, AUR, Flatpak, and npm packages

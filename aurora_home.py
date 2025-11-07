@@ -344,19 +344,19 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def create_sidebar(self):
         sidebar = QWidget()
-        sidebar.setFixedWidth(220)  # Increased to accommodate larger logo and text
+        sidebar.setFixedWidth(180)  # Increased to accommodate larger logo and text
         sidebar.setMinimumHeight(650)
         sidebar.setObjectName("sidebar")
         
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(15, 20, 15, 0)
-        layout.setSpacing(20)  # Increased spacing between cards
+        layout.setContentsMargins(12, 16, 12, 0)
+        layout.setSpacing(16)  # Increased spacing between cards
         
         # Header
         header_widget = QWidget()
-        header_layout = QHBoxLayout(header_widget)
+        header_layout = QVBoxLayout(header_widget)
         header_layout.setContentsMargins(8, 8, 8, 8)  # Add padding for better spacing
-        header_layout.setSpacing(12)  # Spacing between logo and text
+        header_layout.setSpacing(8)  # Spacing between logo and text
         
         # Logo on the left - larger and more prominent
         logo_label = QLabel()
@@ -364,57 +364,57 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         try:
             pixmap = QPixmap(logo_path)
             if not pixmap.isNull():
-                # Scale logo to 64px for better balance with text
-                scaled_pixmap = pixmap.scaledToWidth(64, Qt.TransformationMode.SmoothTransformation)
+                # Scale logo to 40px for better balance with text
+                scaled_pixmap = pixmap.scaledToWidth(40, Qt.TransformationMode.SmoothTransformation)
                 logo_label.setPixmap(scaled_pixmap)
             else:
                 logo_label.setText("🖥️")
-                logo_label.setStyleSheet("font-size: 32px; color: white;")
+                logo_label.setStyleSheet("font-size: 24px; color: white;")
         except:
             logo_label.setText("🖥️")
-            logo_label.setStyleSheet("font-size: 32px; color: white;")
+            logo_label.setStyleSheet("font-size: 24px; color: white;")
         
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo_label.setFixedWidth(64)
+        logo_label.setFixedWidth(40)
         header_layout.addWidget(logo_label)
         
         # Text container on the right - expanded to take remaining space
         text_widget = QWidget()
         text_layout = QVBoxLayout(text_widget)
-        text_layout.setContentsMargins(4, 0, 0, 0)  # Minimal left padding
+        text_layout.setContentsMargins(0, 0, 0, 0)  # Minimal left padding
         text_layout.setSpacing(2)  # Minimal spacing between title and subtitle
         
         # Title - larger and more prominent
         title_label = QLabel("NeoArch")
         title_label.setStyleSheet("""
-            font-size: 20px; 
+            font-size: 16px; 
             font-weight: 700; 
             color: #FFFFFF; 
             background: transparent;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
         """)
-        title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        title_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
         text_layout.addWidget(title_label)
         
         # Subtitle - improved visibility and size
         subtitle_label = QLabel("Elevate Your Arch Experience")
         subtitle_label.setStyleSheet("""
-            font-size: 10px; 
-            color: #E0E0E0; 
+            font-size: 9px; 
+            color: #D5D5D5; 
             background: transparent; 
             line-height: 1.2;
             font-weight: 400;
         """)
-        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
         subtitle_label.setWordWrap(True)  # Allow wrapping for multi-line text
         text_layout.addWidget(subtitle_label)
         
-        header_layout.addWidget(text_widget, 1)  # Give it stretch factor of 1 to take remaining space
+        header_layout.addWidget(text_widget)  # Give it stretch factor of 1 to take remaining space
         
         layout.addWidget(header_widget)
         
         # Spacer
-        layout.addSpacing(15)  # Adjusted spacing for horizontal header
+        layout.addSpacing(8)  # Adjusted spacing for horizontal header
         
         # Navigation buttons with icons
         nav_items = [

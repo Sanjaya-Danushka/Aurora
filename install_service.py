@@ -23,14 +23,17 @@ def install_packages(app, packages_by_source: dict):
 
         def update_progress_message(msg: str = ""):
             base_msg = f"Installing: {completed_packages}/{total_packages} packages"
-            if current_download_info and msg:
-                app.loading_widget.set_message(f"{base_msg}\n{current_download_info}")
-            elif current_download_info:
-                app.loading_widget.set_message(f"{base_msg}\n{current_download_info}")
-            elif msg:
-                app.loading_widget.set_message(f"{base_msg}\n{msg}")
-            else:
-                app.loading_widget.set_message(base_msg)
+            try:
+                if current_download_info and msg:
+                    app.ui_call.emit(lambda: app.loading_widget.set_message(f"{base_msg}\n{current_download_info}"))
+                elif current_download_info:
+                    app.ui_call.emit(lambda: app.loading_widget.set_message(f"{base_msg}\n{current_download_info}"))
+                elif msg:
+                    app.ui_call.emit(lambda: app.loading_widget.set_message(f"{base_msg}\n{msg}"))
+                else:
+                    app.ui_call.emit(lambda: app.loading_widget.set_message(base_msg))
+            except Exception:
+                pass
 
         def parse_output_line(line: str):
             nonlocal current_download_info

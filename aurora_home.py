@@ -141,6 +141,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     load_error = pyqtSignal()
     search_timer = QTimer()
     installation_progress = pyqtSignal(str, bool)  # status, can_cancel
+    ui_call = pyqtSignal(object)
     
     def __init__(self):
         super().__init__()
@@ -188,6 +189,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.log_signal.connect(self.log)
         self.load_error.connect(self.on_load_error)
         self.installation_progress.connect(self.on_installation_progress)
+        self.ui_call.connect(self._on_ui_call)
         # Background loading coordination
         self.loading_context = None
         self.cancel_update_load = False
@@ -3936,6 +3938,13 @@ def on_tick(app):
     
     def log(self, message):
         self.console.append(message)
+    
+    def _on_ui_call(self, fn):
+        try:
+            if callable(fn):
+                fn()
+        except Exception:
+            pass
     
     def toggle_console(self):
         try:

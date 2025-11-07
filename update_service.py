@@ -113,7 +113,10 @@ def update_packages(app, packages_by_source: dict):
                         except Exception as ex:
                             app.log(str(ex))
             app.show_message.emit("Update Complete", f"Successfully updated {sum(len(v) for v in packages_by_source.values())} package(s).")
-            QTimer.singleShot(0, app.refresh_packages)
+            try:
+                app.ui_call.emit(app.refresh_packages)
+            except Exception:
+                pass
         except Exception as e:
             app.log(f"Error in update thread: {str(e)}")
     Thread(target=update, daemon=True).start()
@@ -181,7 +184,10 @@ def update_core_tools(app):
         except Exception as e:
             app.show_message.emit("Environment", f"Update failed: {str(e)}")
         finally:
-            app.loading_widget.stop_animation()
-            app.loading_widget.setVisible(False)
+            try:
+                app.ui_call.emit(lambda: app.loading_widget.stop_animation())
+                app.ui_call.emit(lambda: app.loading_widget.setVisible(False))
+            except Exception:
+                pass
 
     Thread(target=do_update, daemon=True).start()

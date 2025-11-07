@@ -34,8 +34,11 @@ def create_snapshot(app):
         except Exception as e:
             app.show_message.emit("Snapshot", f"Error creating snapshot: {str(e)}")
         finally:
-            app.loading_widget.stop_animation()
-            app.loading_widget.setVisible(False)
+            try:
+                app.ui_call.emit(lambda: app.loading_widget.stop_animation())
+                app.ui_call.emit(lambda: app.loading_widget.setVisible(False))
+            except Exception:
+                pass
 
     Thread(target=do_create, daemon=True).start()
 
@@ -121,8 +124,11 @@ def restore_snapshot(app, snapshot_num):
         except Exception as e:
             app.show_message.emit("Snapshot", f"Error restoring snapshot: {str(e)}")
         finally:
-            app.loading_widget.stop_animation()
-            app.loading_widget.setVisible(False)
+            try:
+                app.ui_call.emit(lambda: app.loading_widget.stop_animation())
+                app.ui_call.emit(lambda: app.loading_widget.setVisible(False))
+            except Exception:
+                pass
 
     Thread(target=do_restore, daemon=True).start()
 
@@ -157,7 +163,10 @@ def delete_snapshots(app):
         except Exception as e:
             app.show_message.emit("Snapshot", f"Error deleting snapshots: {str(e)}")
         finally:
-            app.loading_widget.stop_animation()
-            app.loading_widget.setVisible(False)
+            try:
+                app.ui_call.emit(lambda: app.loading_widget.stop_animation())
+                app.ui_call.emit(lambda: app.loading_widget.setVisible(False))
+            except Exception:
+                pass
 
     Thread(target=do_delete, daemon=True).start()

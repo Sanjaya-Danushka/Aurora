@@ -6,13 +6,13 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QTabWidget,
     QWidget,
     QFrame,
     QGridLayout,
+    QGraphicsDropShadowEffect,
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtGui import QIcon, QPixmap, QPainter, QPainterPath, QColor
 
 
 class AboutDialog(QDialog):
@@ -20,7 +20,7 @@ class AboutDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("About NeoArch")
         self.setModal(True)
-        self.setMinimumSize(720, 560)
+        self.setMinimumSize(880, 560)
 
         icon_path = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "about.svg")
         icon_path = os.path.normpath(icon_path)
@@ -28,157 +28,216 @@ class AboutDialog(QDialog):
             self.setWindowIcon(QIcon(icon_path))
 
         root = QVBoxLayout(self)
-        header = QLabel("NeoArch")
-        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header.setStyleSheet("font-size: 22px; font-weight: 700;")
-        sub = QLabel("Developed by Whale Lab")
-        sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sub.setStyleSheet("color: #9CA6B4; font-size: 13px;")
-        root.addWidget(header)
-        root.addWidget(sub)
+        root.setContentsMargins(20, 20, 20, 20)
+        root.setSpacing(16)
 
-        tabs = QTabWidget()
-        tabs.addTab(self._make_about_tab(), "About")
-        tabs.addTab(self._make_system_tab(), "System")
-        tabs.addTab(self._make_license_tab(), "License")
-        root.addWidget(tabs)
+        card = QFrame()
+        card.setObjectName("aboutCard")
+        card_l = QGridLayout(card)
+        card_l.setContentsMargins(28, 28, 28, 28)
+        card_l.setHorizontalSpacing(36)
+        card_l.setVerticalSpacing(20)
+
+        left = self._make_left_column()
+        right = self._make_right_column()
+        divider = QFrame()
+        divider.setObjectName("vsep")
+        divider.setFixedWidth(1)
+        card_l.addWidget(left, 0, 0)
+        card_l.addWidget(divider, 0, 1)
+        card_l.addWidget(right, 0, 2)
+        card_l.setColumnStretch(0, 1)
+        card_l.setColumnStretch(2, 1)
+
+        effect = QGraphicsDropShadowEffect(self)
+        effect.setBlurRadius(28)
+        effect.setOffset(0, 6)
+        effect.setColor(QColor(0, 0, 0, 180))
+        card.setGraphicsEffect(effect)
+
+        root.addWidget(card)
 
         btns = QHBoxLayout()
         btns.addStretch()
-        ok_btn = QPushButton("OK")
+        ok_btn = QPushButton("Close")
         ok_btn.clicked.connect(self.accept)
         btns.addWidget(ok_btn)
         root.addLayout(btns)
 
-    def _make_about_tab(self) -> QWidget:
+        self.setStyleSheet(self._stylesheet())
+
+    def _make_left_column(self) -> QWidget:
         w = QWidget()
-        layout = QVBoxLayout(w)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(14)
+        v = QVBoxLayout(w)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(16)
 
-        desc = QLabel(
-            "NeoArch is a graphical package manager for Arch Linux with AUR support.\n\n"
-            "Search and manage packages from pacman, AUR, Flatpak, npm, and more.\n"
-            "Create bundles, manage plugins, and streamline your setup."
-        )
-        desc.setWordWrap(True)
-        layout.addWidget(desc)
+        about_h = QLabel("About")
+        about_h.setObjectName("aboutTitle")
+        v.addWidget(about_h)
 
-        row = QHBoxLayout()
-        row.setSpacing(16)
+        header_row = QHBoxLayout()
+        header_row.setSpacing(16)
 
-        left = QFrame()
-        left.setObjectName("aboutLeftCard")
-        left.setFrameShape(QFrame.Shape.NoFrame)
-        left_l = QVBoxLayout(left)
-        left_l.setContentsMargins(16, 16, 16, 16)
-        left_l.setSpacing(10)
+        avatar_wrap = QFrame()
+        avatar_wrap.setObjectName("avatarWrap")
+        avatar_wrap.setFixedSize(116, 116)
+        avatar_l = QVBoxLayout(avatar_wrap)
+        avatar_l.setContentsMargins(10, 10, 10, 10)
 
-        dev_title = QLabel("Developer")
-        dev_title.setStyleSheet("font-weight: 600;")
-        left_l.addWidget(dev_title)
-
-        dev_row = QHBoxLayout()
-        dev_img = QLabel()
-        user_img_path = os.path.join(os.path.dirname(__file__), "..", "assets", "about", "user.jpg")
+        avatar = QLabel()
+        avatar.setObjectName("avatarImg")
+        avatar.setFixedSize(96, 96)
+        user_img_path = os.path.join(os.path.dirname(__file__), "..", "assets","icons", "discover", "logo1.png")
         user_img_path = os.path.normpath(user_img_path)
         if os.path.exists(user_img_path):
-            pm = QPixmap(user_img_path)
-            if not pm.isNull():
-                dev_img.setPixmap(pm.scaled(96, 96, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        dev_img.setFixedSize(96, 96)
-        dev_img.setStyleSheet("border-radius: 8px;")
-        dev_row.addWidget(dev_img)
+            rp = self._round_pixmap(user_img_path, 96)
+            if not rp.isNull():
+                avatar.setPixmap(rp)
+        header_row.addWidget(avatar_wrap, 0, Qt.AlignmentFlag.AlignTop)
+        avatar_l.addWidget(avatar, 0, Qt.AlignmentFlag.AlignCenter)
 
-        dev_info = QVBoxLayout()
-        name = QLabel("Sanjaya Danushka")
-        name.setStyleSheet("font-size: 15px; font-weight: 600;")
-        dev_info.addWidget(name)
+        text_col = QVBoxLayout()
+        project_label = QLabel("Whale Lab Presents")
+        project_label.setObjectName("projectLabel")
+        text_col.addWidget(project_label)
+
+        proj = QLabel("NeoArch")
+        proj.setObjectName("projectName")
+        text_col.addWidget(proj)
+
+        version = QLabel("Version: 1.0")
+        version.setObjectName("versionLabel")
+        text_col.addWidget(version)
+
+        blurb = QLabel(
+            "The all‑in‑one package hub for Arch Linux. Discover, install, update, and manage across pacman, AUR, Flatpak, and npm."
+        )
+        blurb.setWordWrap(True)
+        blurb.setObjectName("desc")
+        text_col.addWidget(blurb)
+        text_col.addStretch()
+
+        header_row.addLayout(text_col)
+        v.addLayout(header_row)
+
+        return w
+
+    def _round_pixmap(self, path: str, size: int) -> QPixmap:
+        try:
+            pm = QPixmap(path)
+            if pm.isNull():
+                return QPixmap()
+            pm = pm.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+            out = QPixmap(size, size)
+            out.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(out)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            clip = QPainterPath()
+            clip.addEllipse(0, 0, size, size)
+            painter.setClipPath(clip)
+            painter.drawPixmap(0, 0, pm)
+            painter.end()
+            return out
+        except Exception:
+            return QPixmap()
+
+    def _make_right_column(self) -> QWidget:
+        w = QWidget()
+        v = QVBoxLayout(w)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(14)
+
+        sponsor_t = QLabel("Sponsor QR")
+        sponsor_t.setObjectName("sectionTitle")
+        v.addWidget(sponsor_t)
+
+        qr_row = QHBoxLayout()
+        qr_row.setSpacing(16)
+        qr_label = QLabel()
+        qr_label.setObjectName("qrBox")
+        qr_label.setFixedSize(164, 164)
+        qr_path = os.path.join(os.path.dirname(__file__), "..", "assets", "about", "sponsor.png")
+        qr_path = os.path.normpath(qr_path)
+        if os.path.exists(qr_path):
+            pm = QPixmap(qr_path)
+            if not pm.isNull():
+                pm = pm.scaled(164, 164, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                qr_label.setPixmap(pm)
+        qr_row.addWidget(qr_label, 0, Qt.AlignmentFlag.AlignTop)
+
+        text_col = QVBoxLayout()
+        sponsor_page = QLabel("Sponsorship page")
+        sponsor_page.setObjectName("sponsorPage")
+        text_col.addWidget(sponsor_page)
+        help_text = QLabel("Scan to open the sponsorship page")
+        help_text.setObjectName("muted")
+        text_col.addWidget(help_text)
+        qr_row.addLayout(text_col)
+        qr_row.addStretch()
+        v.addLayout(qr_row)
+
+        dev_t = QLabel("Developed by")
+        dev_t.setObjectName("sectionTitle")
+        v.addWidget(dev_t)
+
+        dev_row = QHBoxLayout()
+        dev_row.setSpacing(18)
+
+        dev_col = QVBoxLayout()
+        dev_name = QLabel("Sanjaya Danushka")
+        dev_name.setObjectName("devName")
+        dev_col.addWidget(dev_name)
 
         links = QLabel(
-            '<a href="https://github.com/Sanjaya-Danushka">GitHub</a>  |  '
-            '<a href="https://www.linkedin.com/in/sanjaya-danushka-4484292a0">LinkedIn</a>  |  '
+            '<a href="https://github.com/Sanjaya-Danushka">GitHub</a>  ·  '
+            '<a href="https://www.linkedin.com/in/sanjaya-danushka-4484292a0">LinkedIn</a>  ·  '
             '<a href="https://www.facebook.com/sanjaya.danushka.186">Facebook</a>'
         )
         links.setTextFormat(Qt.TextFormat.RichText)
         links.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         links.setOpenExternalLinks(True)
-        dev_info.addWidget(links)
-        dev_info.addStretch()
-        dev_row.addLayout(dev_info)
+        links.setObjectName("links")
+        dev_col.addWidget(links)
+        dev_row.addLayout(dev_col)
+        dev_row.addStretch()
+        v.addLayout(dev_row)
 
-        left_l.addLayout(dev_row)
+        lab = QLabel("NeoArch • Developed by Whale Lab")
+        lab.setObjectName("footerTag")
+        v.addWidget(lab)
+        v.addStretch()
 
-        sponsor_title = QLabel("Sponsor — Buy Me a Coffee")
-        sponsor_title.setStyleSheet("font-weight: 600;")
-        left_l.addWidget(sponsor_title)
+        return w
 
-        qr_label = QLabel()
-        qr_path = os.path.join(os.path.dirname(__file__), "..", "assets", "about", "sponsor.png")
-        qr_path = os.path.normpath(qr_path)
-        if os.path.exists(qr_path):
-            qr_pm = QPixmap(qr_path)
-            if not qr_pm.isNull():
-                qr_label.setPixmap(qr_pm.scaled(180, 180, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        qr_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-        left_l.addWidget(qr_label)
-
-        row.addWidget(left, 1)
-
-        right = QFrame()
-        right.setObjectName("aboutRightCard")
-        right_l = QVBoxLayout(right)
-        right_l.setContentsMargins(16, 16, 16, 16)
-        right_l.setSpacing(8)
-
-        highlights = QLabel(
-            "• Unified package search across pacman, AUR, Flatpak, npm\n"
-            "• One‑click installs with progress tracking\n"
-            "• Bundle creation and plugin ecosystem\n"
-            "• Snapshot support for safe updates"
-        )
-        highlights.setWordWrap(True)
-        right_l.addWidget(highlights)
-        right_l.addStretch()
-
-        row.addWidget(right, 1)
-
-        layout.addLayout(row)
-
-        w.setStyleSheet(
-            "QFrame#aboutLeftCard, QFrame#aboutRightCard {"
-            "  border: 1px solid rgba(0, 191, 174, 0.18);"
-            "  border-radius: 12px;"
-            "  background: rgba(32,34,40,0.08);"
+    def _stylesheet(self) -> str:
+        return (
+            "AboutDialog {"
+            "  background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
+            "    stop:0 #0F1218, stop:1 #0B0E14);"
             "}"
+            "QLabel#aboutTitle { color: #EAF6F5; font-size: 22px; font-weight: 700; margin-bottom: 4px; }"
+            "QFrame#aboutCard {"
+            "  background: rgba(20,22,28,0.92);"
+            "  border: 1px solid rgba(0, 191, 174, 0.18);"
+            "  border-radius: 22px;"
+            "}"
+            "QLabel#projectLabel { color: #AEB4C2; font-size: 12px; }"
+            "QLabel#projectName { color: #F6F7FB; font-size: 18px; font-weight: 600; }"
+            "QLabel#versionLabel { color: #9CA6B4; }"
+            "QLabel#muted { color: #9CA6B4; }"
+            "QLabel#desc { color: #C9D1D9; }"
+            "QLabel#sectionTitle { color: #E8F1F0; font-weight: 600; }"
+            "QLabel#sponsorPage { color: #F6F7FB; font-size: 15px; font-weight: 600; }"
+            "QLabel#devName { color: #F6F7FB; font-size: 15px; font-weight: 600; }"
+            "QLabel#links { color: #8EDBD4; }"
+            "QLabel#footerTag { color: #AEB4C2; margin-top: 8px; }"
+            "QFrame#avatarWrap {"
+            "  background: qradialgradient(cx:0.5, cy:0.5, radius:0.7,"
+            "    stop:0 rgba(0,191,174,0.55), stop:0.6 rgba(0,191,174,0.18), stop:1 rgba(0,191,174,0.04));"
+            "  border-radius: 58px;"
+            "}"
+            "QFrame#vsep { background-color: rgba(255,255,255,0.08); min-width:1px; max-width:1px; }"
+            "QLabel#avatarImg { border-radius: 48px; }"
+            "QLabel#qrBox { background: #FFFFFF; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 8px; }"
         )
-
-        return w
-
-    def _make_system_tab(self) -> QWidget:
-        w = QWidget()
-        v = QVBoxLayout(w)
-        v.setContentsMargins(16, 16, 16, 16)
-        sys_text = (
-            f"Python: {platform.python_version()}\n"
-            f"OS: {platform.system()} {platform.release()}\n"
-            f"Machine: {platform.machine()}\n"
-        )
-        lbl = QLabel(sys_text)
-        lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        v.addWidget(lbl)
-        v.addStretch()
-        return w
-
-    def _make_license_tab(self) -> QWidget:
-        w = QWidget()
-        v = QVBoxLayout(w)
-        v.setContentsMargins(16, 16, 16, 16)
-        lbl = QLabel(
-            "License: Open source. See project repository for details.\n\n"
-            "Acknowledgements: Built with PyQt6 and other open-source components."
-        )
-        lbl.setWordWrap(True)
-        v.addWidget(lbl)
-        v.addStretch()
-        return w

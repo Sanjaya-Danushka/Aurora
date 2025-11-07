@@ -1,6 +1,7 @@
 # docker_manager.py - Docker container management component for Aurora
 
 import os
+import shutil
 import subprocess
 from threading import Thread
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -575,6 +576,7 @@ class DockerManager(QObject):
         act_stop = menu.addAction("Stop Selected")
         act_restart = menu.addAction("Restart Selected")
         act_remove = menu.addAction("Remove Selected")
+        act_shell_sel = menu.addAction("Open Shell in Selected")
         menu.addSeparator()
         act_stop_all = menu.addAction("Stop All")
         act_remove_exited = menu.addAction("Remove All Exited")
@@ -584,6 +586,7 @@ class DockerManager(QObject):
         act_stop.setEnabled(has_sel)
         act_restart.setEnabled(has_sel)
         act_remove.setEnabled(has_sel)
+        act_shell_sel.setEnabled(has_sel)
         # Exec menu
         pos = sender.mapToGlobal(QPoint(0, sender.height())) if hasattr(sender, 'mapToGlobal') else QCursor.pos()
         action = menu.exec(pos)
@@ -605,6 +608,9 @@ class DockerManager(QObject):
             self.stop_docker_containers()
         elif action == act_remove_exited:
             self.remove_all_exited()
+        elif action == act_shell_sel:
+            for n in selected:
+                self.open_shell_in_container(n)
 
     def show_container_menu(self, pos):
         item = self.recent_containers_list.itemAt(pos)
@@ -613,6 +619,7 @@ class DockerManager(QObject):
         name = item.data(Qt.ItemDataRole.UserRole)
         menu = QMenu()
         act_logs = menu.addAction("View Logs")
+        act_shell = menu.addAction("Open Shell")
         act_start = menu.addAction("Start")
         act_stop = menu.addAction("Stop")
         act_restart = menu.addAction("Restart")
@@ -622,6 +629,8 @@ class DockerManager(QObject):
             return
         if action == act_logs:
             self.open_container_logs(item)
+        elif action == act_shell:
+            self.open_shell_in_container(name)
         elif action == act_start:
             self.start_container(name)
         elif action == act_stop:
@@ -630,6 +639,68 @@ class DockerManager(QObject):
             self.restart_container(name)
         elif action == act_remove:
             self.remove_container(name)
+
+    def _find_terminal_emulator(self):
+        candidates = [
+            "gnome-terminal",
+            "konsole",
+            "alacritty",
+            "kitty",
+            "xfce4-terminal",
+            "tilix",
+            "wezterm",
+            "footclient",
+            "xterm",
+            "lxterminal",
+        ]
+        for name in candidates:
+            if shutil.which(name):
+                return name
+        return None
+
+    def _build_terminal_args(self, term: str, command: str, title: str | None = None):
+        # Run command inside bash -lc to interpret; keep window open after exit
+        if term == "gnome-terminal":
+            args = [term, "--", "bash", "-lc", command]
+            if title:
+                args.insert(1, "--title=%s" % title)
+            return args
+        if term == "konsole":
+            args = [term, "-e", "bash", "-lc", command]
+            if title:
+                args.extend(["--title", title])
+            return args
+        if term in ("alacritty", "tilix"):
+            return [term, "-e", "bash", "-lc", command]
+        if term == "kitty":
+            return [term, "bash", "-lc", command]
+        if term == "wezterm":
+            return [term, "start", "--", "bash", "-lc", command]
+        if term == "footclient":
+            return [term, "bash", "-lc", command]
+        if term == "xterm":
+            return [term, "-e", "bash", "-lc", command]
+        if term == "xfce4-terminal" or term == "lxterminal":
+            # These expect a single string for -e
+            return [term, "-e", f"bash -lc \"{command}\""]
+        # Fallback: try to run in xterm-like
+        return [term, "-e", "bash", "-lc", command]
+
+    def open_shell_in_container(self, name: str):
+        import shlex
+        name_q = shlex.quote(name)
+        inner = f"docker exec -it {name_q} bash || docker exec -it {name_q} sh"
+        cmd = inner + "; echo; echo 'Shell exited.'; echo 'Press Enter to close...'; read"
+        term = self._find_terminal_emulator()
+        if not term:
+            self.show_message.emit("Docker", "No terminal emulator found. Install gnome-terminal/konsole/xterm/kitty/etc.")
+            return
+        try:
+            args = self._build_terminal_args(term, cmd, title=f"Container: {name}")
+            subprocess.Popen(args)
+            self.show_message.emit("Docker", f"Opening shell in {name}...")
+        except Exception as e:
+            self.show_message.emit("Docker", f"Failed to open shell: {e}")
 
     def remove_docker_section(self):
         """Remove the Docker section from the sources layout"""

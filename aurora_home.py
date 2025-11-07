@@ -264,7 +264,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 pass
             return
 
-        if len(query) < 3:
+        if len(query) < 2:
             if self.current_view == "discover":
                 self.large_search_box.setVisible(True)
                 self.package_table.setVisible(False)

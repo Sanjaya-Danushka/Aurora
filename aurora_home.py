@@ -2101,6 +2101,23 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.git_manager.create_git_section()
             except Exception:
                 pass
+        # Pin Docker containers card in Discover sidebar
+        try:
+            if not hasattr(self, 'docker_manager') or self.docker_manager is None:
+                from docker_manager import DockerManager
+                self.docker_manager = DockerManager(self.log_signal, self.show_message, self.sources_layout, self)
+            else:
+                # Reattach/recreate the Docker section under the current sources layout
+                try:
+                    self.docker_manager.sources_layout = self.sources_layout
+                except Exception:
+                    pass
+                try:
+                    self.docker_manager.create_docker_section()
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def update_updates_sources(self):
         while self.sources_layout.count() > 1:

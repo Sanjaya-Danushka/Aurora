@@ -1,5 +1,2 @@
 PyQt6==6.6.1
-
-# plugins page souce card resizebug
-# two letter search not work
 requests

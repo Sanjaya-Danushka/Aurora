@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QButtonGroup, QListWidget, QPushButton, QMenu
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QAction
 
 
@@ -15,11 +15,13 @@ class PluginsSidebar(QWidget):
         self._category_menu = None
         self.category_btn = None
         self._build()
+        self._apply_style()
 
     def _build(self):
+        self.setObjectName("pluginsSidebar")
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(10)
 
         title = QLabel("Extensions")
         title.setObjectName("sectionLabel")
@@ -28,6 +30,15 @@ class PluginsSidebar(QWidget):
         self.search = QLineEdit()
         self.search.setPlaceholderText("Search extensions")
         self.search.textChanged.connect(self._emit)
+        try:
+            self.search.setClearButtonEnabled(True)
+        except Exception:
+            pass
+        try:
+            self.search.setFixedHeight(34)
+        except Exception:
+            pass
+        self.search.setObjectName("searchBox")
         layout.addWidget(self.search)
 
         self.group = QButtonGroup(self)
@@ -48,19 +59,128 @@ class PluginsSidebar(QWidget):
         self.category_btn = QPushButton("Categories: All")
         self.category_menu = QMenu(self)
         self.category_btn.setMenu(self.category_menu)
+        try:
+            self.category_btn.setFixedHeight(34)
+        except Exception:
+            pass
+        self.category_btn.setObjectName("categoryBtn")
         layout.addWidget(self.category_btn)
 
         self.list = QListWidget()
         self.list.currentTextChanged.connect(self._on_select)
+        try:
+            self.list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        except Exception:
+            pass
+        try:
+            self.list.setTextElideMode(Qt.TextElideMode.ElideRight)
+        except Exception:
+            pass
+        try:
+            self.list.setUniformItemSizes(True)
+        except Exception:
+            pass
+        try:
+            self.list.setSpacing(2)
+        except Exception:
+            pass
+        self.list.setObjectName("pluginsList")
         layout.addWidget(self.list)
         
         self.install_btn = QPushButton("Install Selected")
         self.install_btn.clicked.connect(self._install_selected)
+        try:
+            self.install_btn.setFixedHeight(34)
+        except Exception:
+            pass
+        self.install_btn.setObjectName("primaryBtn")
         layout.addWidget(self.install_btn)
         self.uninstall_btn = QPushButton("Uninstall Selected")
         self.uninstall_btn.clicked.connect(self._uninstall_selected)
+        try:
+            self.uninstall_btn.setFixedHeight(34)
+        except Exception:
+            pass
+        self.uninstall_btn.setObjectName("dangerBtn")
         layout.addWidget(self.uninstall_btn)
         layout.addStretch()
+
+    def _apply_style(self):
+        try:
+            self.setStyleSheet(self._style())
+        except Exception:
+            pass
+
+    def _style(self):
+        return (
+            """
+            QWidget#pluginsSidebar {
+                background-color: transparent;
+            }
+            QLineEdit#searchBox {
+                background-color: #151515;
+                color: #F0F0F0;
+                border: 1px solid rgba(255,255,255,0.10);
+                border-radius: 8px;
+                padding: 6px 10px;
+            }
+            QLineEdit#searchBox:focus {
+                border: 1px solid #00BFAE;
+                outline: none;
+            }
+            QPushButton#categoryBtn {
+                background-color: #151515;
+                color: #E0E0E0;
+                border: 1px solid rgba(255,255,255,0.10);
+                border-radius: 8px;
+                padding: 6px 10px;
+                text-align: left;
+            }
+            QPushButton#categoryBtn:hover {
+                border-color: rgba(0,191,174,0.6);
+            }
+            QListWidget#pluginsList {
+                background-color: #0f0f0f;
+                color: #E0E0E0;
+                border: 1px solid rgba(255,255,255,0.06);
+                border-radius: 8px;
+            }
+            QListWidget#pluginsList::item {
+                padding: 6px 8px;
+            }
+            QListWidget#pluginsList::item:selected {
+                background: rgba(0,191,174,0.15);
+                color: #FFFFFF;
+            }
+            QPushButton#primaryBtn {
+                background-color: #1a1a1a;
+                color: #E0E0E0;
+                border: 1px solid rgba(0,191,174,0.5);
+                border-radius: 8px;
+                padding: 6px 10px;
+                font-weight: 600;
+            }
+            QPushButton#primaryBtn:hover {
+                background-color: rgba(0,191,174,0.15);
+                border-color: #00BFAE;
+            }
+            QPushButton#dangerBtn {
+                background-color: #1a1a1a;
+                color: #E0E0E0;
+                border: 1px solid rgba(229,57,53,0.5);
+                border-radius: 8px;
+                padding: 6px 10px;
+                font-weight: 600;
+            }
+            QPushButton#dangerBtn:hover {
+                background-color: rgba(229,57,53,0.15);
+                border-color: #E53935;
+            }
+            QRadioButton {
+                color: #E0E0E0;
+            }
+            """
+        )
 
     def set_plugins(self, plugins):
         self.plugins = plugins or []

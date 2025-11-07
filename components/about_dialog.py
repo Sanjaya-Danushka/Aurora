@@ -11,8 +11,9 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QGraphicsDropShadowEffect,
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QPixmap, QPainter, QPainterPath, QColor
+from PyQt6.QtCore import Qt, QRectF
+from PyQt6.QtGui import QIcon, QPixmap, QPainter, QPainterPath, QColor, QPen
+from PyQt6.QtSvg import QSvgRenderer
 
 
 class AboutDialog(QDialog):
@@ -88,12 +89,9 @@ class AboutDialog(QDialog):
         avatar = QLabel()
         avatar.setObjectName("avatarImg")
         avatar.setFixedSize(96, 96)
-        user_img_path = os.path.join(os.path.dirname(__file__), "..", "assets","icons", "discover", "logo1.png")
-        user_img_path = os.path.normpath(user_img_path)
-        if os.path.exists(user_img_path):
-            rp = self._round_pixmap(user_img_path, 96)
-            if not rp.isNull():
-                avatar.setPixmap(rp)
+        rp = self._render_logo(96)
+        if not rp.isNull():
+            avatar.setPixmap(rp)
         header_row.addWidget(avatar_wrap, 0, Qt.AlignmentFlag.AlignTop)
         avatar_l.addWidget(avatar, 0, Qt.AlignmentFlag.AlignCenter)
 
@@ -136,7 +134,63 @@ class AboutDialog(QDialog):
             clip = QPainterPath()
             clip.addEllipse(0, 0, size, size)
             painter.setClipPath(clip)
+            painter.fillPath(clip, QColor("white"))
             painter.drawPixmap(0, 0, pm)
+            painter.end()
+            return out
+        except Exception:
+            return QPixmap()
+
+    def _render_logo(self, size: int) -> QPixmap:
+        try:
+            base = os.path.dirname(__file__)
+            candidates = [
+                os.path.normpath(os.path.join(base, "..", "assets", "icons", "discover", "logo1.png")),
+                os.path.normpath(os.path.join(base, "..", "assets", "icons", "discover.svg")),
+                os.path.normpath(os.path.join(base, "..", "assets", "icons", "about.svg")),
+                os.path.normpath(os.path.join(base, "..", "assets", "about", "user.jpg")),
+            ]
+            logo_pm = QPixmap()
+            used_svg = False
+            for p in candidates:
+                if os.path.exists(p):
+                    if p.lower().endswith(".svg"):
+                        renderer = QSvgRenderer(p)
+                        if renderer.isValid():
+                            used_svg = True
+                            logo_size = int(size * 0.78)
+                            tmp = QPixmap(logo_size, logo_size)
+                            tmp.fill(Qt.GlobalColor.transparent)
+                            painter = QPainter(tmp)
+                            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                            renderer.render(painter, QRectF(0, 0, logo_size, logo_size))
+                            painter.end()
+                            logo_pm = tmp
+                            break
+                    else:
+                        pm = QPixmap(p)
+                        if not pm.isNull():
+                            logo_size = int(size * 0.78)
+                            logo_pm = pm.scaled(logo_size, logo_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                            break
+
+            if logo_pm.isNull():
+                return QPixmap()
+
+            out = QPixmap(size, size)
+            out.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(out)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            circle = QPainterPath()
+            circle.addEllipse(0, 0, size, size)
+            painter.fillPath(circle, QColor("white"))
+            pen = QPen(QColor(220, 225, 230, 200))
+            pen.setWidth(1)
+            painter.setPen(pen)
+            painter.drawEllipse(0, 0, size-1, size-1)
+            x = (size - logo_pm.width()) // 2
+            y = (size - logo_pm.height()) // 2
+            painter.drawPixmap(x, y, logo_pm)
             painter.end()
             return out
         except Exception:
@@ -148,7 +202,7 @@ class AboutDialog(QDialog):
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(14)
 
-        sponsor_t = QLabel("Sponsor QR")
+        sponsor_t = QLabel("Support NeoArch")
         sponsor_t.setObjectName("sectionTitle")
         v.addWidget(sponsor_t)
 
@@ -167,10 +221,11 @@ class AboutDialog(QDialog):
         qr_row.addWidget(qr_label, 0, Qt.AlignmentFlag.AlignTop)
 
         text_col = QVBoxLayout()
-        sponsor_page = QLabel("Sponsorship page")
-        sponsor_page.setObjectName("sponsorPage")
+        sponsor_page = QLabel("Buy me a coffee")
+        sponsor_page.setObjectName("supportTitle")
         text_col.addWidget(sponsor_page)
-        help_text = QLabel("Scan to open the sponsorship page")
+        help_text = QLabel("We don't have sponsors yet. If NeoArch helps you, kindly buy me a coffee by scanning the QR. Thank you!")
+        help_text.setWordWrap(True)
         help_text.setObjectName("muted")
         text_col.addWidget(help_text)
         qr_row.addLayout(text_col)
@@ -228,7 +283,7 @@ class AboutDialog(QDialog):
             "QLabel#muted { color: #9CA6B4; }"
             "QLabel#desc { color: #C9D1D9; }"
             "QLabel#sectionTitle { color: #E8F1F0; font-weight: 600; }"
-            "QLabel#sponsorPage { color: #F6F7FB; font-size: 15px; font-weight: 600; }"
+            "QLabel#supportTitle { color: #F6F7FB; font-size: 15px; font-weight: 600; }"
             "QLabel#devName { color: #F6F7FB; font-size: 15px; font-weight: 600; }"
             "QLabel#links { color: #8EDBD4; }"
             "QLabel#footerTag { color: #AEB4C2; margin-top: 8px; }"

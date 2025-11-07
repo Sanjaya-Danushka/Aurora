@@ -451,6 +451,16 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         except Exception:
             pass
     
+    def update_installed_header_counts(self):
+        """Update the header info subtitle for Installed with total installed count."""
+        if self.current_view != "installed":
+            return
+        total = len(getattr(self, 'installed_all', []) or [])
+        try:
+            self.header_info.setText(f"{total} packages installed")
+        except Exception:
+            pass
+    
     def create_bottom_card_button(self, icon_path, text, callback):
         btn = QPushButton()
         btn.setObjectName("bottomCardBtn")
@@ -1578,8 +1588,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Update header
         headers = {
             "updates": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "update12.svg"), "Software Updates", ""),
-            "installed": ("📦 Installed Packages", "View all installed packages on your system"),
-            "discover": ("/home/alexa/StudioProjects/Aurora/assets/icons/discover/search.svg", "Discover Packages", "Search and discover new packages to install"),
+            "installed": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "installed.svg"), "Installed Packages", ""),
+            "discover": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "search.svg"), "Discover Packages", "Search and discover new packages to install"),
             "bundles": ("📋 Package Bundles", "Manage package bundles"),
             "plugins": (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins", "plugins.svg"), "Plugins", "Extensions and system tools"),
             "settings": (os.path.join(os.path.dirname(__file__), "assets", "icons", "settings.svg"), "Settings", "Configure NeoArch settings and plugins"),
@@ -1597,9 +1607,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.header_icon.setVisible(False)
             self.header_label.setText(title)
             self.header_info.setText(subtitle)
-        # Update dynamic counts if on updates
+        # Update dynamic counts if on updates/installed
         if view_id == "updates":
             QTimer.singleShot(0, self.update_updates_header_counts)
+        elif view_id == "installed":
+            QTimer.singleShot(0, self.update_installed_header_counts)
         
         self.update_table_columns(view_id)
         self.update_filters_panel(view_id)
@@ -2153,6 +2165,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             except Exception:
                 pass
             self.update_updates_header_counts()
+        elif self.current_view == "installed":
+            self.update_installed_header_counts()
     
     def on_load_error(self):
         # Hide loading spinner, stop animation, and show packages table (empty)

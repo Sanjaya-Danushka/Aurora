@@ -67,6 +67,10 @@ As a package manager, Aurora requires administrative privileges to install, upda
 4. **Plugins**: Access additional tools and utilities through the plugin system
 5. **Bundles**: Create package bundles for consistent deployments
 
+## Contributing
+
+Contributions are welcome! Please ensure all changes maintain the security and stability requirements of a system package manager.
+
 ## License
 
-This project does not use the MIT license. All rights reserved. No copying, modification, distribution, or redistribution is permitted for security reasons. This software is proprietary and intended solely for authorized use within the whale lab.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -2,8 +2,7 @@
 <component type="desktop-application">
   <id>com.sanjayadanushka.NeoArch</id>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>custom</project_license>
-  <license>This project does not use the MIT license. All rights reserved. No copying, modification, distribution, or redistribution is permitted for security reasons. This software is proprietary and intended solely for authorized use within the whale lab.</license>
+  <project_license>MIT</project_license>
   <name>NeoArch</name>
   <summary>Package Manager for Arch Linux</summary>
   <description>

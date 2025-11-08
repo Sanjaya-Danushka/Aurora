@@ -1,6 +1,6 @@
-# Aurora - Package Manager for Arch Linux
+# NeoArch - Package Manager for Arch Linux
 
-Aurora is a modern, user-friendly package manager designed specifically for Arch Linux. It provides an intuitive graphical interface for managing packages from multiple sources including pacman, AUR, Flatpak, and npm.
+NeoArch is a modern, user-friendly package manager designed specifically for Arch Linux. It provides an intuitive graphical interface for managing packages from multiple sources including pacman, AUR, Flatpak, and npm.
 
 ## Features
 
@@ -11,6 +11,14 @@ Aurora is a modern, user-friendly package manager designed specifically for Arch
 - **Security-focused**: Requires appropriate privileges for package installation to maintain system security
 
 ## Installation
+
+### From AUR (Recommended)
+
+Install neoarch-git from the Arch User Repository using your preferred AUR helper:
+
+```bash
+yay -S neoarch-git  # or paru -S neoarch-git, etc.
+```
 
 ### Prerequisites
 

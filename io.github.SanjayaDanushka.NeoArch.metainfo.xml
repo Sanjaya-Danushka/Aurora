@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.sanjayadanushka.NeoArch</id>
+  <id>io.github.SanjayaDanushka.NeoArch</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0+</project_license>
   <name>NeoArch</name>
@@ -20,7 +20,7 @@
       <li>Modern dark UI</li>
     </ul>
   </description>
-  <launchable type="desktop-id">com.sanjayadanushka.NeoArch.desktop</launchable>
+  <launchable type="desktop-id">io.github.SanjayaDanushka.NeoArch.desktop</launchable>
   <screenshots>
     <screenshot type="default">
       <caption>Main interface showing package discovery</caption>

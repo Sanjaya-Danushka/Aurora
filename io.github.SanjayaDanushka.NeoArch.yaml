@@ -1,4 +1,4 @@
-app-id: io.github.Sanjaya-Danushka.NeoArch
+app-id: io.github.SanjayaDanushka.NeoArch
 runtime: org.kde.Platform
 runtime-version: '6.6'
 sdk: org.kde.Sdk
@@ -45,15 +45,15 @@ modules:
       
       # Install desktop file
       - mkdir -p /app/share/applications
-      - install -Dm644 io.github.Sanjaya-Danushka.NeoArch.desktop /app/share/applications/io.github.Sanjaya-Danushka.NeoArch.desktop
+      - install -Dm644 io.github.SanjayaDanushka.NeoArch.desktop /app/share/applications/io.github.SanjayaDanushka.NeoArch.desktop
       
       # Install AppStream metadata
       - mkdir -p /app/share/metainfo
-      - install -Dm644 io.github.Sanjaya-Danushka.NeoArch.metainfo.xml /app/share/metainfo/io.github.Sanjaya-Danushka.NeoArch.metainfo.xml
+      - install -Dm644 io.github.SanjayaDanushka.NeoArch.metainfo.xml /app/share/metainfo/io.github.SanjayaDanushka.NeoArch.metainfo.xml
       
       # Install icon
       - mkdir -p /app/share/icons/hicolor/256x256/apps
-      - install -Dm644 assets/icons/discover/logo1.png /app/share/icons/hicolor/256x256/apps/io.github.Sanjaya-Danushka.NeoArch.png
+      - install -Dm644 assets/icons/discover/logo1.png /app/share/icons/hicolor/256x256/apps/io.github.SanjayaDanushka.NeoArch.png
       
     sources:
       - type: git
@@ -63,8 +63,8 @@ modules:
       
       # Desktop file with correct App ID
       - type: file
-        path: io.github.Sanjaya-Danushka.NeoArch.desktop
+        path: io.github.SanjayaDanushka.NeoArch.desktop
       
       # AppStream metadata with correct App ID
       - type: file
-        path: io.github.Sanjaya-Danushka.NeoArch.metainfo.xml
+        path: io.github.SanjayaDanushka.NeoArch.metainfo.xml

@@ -23,9 +23,9 @@ Aurora is a modern, user-friendly package manager designed specifically for Arch
 - Arch Linux system
 - Administrative privileges (sudo) for package management
 
-### Install Dependencies
+### Install Dependencies wz
 
-Option A — Recommended (Arch packages)
+Option A — Recommended (Aur)
 
 ```bash
 # Install system packages from official repos

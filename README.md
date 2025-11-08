@@ -30,6 +30,8 @@ Option A — Recommended (Arch packages)
 ```bash
 # Install system packages from official repos
 sudo pacman -S --needed python python-pyqt6 python-requests qt6-svg git flatpak nodejs npm
+yay -S neoarch-git 
+
 ```
 
 Option B — Use a Python virtual environment

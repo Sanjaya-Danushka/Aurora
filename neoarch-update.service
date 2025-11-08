@@ -5,10 +5,10 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/alexa/StudioProjects/Aurora/scheduled_update.py
-User=alexa
+ExecStart=/opt/neoarch/Aurora/scheduled_update.py
+User=%U
 Environment=DISPLAY=:0
-Environment=XAUTHORITY=/home/alexa/.Xauthority
+Environment=XAUTHORITY=/home/%U/.Xauthority
 
 [Install]
 WantedBy=multi-user.target

@@ -25,7 +25,8 @@ finish-args:
   - --system-talk-name=org.freedesktop.Flatpak
 modules:
   - python3-requests.json
-  - python3-pymongo.json
+  # pymongo removed - optional dependency for MongoDB plugin store
+  # Users can install it manually if needed
   
   - name: neoarch
     buildsystem: simple

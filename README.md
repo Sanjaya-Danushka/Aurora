@@ -71,4 +71,5 @@ Contributions are welcome! Please ensure all changes maintain the security and s
 
 ## License
 
-This project is now open-source and is available under the [insert open-source license, e.g., MIT License]. You are free to copy, modify, distribute, and use the software according to the terms of the chosen license. developed by Whale Lab
+This project is now open-source 
+--developed by Whale Lab

@@ -1,0 +1,70 @@
+app-id: io.github.SanjayaDanushka.NeoArch
+runtime: org.kde.Platform
+runtime-version: '6.6'
+sdk: org.kde.Sdk
+base: com.riverbankcomputing.PyQt.BaseApp
+base-version: '6.6'
+command: neoarch
+cleanup-commands:
+  - /app/cleanup-BaseApp.sh
+build-options:
+  env:
+    - BASEAPP_REMOVE_WEBENGINE=1
+finish-args:
+  - --share=network
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  - --share=ipc
+  # Minimal filesystem access per Flathub policy
+  - --filesystem=xdg-download
+  - --filesystem=xdg-documents
+  # Note: Host package manager access (pacman/yay/flatpak/npm) typically blocked by Flathub
+  # Consider read-only mode or removing host package management features for approval
+  - --talk-name=org.freedesktop.Flatpak
+  - --system-talk-name=org.freedesktop.Flatpak
+modules:
+  - python3-requests.json
+  - python3-pymongo.json
+  
+  - name: neoarch
+    buildsystem: simple
+    build-commands:
+      # Install all Python sources
+      - mkdir -p /app/share/neoarch
+      - cp -r *.py components assets community_plugins test_plugins /app/share/neoarch/ || true
+      
+      # Create launcher wrapper
+      - mkdir -p /app/bin
+      - |
+        cat > /app/bin/neoarch << 'EOF'
+        #!/usr/bin/env bash
+        exec python3 /app/share/neoarch/aurora_home.py "$@"
+        EOF
+      - chmod +x /app/bin/neoarch
+      
+      # Install desktop file
+      - mkdir -p /app/share/applications
+      - install -Dm644 io.github.SanjayaDanushka.NeoArch.desktop /app/share/applications/io.github.SanjayaDanushka.NeoArch.desktop
+      
+      # Install AppStream metadata
+      - mkdir -p /app/share/metainfo
+      - install -Dm644 io.github.SanjayaDanushka.NeoArch.metainfo.xml /app/share/metainfo/io.github.SanjayaDanushka.NeoArch.metainfo.xml
+      
+      # Install icon
+      - mkdir -p /app/share/icons/hicolor/256x256/apps
+      - install -Dm644 assets/icons/discover/logo1.png /app/share/icons/hicolor/256x256/apps/io.github.SanjayaDanushka.NeoArch.png
+      
+    sources:
+      - type: git
+        url: https://github.com/Sanjaya-Danushka/Aurora.git
+        tag: v1.0-beta
+        commit: bce47cf4ae7f4569c7325f149739a34a40cd5da6
+      
+      # Desktop file with correct App ID
+      - type: file
+        path: io.github.SanjayaDanushka.NeoArch.desktop
+      
+      # AppStream metadata with correct App ID
+      - type: file
+        path: io.github.SanjayaDanushka.NeoArch.metainfo.xml

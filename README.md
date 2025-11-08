@@ -29,7 +29,7 @@ Option A — Recommended (Aur)
 
 ```bash
 # Install system packages from official repos
-sudo pacman -S --needed python python-pyqt6 python-requests qt6-svg git flatpak nodejs npm
+sudo pacman -S --needed python python-pyqt6 python-requests qt6-svg git flatpak nodejs npm docker
 yay -S neoarch-git 
 
 ```

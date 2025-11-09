@@ -374,7 +374,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 logo_label.setStyleSheet("font-size: 24px; color: white;")
         except OSError:
             # Handle file loading or parsing errors
-            self.log(f"Error loading logo")
+            self.log("Error loading logo")
             logo_label.setText("🖥️")
             logo_label.setStyleSheet("font-size: 24px; color: white;")
         

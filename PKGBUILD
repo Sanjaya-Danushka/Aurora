@@ -10,6 +10,7 @@ depends=('python-pyqt6' 'python-requests' 'qt6-svg' 'git' 'flatpak' 'nodejs' 'np
 makedepends=('git')
 provides=('neoarch')
 conflicts=('neoarch')
+install=neoarch-git.install
 source=('git+https://github.com/Sanjaya-Danushka/Aurora.git')
 md5sums=('SKIP')
 
@@ -34,8 +35,3 @@ package() {
   install -Dm644 "$pkgdir/opt/neoarch/Aurora/assets/icons/discover/logo1.png" "$pkgdir/usr/share/pixmaps/neoarch.png"
 }
 
-post_install() {
-  if command -v flatpak >/dev/null 2>&1; then
-    flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
-  fi
-}

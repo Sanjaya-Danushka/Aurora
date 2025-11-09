@@ -1,0 +1,13 @@
+# pack-refs with: peeled fully-peeled sorted 
+8bc58fe6bdb8be5cfe069ea3d4d301b146852790 refs/heads/dev
+5ab972f301cfc91b516154737ce50a2a1e839c17 refs/heads/feature/multi-aur-helper-support
+cd72b9fd4f29da29de4ae5d965b4805dc7a529af refs/heads/main
+21d37f34bf53a0438a85cb5f18d5f6f2a7d5133c refs/heads/release/v1.0-beta
+518f788033ce1a7bfc00f86a06bae812aaee091a refs/pull/1/head
+8b5a69570ac4b774ebd64e74bb13b4557928ba59 refs/pull/2/head
+5ce6828a3437454d0ee290527576546fcae21ab5 refs/pull/3/head
+21d37f34bf53a0438a85cb5f18d5f6f2a7d5133c refs/pull/4/head
+8bc58fe6bdb8be5cfe069ea3d4d301b146852790 refs/pull/5/head
+5ab972f301cfc91b516154737ce50a2a1e839c17 refs/pull/7/head
+bce47cf4ae7f4569c7325f149739a34a40cd5da6 refs/tags/v1.0-beta
+^518f788033ce1a7bfc00f86a06bae812aaee091a

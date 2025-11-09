@@ -25,6 +25,10 @@ venv/
 env/
 ENV/
 
+# Flatpak
+.flatpak-builder/
+build-dir/
+
 # IDE
 .vscode/
 .idea/

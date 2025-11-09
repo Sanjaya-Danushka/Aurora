@@ -24,19 +24,19 @@ class GeneralSettingsWidget(QWidget):
         # Auto check updates on launch
         self.cb_auto_check = QCheckBox("Auto check updates on launch")
         self.cb_auto_check.setChecked(bool(self.app.settings.get('auto_check_updates', True)))
-        self.cb_auto_check.toggled.connect(lambda v: self.app._update_setting('auto_check_updates', v))
+        self.cb_auto_check.toggled.connect(lambda v: self.app.update_setting('auto_check_updates', v))
         grid.addWidget(self.cb_auto_check, 0, 0, 1, 2)
 
         # Include Local source
         self.cb_local = QCheckBox("Include Local source (custom scripts)")
         self.cb_local.setChecked(bool(self.app.settings.get('include_local_source', True)))
-        self.cb_local.toggled.connect(lambda v: self.app._update_setting('include_local_source', v))
+        self.cb_local.toggled.connect(lambda v: self.app.update_setting('include_local_source', v))
         grid.addWidget(self.cb_local, 1, 0, 1, 2)
 
         # Use npm user mode
         self.cb_npm = QCheckBox("Use npm user mode for global installs")
         self.cb_npm.setChecked(bool(self.app.settings.get('npm_user_mode', True)))
-        self.cb_npm.toggled.connect(lambda v: self.app._update_setting('npm_user_mode', v))
+        self.cb_npm.toggled.connect(lambda v: self.app.update_setting('npm_user_mode', v))
         grid.addWidget(self.cb_npm, 2, 0, 1, 2)
 
         # AUR Helper selection
@@ -86,7 +86,7 @@ class GeneralSettingsWidget(QWidget):
 
         self.cb_bsave = QCheckBox("Autosave bundle to file")
         self.cb_bsave.setChecked(bool(self.app.settings.get('bundle_autosave', True)))
-        self.cb_bsave.toggled.connect(lambda v: self.app._update_setting('bundle_autosave', v))
+        self.cb_bsave.toggled.connect(lambda v: self.app.update_setting('bundle_autosave', v))
         pgrid.addWidget(self.cb_bsave, 0, 0, 1, 3)
 
         from_path = self.app.settings.get('bundle_autosave_path') or os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json')
@@ -122,9 +122,9 @@ class GeneralSettingsWidget(QWidget):
                                            self.path_edit.text(), "Bundle JSON (*.json)")
         if path:
             self.path_edit.setText(path)
-            self.app._update_setting('bundle_autosave_path', path)
+            self.app.update_setting('bundle_autosave_path', path)
     
     def on_aur_helper_changed(self, index):
         helper = self.aur_helper_combo.itemData(index)
-        self.app._update_setting('aur_helper', helper)
+        self.app.update_setting('aur_helper', helper)
         self.app.log(f"AUR helper preference set to: {helper}")

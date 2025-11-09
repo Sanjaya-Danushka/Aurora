@@ -22,14 +22,14 @@ class AutoUpdateSettingsWidget(QWidget):
 
         self.cb_auto_update = QCheckBox("Enable automatic updates")
         self.cb_auto_update.setChecked(bool(self.app.settings.get('auto_update_enabled', False)))
-        self.cb_auto_update.toggled.connect(lambda v: self.app._update_setting('auto_update_enabled', v))
+        self.cb_auto_update.toggled.connect(lambda v: self.app.update_setting('auto_update_enabled', v))
         auto_grid.addWidget(self.cb_auto_update, 0, 0, 1, 2)
 
         auto_grid.addWidget(QLabel("Update interval (days):"), 1, 0)
         self.interval_spin = QSpinBox()
         self.interval_spin.setRange(1, 30)  # 1 day to 30 days
         self.interval_spin.setValue(int(self.app.settings.get('auto_update_interval_days', 1)))
-        self.interval_spin.valueChanged.connect(lambda v: self.app._update_setting('auto_update_interval_days', v))
+        self.interval_spin.valueChanged.connect(lambda v: self.app.update_setting('auto_update_interval_days', v))
         auto_grid.addWidget(self.interval_spin, 1, 1)
 
         self.layout.addWidget(update_box)
@@ -42,7 +42,7 @@ class AutoUpdateSettingsWidget(QWidget):
 
         self.cb_snapshot = QCheckBox("Create snapshot before updates")
         self.cb_snapshot.setChecked(bool(self.app.settings.get('snapshot_before_update', False)))
-        self.cb_snapshot.toggled.connect(lambda v: self.app._update_setting('snapshot_before_update', v))
+        self.cb_snapshot.toggled.connect(lambda v: self.app.update_setting('snapshot_before_update', v))
         snap_grid.addWidget(self.cb_snapshot, 0, 0, 1, 2)
 
         snap_btns = QHBoxLayout()

@@ -157,6 +157,9 @@ def install_packages(app, packages_by_source: dict):
                             worker.env['XAUTHORITY'] = os.environ['XAUTHORITY']
                         if 'WAYLAND_DISPLAY' not in worker.env and 'WAYLAND_DISPLAY' in os.environ:
                             worker.env['WAYLAND_DISPLAY'] = os.environ['WAYLAND_DISPLAY']
+                        # Critical: pkexec needs D-Bus to communicate with polkit agent
+                        if 'DBUS_SESSION_BUS_ADDRESS' not in worker.env and 'DBUS_SESSION_BUS_ADDRESS' in os.environ:
+                            worker.env['DBUS_SESSION_BUS_ADDRESS'] = os.environ['DBUS_SESSION_BUS_ADDRESS']
                     
                     process = subprocess.Popen(
                         exec_cmd,

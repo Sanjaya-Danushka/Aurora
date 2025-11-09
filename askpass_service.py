@@ -20,12 +20,20 @@ def get_sudo_askpass():
 def prepare_askpass_env():
     env = os.environ.copy()
     cleanup_path = None
+    
+    # Ensure DISPLAY is set for GUI dialogs
+    if "DISPLAY" not in env:
+        env["DISPLAY"] = ":0"
+    
     try:
         script = """#!/bin/sh
 # Single-attempt password dialog - no retries
 title=${NEOARCH_ASKPASS_TITLE:-"NeoArch - AUR Install"}
 text=${NEOARCH_ASKPASS_TEXT:-"AUR packages are community-maintained and may be unsafe.\nEnter your password to proceed."}
 icon=${NEOARCH_ASKPASS_ICON:-"dialog-password"}
+
+# Ensure DISPLAY is set
+export DISPLAY="${DISPLAY:-:0}"
 
 # Try different dialog tools, exit immediately on cancellation
 if command -v kdialog >/dev/null 2>&1; then
@@ -38,7 +46,11 @@ elif command -v yad >/dev/null 2>&1; then
   result=$(yad --title="$title" --text="$text" --entry --hide-text --window-icon="$icon" 2>/dev/null)
   exit_code=$?
 else
-  exit 1
+  # Fallback to terminal-based password prompt if no GUI available
+  echo "$text" >&2
+  read -s -p "Password: " result
+  echo >&2
+  exit_code=$?
 fi
 
 # If cancelled or failed, exit with error code
@@ -50,7 +62,19 @@ fi
 echo "$result"
 exit 0
 """
-        fd, path = tempfile.mkstemp(prefix="neoarch-askpass-", suffix=".sh")
+        # Try to create temp file in user's temp directory first
+        temp_dir = os.path.expanduser("~/.cache")
+        if not os.path.exists(temp_dir):
+            try:
+                os.makedirs(temp_dir, exist_ok=True)
+            except Exception:
+                temp_dir = None
+        
+        if temp_dir and os.access(temp_dir, os.W_OK):
+            fd, path = tempfile.mkstemp(prefix="neoarch-askpass-", suffix=".sh", dir=temp_dir)
+        else:
+            fd, path = tempfile.mkstemp(prefix="neoarch-askpass-", suffix=".sh")
+            
         with os.fdopen(fd, "w") as f:
             f.write(script)
         os.chmod(path, 0o700)
@@ -58,6 +82,8 @@ exit 0
         env["SUDO_ASKPASS"] = path
         env["SSH_ASKPASS"] = path
         env["SUDO_ASKPASS_REQUIRE"] = "force"
-    except Exception:
-        pass
+    except Exception as e:
+        # If we can't create the askpass script, log the error but continue
+        print(f"Warning: Could not create askpass script: {e}")
+    
     return env, cleanup_path

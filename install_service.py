@@ -161,6 +161,9 @@ def install_packages(app, packages_by_source: dict):
                         if 'DBUS_SESSION_BUS_ADDRESS' not in worker.env and 'DBUS_SESSION_BUS_ADDRESS' in os.environ:
                             worker.env['DBUS_SESSION_BUS_ADDRESS'] = os.environ['DBUS_SESSION_BUS_ADDRESS']
                     
+                    # For pkexec, don't use os.setsid as it breaks D-Bus session connection
+                    use_setsid = source not in ('pacman', 'AUR')
+                    
                     process = subprocess.Popen(
                         exec_cmd,
                         stdout=subprocess.PIPE,
@@ -168,7 +171,7 @@ def install_packages(app, packages_by_source: dict):
                         stdin=subprocess.DEVNULL,
                         text=True,
                         bufsize=1,
-                        preexec_fn=os.setsid,
+                        preexec_fn=os.setsid if use_setsid else None,
                         env=worker.env
                     )
 

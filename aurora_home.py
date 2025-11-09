@@ -4048,21 +4048,6 @@ def on_tick(app):
         except Exception as e:
             self._show_message("Remove Plugins", f"Error: {e}")
     
-    def reload_plugins_and_notify(self):
-        self.reload_plugins()
-        self._show_message("Plugins", f"Reloaded {len(self.plugins)} plugin(s)")
-    
-    def scan_plugins(self):
-        plugs = []
-        try:
-            user_dir = self.get_user_plugins_dir()
-            for fn in sorted(os.listdir(user_dir)):
-                if fn.endswith('.py'):
-                    plugs.append({'name': os.path.splitext(fn)[0], 'path': os.path.join(user_dir, fn), 'location': 'User'})
-        except Exception:
-            pass
-        return plugs
-    
     def refresh_plugins_table(self):
         # This method is used internally by the main class
         # The component will call this if needed

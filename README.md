@@ -64,6 +64,10 @@ python aurora_home.py
 
 As a package manager, Aurora requires administrative privileges to install, update, and remove system packages. This is essential for maintaining system security and integrity. The application will prompt for authentication when performing privileged operations.
 
+## Security
+
+If you discover any security vulnerabilities or have concerns about the security of NeoArch, please report them immediately to our security team at **dsanjaya712@gmail.com**. We take security seriously and will respond promptly to address any issues.
+
 ## Usage
 
 1. **Discover Packages**: Search and browse available packages from multiple repositories
@@ -74,7 +78,45 @@ As a package manager, Aurora requires administrative privileges to install, upda
 
 ## Contributing
 
-Contributions are welcome! Please ensure all changes maintain the security and stability requirements of a system package manager.
+We welcome contributions from the community! NeoArch aims to provide a secure, user-friendly package management experience for Arch Linux users.
+
+### Our Purpose & Standards
+
+**Purpose**: To create a modern, intuitive package manager that simplifies Arch Linux package management while maintaining the highest security standards.
+
+**Standards**:
+- **Security First**: All code must undergo security review. No compromises on system security.
+- **Code Quality**: Follow PEP 8 style guidelines, add comprehensive tests, and maintain clean, readable code.
+- **User Experience**: Prioritize intuitive UI/UX design and responsive performance.
+- **Compatibility**: Ensure compatibility with latest Arch Linux standards and dependencies.
+- **Documentation**: All features must be properly documented.
+
+### How to Contribute
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
+
+### Development Setup
+
+```bash
+git clone https://github.com/Sanjaya-Danushka/Aurora.git
+cd Aurora
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements_pyqt.txt
+python aurora_home.py
+```
+
+### Guidelines
+
+- Write clear, concise commit messages
+- Add tests for new features
+- Update documentation as needed
+- Follow the existing code style
+- Ensure all tests pass before submitting PR
 
 ## License
 

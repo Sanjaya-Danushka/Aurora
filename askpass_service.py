@@ -21,6 +21,17 @@ def prepare_askpass_env():
     env = os.environ.copy()
     cleanup_path = None
     
+    # Check if any GUI dialog tools are available
+    available_tools = []
+    for tool in ["kdialog", "zenity", "yad"]:
+        if shutil.which(tool):
+            available_tools.append(tool)
+    
+    # If no GUI tools available, return None to indicate failure
+    if not available_tools:
+        print("Warning: No GUI authentication tools found (kdialog, zenity, yad)")
+        return env, None
+    
     # Ensure DISPLAY is set for GUI dialogs
     if "DISPLAY" not in env:
         env["DISPLAY"] = ":0"

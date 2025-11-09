@@ -49,3 +49,29 @@ def get_missing_dependencies() -> list:
     if not get_available_aur_helpers():
         missing.append("yay or paru")
     return missing
+
+
+def get_missing_auth_tools() -> list:
+    """Get list of missing GUI authentication tools needed for AUR packages"""
+    auth_tools = ['kdialog', 'zenity', 'yad']
+    available = [tool for tool in auth_tools if cmd_exists(tool)]
+    if not available:
+        return auth_tools
+    return []
+
+
+def check_aur_authentication_support() -> tuple[bool, str]:
+    """Check if AUR authentication is properly supported
+    
+    Returns:
+        tuple: (is_supported, message)
+    """
+    missing_auth = get_missing_auth_tools()
+    if missing_auth:
+        message = (
+            "Warning: No GUI authentication tools found for AUR packages.\n"
+            f"Please install one of: {', '.join(missing_auth)}\n"
+            "Example: sudo pacman -S kdialog (or zenity/yad)"
+        )
+        return False, message
+    return True, "AUR authentication is properly configured"

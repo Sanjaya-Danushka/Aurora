@@ -805,6 +805,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
 
     def prepare_askpass_env(self):
         return askpass_service.prepare_askpass_env()
+    
+    def check_authentication_tools(self):
+        """Check if authentication tools are available and warn user if not"""
+        import sys_utils
+        is_supported, message = sys_utils.check_aur_authentication_support()
+        if not is_supported:
+            # Show warning after a short delay to ensure UI is ready
+            QTimer.singleShot(2000, lambda: self.show_message.emit("AUR Authentication Warning", message))
 
     def get_source_accent(self, source):
         m = {
@@ -4072,6 +4080,10 @@ def main():
     
     window = ArchPkgManagerUniGetUI()
     window.show()
+    
+    # Check for authentication tools after UI is shown
+    window.check_authentication_tools()
+    
     sys.exit(app.exec())
 
 if __name__ == "__main__":

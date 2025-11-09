@@ -22,7 +22,8 @@ def load_settings():
             'auto_refresh_updates_minutes': 0,
             'auto_update_enabled': False,
             'auto_update_interval_days': 7,
-            'snapshot_before_update': False
+            'snapshot_before_update': False,
+            'aur_helper': 'auto'  # auto, yay, paru, trizen, or pikaur
         }
         default.update(data if isinstance(data, dict) else {})
         return default
@@ -37,7 +38,8 @@ def load_settings():
             'auto_refresh_updates_minutes': 0,
             'auto_update_enabled': False,
             'auto_update_interval_days': 7,
-            'snapshot_before_update': False
+            'snapshot_before_update': False,
+            'aur_helper': 'auto'  # auto, yay, paru, trizen, or pikaur
         }
 
 

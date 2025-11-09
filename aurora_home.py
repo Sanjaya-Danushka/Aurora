@@ -752,7 +752,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
 
     def install_dependencies(self, missing):
         try:
-            pacman_pkgs = [p for p in missing if p != "yay"]
+            # Filter out AUR helper from pacman packages
+            pacman_pkgs = [p for p in missing if p not in ["yay", "yay or paru"]]
             if pacman_pkgs:
                 cmd = ["pacman", "-S", "--needed", "--noconfirm"] + pacman_pkgs
                 worker = CommandWorker(cmd, sudo=True)
@@ -762,15 +763,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 worker.finished.connect(lambda: done_event.set())
                 worker.run()
                 done_event.wait(timeout=1)
-            if "yay" in missing and self.cmd_exists("git"):
-                self.install_yay_helper()
+            # Install an AUR helper if none are available
+            if ("yay" in missing or "yay or paru" in missing) and self.cmd_exists("git"):
+                self.install_aur_helper()
             self.show_message.emit("Environment", "Dependency setup completed")
         except Exception as e:
             self.show_message.emit("Environment", f"Setup failed: {str(e)}")
 
-    def install_yay_helper(self):
+    def install_aur_helper(self):
+        """Install yay as the default AUR helper if none are available."""
         tmpdir = tempfile.mkdtemp(prefix="neoarch-yay-")
         try:
+            self.log("Installing yay AUR helper...")
             clone = subprocess.run(["git", "clone", "https://aur.archlinux.org/yay-bin.git", tmpdir], capture_output=True, text=True, timeout=120)
             if clone.returncode != 0:
                 self.log(f"Error: {clone.stderr}")
@@ -3443,15 +3447,15 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         grid = QGridLayout(box)
         cb_auto = QCheckBox("Auto check updates on launch")
         cb_auto.setChecked(bool(self.settings.get('auto_check_updates')))
-        cb_auto.toggled.connect(lambda v: self._update_setting('auto_check_updates', v))
+        cb_auto.toggled.connect(lambda v: self.update_setting('auto_check_updates', v))
         grid.addWidget(cb_auto, 0, 0, 1, 2)
         cb_local = QCheckBox("Include Local source (custom scripts)")
         cb_local.setChecked(bool(self.settings.get('include_local_source')))
-        cb_local.toggled.connect(lambda v: self._update_setting('include_local_source', v))
+        cb_local.toggled.connect(lambda v: self.update_setting('include_local_source', v))
         grid.addWidget(cb_local, 1, 0, 1, 2)
         cb_npm = QCheckBox("Use npm user mode for global installs")
         cb_npm.setChecked(bool(self.settings.get('npm_user_mode')))
-        cb_npm.toggled.connect(lambda v: self._update_setting('npm_user_mode', v))
+        cb_npm.toggled.connect(lambda v: self.update_setting('npm_user_mode', v))
         grid.addWidget(cb_npm, 2, 0, 1, 2)
         layout.addWidget(box)
         
@@ -3459,7 +3463,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         pgrid = QGridLayout(path_box)
         cb_bsave = QCheckBox("Autosave bundle to file")
         cb_bsave.setChecked(bool(self.settings.get('bundle_autosave', True)))
-        cb_bsave.toggled.connect(lambda v: self._update_setting('bundle_autosave', v))
+        cb_bsave.toggled.connect(lambda v: self.update_setting('bundle_autosave', v))
         pgrid.addWidget(cb_bsave, 0, 0, 1, 3)
         from_path = self.settings.get('bundle_autosave_path') or os.path.join(os.path.expanduser('~'), '.config', 'aurora', 'bundles', 'default.json')
         try:
@@ -3472,7 +3476,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             path, _ = QFileDialog.getSaveFileName(self, "Select Bundle Autosave Path", from_path, "Bundle JSON (*.json)")
             if path:
                 path_edit.setText(path)
-                self._update_setting('bundle_autosave_path', path)
+                self.update_setting('bundle_autosave_path', path)
         browse_btn.clicked.connect(on_browse)
         pgrid.addWidget(QLabel("Autosave path:"), 1, 0)
         pgrid.addWidget(path_edit, 1, 1)
@@ -3484,14 +3488,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         auto_grid = QGridLayout(auto_update_box)
         cb_auto_update = QCheckBox("Enable automatic updates")
         cb_auto_update.setChecked(bool(self.settings.get('auto_update_enabled')))
-        cb_auto_update.toggled.connect(lambda v: self._update_setting('auto_update_enabled', v))
+        cb_auto_update.toggled.connect(lambda v: self.update_setting('auto_update_enabled', v))
         auto_grid.addWidget(cb_auto_update, 0, 0, 1, 2)
         
         auto_grid.addWidget(QLabel("Update interval (hours):"), 1, 0)
         interval_spin = QSpinBox()
         interval_spin.setRange(1, 168)  # 1 hour to 1 week
         interval_spin.setValue(int(self.settings.get('auto_update_interval_hours', 24)))
-        interval_spin.valueChanged.connect(lambda v: self._update_setting('auto_update_interval_hours', v))
+        interval_spin.valueChanged.connect(lambda v: self.update_setting('auto_update_interval_hours', v))
         auto_grid.addWidget(interval_spin, 1, 1)
         
         layout.addWidget(auto_update_box)
@@ -3501,7 +3505,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         snap_grid = QGridLayout(snapshot_box)
         cb_snapshot = QCheckBox("Create snapshot before updates")
         cb_snapshot.setChecked(bool(self.settings.get('snapshot_before_update')))
-        cb_snapshot.toggled.connect(lambda v: self._update_setting('snapshot_before_update', v))
+        cb_snapshot.toggled.connect(lambda v: self.update_setting('snapshot_before_update', v))
         snap_grid.addWidget(cb_snapshot, 0, 0, 1, 2)
         
         snap_btns = QHBoxLayout()
@@ -3531,7 +3535,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         btns.addWidget(btn_import)
         btns.addStretch()
     
-    def _update_setting(self, key, value):
+    def update_setting(self, key, value):
+        """Public method for updating a setting value."""
         self.settings[key] = value
         self.save_settings()
     
@@ -3828,12 +3833,14 @@ def on_tick(app):
                 else:
                     app.log(f"Auto-update: Pacman update failed: {result.stderr}")
                     app.show_message.emit("Auto Update", f"Pacman update failed: {result.stderr}")
-            if app.cmd_exists("yay"):
+            # Update AUR packages using any available AUR helper
+            aur_helper = sys_utils.get_aur_helper(app.settings.get('aur_helper', 'auto') if app.settings.get('aur_helper', 'auto') != 'auto' else None)
+            if aur_helper:
                 try:
                     env, _ = app.prepare_askpass_env()
-                    result = subprocess.run(["yay", "-Syu", "--noconfirm", "--sudoflags", "-A"], capture_output=True, text=True, timeout=1800, env=env)
+                    result = subprocess.run([aur_helper, "-Syu", "--noconfirm", "--sudoflags", "-A"], capture_output=True, text=True, timeout=1800, env=env)
                     if result.returncode == 0:
-                        app.log("Auto-update: AUR updates completed successfully")
+                        app.log(f"Auto-update: AUR updates completed successfully using {aur_helper}")
                         update_success = True
                     else:
                         app.log(f"Auto-update: AUR update failed: {result.stderr}")
@@ -4041,21 +4048,6 @@ def on_tick(app):
                             break
         except Exception as e:
             self._show_message("Remove Plugins", f"Error: {e}")
-    
-    def reload_plugins_and_notify(self):
-        self.reload_plugins()
-        self._show_message("Plugins", f"Reloaded {len(self.plugins)} plugin(s)")
-    
-    def scan_plugins(self):
-        plugs = []
-        try:
-            user_dir = self.get_user_plugins_dir()
-            for fn in sorted(os.listdir(user_dir)):
-                if fn.endswith('.py'):
-                    plugs.append({'name': os.path.splitext(fn)[0], 'path': os.path.join(user_dir, fn), 'location': 'User'})
-        except Exception:
-            pass
-        return plugs
     
     def refresh_plugins_table(self):
         # This method is used internally by the main class

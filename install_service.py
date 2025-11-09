@@ -4,9 +4,16 @@ import subprocess
 import time
 from threading import Thread, Event
 from workers import CommandWorker
+import sys_utils
 
 
 def install_packages(app, packages_by_source: dict):
+    """Install packages from multiple sources.
+    
+    Note: This function has high cyclomatic complexity (76) due to handling
+    multiple package sources (pacman, AUR, Flatpak, npm, pip, cargo, snap).
+    TODO: Consider refactoring into separate handler functions per source.
+    """
     def install():
         app.install_cancel_event = Event()
         app.installation_progress.emit("start", True)
@@ -71,8 +78,16 @@ def install_packages(app, packages_by_source: dict):
                 if source == 'pacman':
                     cmd = ["pacman", "-S", "--noconfirm"] + packages
                 elif source == 'AUR':
+                    # Get the configured AUR helper
+                    preferred = app.settings.get('aur_helper', 'auto')
+                    aur_helper = sys_utils.get_aur_helper(None if preferred == 'auto' else preferred)
+                    if not aur_helper:
+                        app.log_signal.emit("Error: No AUR helper available. Install yay, paru, trizen, or pikaur.")
+                        success = False
+                        break
+                    
                     cmd = [
-                        "yay",
+                        aur_helper,
                         "-S", "--noconfirm",
                         "--sudoflags", "-A",
                         "--answerclean", "None",

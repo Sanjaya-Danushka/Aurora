@@ -86,16 +86,8 @@ def install_packages(app, packages_by_source: dict):
                         success = False
                         break
                     
-                    # Configure AUR helper with proper authentication
-                    if aur_helper in ['paru', 'yay']:
-                        cmd = [
-                            aur_helper,
-                            "-S", "--noconfirm",
-                            "--sudoflags", "-A"
-                        ] + packages
-                    else:
-                        # For other AUR helpers, use basic flags
-                        cmd = [aur_helper, "-S", "--noconfirm"] + packages
+                    # Configure AUR helper - use pkexec for proper GUI authentication
+                    cmd = [aur_helper, "-S", "--noconfirm"] + packages
                 elif source == 'Flatpak':
                     try:
                         app.ensure_flathub_user_remote()
@@ -129,56 +121,11 @@ def install_packages(app, packages_by_source: dict):
                     app.installation_progress.emit("cancelled", False)
                     return
 
-                cleanup_path = None
+                # For AUR, we'll use pkexec to integrate with the system's polkit agent
                 if source == 'AUR':
-                    env, cleanup_path = app.prepare_askpass_env()
-                    if cleanup_path is None:
-                        # No authentication tools available
-                        app.log_signal.emit("Error: No GUI authentication tools found!")
-                        app.log_signal.emit("AUR packages require password authentication, but no dialog tools are available.")
-                        app.log_signal.emit("Please install one of the following:")
-                        app.log_signal.emit("  • kdialog (KDE)")
-                        app.log_signal.emit("  • zenity (GNOME)")
-                        app.log_signal.emit("  • yad (Universal)")
-                        app.log_signal.emit("")
-                        app.log_signal.emit("Install command examples:")
-                        app.log_signal.emit("  sudo pacman -S kdialog    # For KDE users")
-                        app.log_signal.emit("  sudo pacman -S zenity     # For GNOME users")
-                        app.log_signal.emit("  sudo pacman -S yad        # Universal option")
-                        success = False
-                        break
-                    try:
-                        title = "NeoArch - Confirm AUR Install"
-                        if len(packages) <= 3:
-                            pkg_list = ", ".join(packages)
-                        else:
-                            pkg_list = ", ".join(packages[:3]) + f" and {len(packages)-3} more"
-                        text = (
-                            "AUR packages are community-maintained and may be unsafe.\n"
-                            f"Packages: {pkg_list}\n\n"
-                            "Enter your password to proceed."
-                        )
-                        env["NEOARCH_ASKPASS_TITLE"] = title
-                        env["NEOARCH_ASKPASS_TEXT"] = text
-                        env["NEOARCH_ASKPASS_ICON"] = "dialog-password"
-                        
-                        # Ensure critical environment variables are set
-                        if "DISPLAY" not in env and "DISPLAY" in os.environ:
-                            env["DISPLAY"] = os.environ["DISPLAY"]
-                        if "WAYLAND_DISPLAY" not in env and "WAYLAND_DISPLAY" in os.environ:
-                            env["WAYLAND_DISPLAY"] = os.environ["WAYLAND_DISPLAY"]
-                        if "XDG_SESSION_TYPE" not in env and "XDG_SESSION_TYPE" in os.environ:
-                            env["XDG_SESSION_TYPE"] = os.environ["XDG_SESSION_TYPE"]
-                        
-                        # Add polkit agent environment for better authentication
-                        if "POLKIT_AGENT_INFO" in os.environ:
-                            env["POLKIT_AGENT_INFO"] = os.environ["POLKIT_AGENT_INFO"]
-                            
-                        app.log_signal.emit(f"AUR askpass setup: SUDO_ASKPASS={env.get('SUDO_ASKPASS', 'NOT_SET')}")
-                        app.log_signal.emit(f"Environment: DISPLAY={env.get('DISPLAY')}, XDG_SESSION_TYPE={env.get('XDG_SESSION_TYPE')}")
-                        app.log_signal.emit(f"AUR command: {' '.join(cmd)}")
-                    except Exception as e:
-                        app.log_signal.emit(f"Warning: AUR askpass setup failed: {e}")
+                    app.log_signal.emit(f"AUR command: pkexec {' '.join(cmd)}")
+                    # pkexec will handle authentication via the running polkit agent
+                    cmd = ["pkexec"] + cmd
                 
                 # For Flatpak with sudo, ensure proper authentication
                 if source == 'Flatpak' and force_sudo:
@@ -310,7 +257,8 @@ def install_packages(app, packages_by_source: dict):
                                     error_text += "For example, change 'tar -xzf file.tar.gz' to 'tar -xzf file.tar.gz --no-same-owner'"
                                 worker.error.emit(error_text)
                 finally:
-                    if source == 'AUR' and cleanup_path and os.path.exists(cleanup_path):
+                    # Cleanup askpass script if used for Flatpak
+                    if source == 'Flatpak' and 'cleanup_path' in locals() and cleanup_path and os.path.exists(cleanup_path):
                         try:
                             os.remove(cleanup_path)
                         except Exception:

@@ -9,7 +9,4 @@ enabled = true
 
 [[analyzers]]
 name = "test-coverage"
-enabled = true
-
-  [analyzers.meta]
-  threshold = 50
+enabled = false

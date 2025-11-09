@@ -101,9 +101,9 @@ def install_packages(app, packages_by_source: dict):
                         pass
                     # In sudo mode install system-wide; otherwise user-scoped
                     if force_sudo:
-                        cmd = ["flatpak", "install", "-y", "flathub"] + packages
+                        cmd = ["flatpak", "install", "-y", "--noninteractive", "flathub"] + packages
                     else:
-                        cmd = ["flatpak", "--user", "install", "-y", "flathub"] + packages
+                        cmd = ["flatpak", "--user", "install", "-y", "--noninteractive", "flathub"] + packages
                 elif source == 'npm':
                     if not force_sudo:
                         try:
@@ -144,8 +144,30 @@ def install_packages(app, packages_by_source: dict):
                         env["NEOARCH_ASKPASS_TITLE"] = title
                         env["NEOARCH_ASKPASS_TEXT"] = text
                         env["NEOARCH_ASKPASS_ICON"] = "dialog-password"
-                    except Exception:
-                        pass
+                        
+                        # Ensure critical environment variables are set
+                        if "DISPLAY" not in env and "DISPLAY" in os.environ:
+                            env["DISPLAY"] = os.environ["DISPLAY"]
+                        if "WAYLAND_DISPLAY" not in env and "WAYLAND_DISPLAY" in os.environ:
+                            env["WAYLAND_DISPLAY"] = os.environ["WAYLAND_DISPLAY"]
+                        if "XDG_SESSION_TYPE" not in env and "XDG_SESSION_TYPE" in os.environ:
+                            env["XDG_SESSION_TYPE"] = os.environ["XDG_SESSION_TYPE"]
+                        
+                        # Add polkit agent environment for better authentication
+                        if "POLKIT_AGENT_INFO" in os.environ:
+                            env["POLKIT_AGENT_INFO"] = os.environ["POLKIT_AGENT_INFO"]
+                            
+                        app.log_signal.emit(f"AUR askpass setup: SUDO_ASKPASS={env.get('SUDO_ASKPASS', 'NOT_SET')}")
+                        app.log_signal.emit(f"Environment: DISPLAY={env.get('DISPLAY')}, XDG_SESSION_TYPE={env.get('XDG_SESSION_TYPE')}")
+                    except Exception as e:
+                        app.log_signal.emit(f"Warning: AUR askpass setup failed: {e}")
+                
+                # For Flatpak with sudo, ensure proper authentication
+                if source == 'Flatpak' and force_sudo:
+                    # Flatpak system-wide installation needs polkit authentication
+                    if not env.get('SUDO_ASKPASS'):
+                        env, cleanup_path = app.prepare_askpass_env()
+                
                 worker = CommandWorker(cmd, sudo=(source == 'pacman'), env=env)
                 worker.output.connect(lambda msg: app.log_signal.emit(msg))
                 worker.error.connect(lambda msg: app.log_signal.emit(msg))

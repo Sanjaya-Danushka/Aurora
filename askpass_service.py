@@ -32,33 +32,45 @@ title=${NEOARCH_ASKPASS_TITLE:-"NeoArch - AUR Install"}
 text=${NEOARCH_ASKPASS_TEXT:-"AUR packages are community-maintained and may be unsafe.\nEnter your password to proceed."}
 icon=${NEOARCH_ASKPASS_ICON:-"dialog-password"}
 
+# Debug logging
+echo "NeoArch askpass called: $title" >> /tmp/neoarch-askpass.log
+
 # Ensure DISPLAY is set
 export DISPLAY="${DISPLAY:-:0}"
 
 # Try different dialog tools, exit immediately on cancellation
 if command -v kdialog >/dev/null 2>&1; then
+  echo "Using kdialog for password prompt" >> /tmp/neoarch-askpass.log
   result=$(kdialog --title "$title" --icon "$icon" --password "$text" 2>/dev/null)
   exit_code=$?
 elif command -v zenity >/dev/null 2>&1; then
+  echo "Using zenity for password prompt" >> /tmp/neoarch-askpass.log
   result=$(zenity --password --title="$title" --text="$text" --window-icon="$icon" 2>/dev/null)
   exit_code=$?
 elif command -v yad >/dev/null 2>&1; then
+  echo "Using yad for password prompt" >> /tmp/neoarch-askpass.log
   result=$(yad --title="$title" --text="$text" --entry --hide-text --window-icon="$icon" 2>/dev/null)
   exit_code=$?
 else
   # Fallback to terminal-based password prompt if no GUI available
+  echo "Using terminal fallback for password prompt" >> /tmp/neoarch-askpass.log
   echo "$text" >&2
   read -s -p "Password: " result
   echo >&2
   exit_code=$?
 fi
 
+# Log result
+echo "Password prompt result: exit_code=$exit_code, has_result=$([ -n "$result" ] && echo yes || echo no)" >> /tmp/neoarch-askpass.log
+
 # If cancelled or failed, exit with error code
 if [ $exit_code -ne 0 ] || [ -z "$result" ]; then
+  echo "Password prompt cancelled or failed" >> /tmp/neoarch-askpass.log
   exit 1
 fi
 
 # Output the password and exit successfully
+echo "Password prompt successful" >> /tmp/neoarch-askpass.log
 echo "$result"
 exit 0
 """

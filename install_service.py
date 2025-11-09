@@ -143,10 +143,21 @@ def install_packages(app, packages_by_source: dict):
                     # Use pkexec for pacman to ensure GUI authentication
                     if source == 'pacman':
                         exec_cmd = ["pkexec"] + exec_cmd
+                        app.log_signal.emit(f"Pacman command with pkexec: {' '.join(exec_cmd)}")
                     elif force_sudo and source in ('Flatpak', 'npm'):
                         from workers import get_auth_command
                         auth_cmd = get_auth_command(worker.env)
                         exec_cmd = auth_cmd + exec_cmd
+                    
+                    # Ensure DISPLAY and other GUI environment variables are set for pkexec
+                    if source in ('pacman', 'AUR'):
+                        if 'DISPLAY' not in worker.env and 'DISPLAY' in os.environ:
+                            worker.env['DISPLAY'] = os.environ['DISPLAY']
+                        if 'XAUTHORITY' not in worker.env and 'XAUTHORITY' in os.environ:
+                            worker.env['XAUTHORITY'] = os.environ['XAUTHORITY']
+                        if 'WAYLAND_DISPLAY' not in worker.env and 'WAYLAND_DISPLAY' in os.environ:
+                            worker.env['WAYLAND_DISPLAY'] = os.environ['WAYLAND_DISPLAY']
+                    
                     process = subprocess.Popen(
                         exec_cmd,
                         stdout=subprocess.PIPE,

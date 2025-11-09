@@ -71,7 +71,8 @@ class DockerManager(QObject):
                     docker_icon_label.setPixmap(pixmap)
             else:
                 docker_icon_label.setText("🐳")
-        except:
+        except (OSError, IOError, ValueError) as e:
+            # Handle file loading or parsing errors
             docker_icon_label.setText("🐳")
 
         install_docker_layout.addWidget(docker_icon_label)

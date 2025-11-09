@@ -372,7 +372,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             else:
                 logo_label.setText("🖥️")
                 logo_label.setStyleSheet("font-size: 24px; color: white;")
-        except:
+        except (OSError, IOError, ValueError) as e:
+            # Handle file loading or parsing errors
+            self.log(f"Error loading logo: {e}")
             logo_label.setText("🖥️")
             logo_label.setStyleSheet("font-size: 24px; color: white;")
         
@@ -4018,8 +4020,9 @@ def on_tick(app):
                             if hasattr(widget, 'refresh_plugins_table'):
                                 widget.refresh_plugins_table()
                                 break
-            except:
-                pass
+            except (AttributeError, RuntimeError) as e:
+                # Handle UI widget access errors gracefully
+                self.log(f"Plugin refresh warning: {e}")
         except Exception as e:
             self._show_message("Install Plugin", f"Failed: {e}")
     

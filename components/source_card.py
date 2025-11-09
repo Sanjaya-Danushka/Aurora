@@ -106,7 +106,8 @@ class SourceCard(QWidget):
             from PyQt6.QtGui import QColor as _QColor
             shadow.setColor(_QColor(0, 0, 0, 80))
             self.setGraphicsEffect(shadow)
-        except:
+        except (ImportError, AttributeError) as e:
+            # Handle missing graphics effect support gracefully
             pass
 
         # Apply styling

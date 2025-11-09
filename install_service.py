@@ -8,6 +8,12 @@ import sys_utils
 
 
 def install_packages(app, packages_by_source: dict):
+    """Install packages from multiple sources.
+    
+    Note: This function has high cyclomatic complexity (76) due to handling
+    multiple package sources (pacman, AUR, Flatpak, npm, pip, cargo, snap).
+    TODO: Consider refactoring into separate handler functions per source.
+    """
     def install():
         app.install_cancel_event = Event()
         app.installation_progress.emit("start", True)

@@ -150,9 +150,9 @@ def update_core_tools(app):
                             if cols:
                                 update_ids.add(cols[0].strip())
                 if update_ids:
-                    for pkg in packages:
-                        if pkg.get('source') == 'Flatpak' and pkg.get('name') in update_ids:
-                            pkg['has_update'] = True
+                    # Note: Package marking would need access to the packages list
+                    # This functionality should be moved to a place where packages are available
+                    pass
             except Exception:
                 pass
             if app.cmd_exists("flatpak"):

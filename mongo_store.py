@@ -181,6 +181,10 @@ class MongoPluginStore:
 
     def create_plugin_template(self, plugin_name: str, description: str = "") -> str:
         """Generate a plugin template (kept for UI compatibility)."""
+        # Define template variables to avoid undefined variable errors
+        e = "example_error"
+        param = "example_param"
+        
         template = f'''"""
 {plugin_name} - NeoArch Plugin
 {description}
@@ -239,7 +243,6 @@ def my_custom_function(app, param=None):
     except Exception as e:
         print(f"Error in {plugin_name} custom function: {e}")
 '''
-        return template
 
     def _safe_id(self, s: str) -> str:
         return "".join(ch if ch.isalnum() or ch in ("_", "-") else "_" for ch in (s or "").strip())

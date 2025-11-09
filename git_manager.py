@@ -80,7 +80,7 @@ class GitManager(QObject):
                     git_icon_label.setPixmap(pixmap)
             else:
                 git_icon_label.setText("📦")
-        except (OSError, IOError, ValueError) as e:
+        except OSError:
             # Handle file loading or parsing errors
             git_icon_label.setText("📦")
 

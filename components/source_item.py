@@ -67,7 +67,7 @@ class SourceItem(QWidget):
             c.setAlpha(80)
             shadow.setColor(c)
             self.icon_container.setGraphicsEffect(shadow)
-        except (ImportError, AttributeError) as e:
+        except ImportError:
             # Handle missing graphics effect support gracefully
             pass
 
@@ -100,7 +100,7 @@ class SourceItem(QWidget):
             else:
                 self.icon_label.setText("📦")
                 self.icon_label.setStyleSheet("font-size: 16px; color: white;")
-        except (OSError, IOError, ValueError) as e:
+        except OSError:
             # Handle file loading or parsing errors with emoji fallback
             emoji_map = {
                 "pacman": "📦",

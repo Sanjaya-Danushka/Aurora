@@ -47,7 +47,7 @@ class Networking:
                                 'description': pkg.get('Description', ''),
                                 'tags': ', '.join(pkg.get('Keywords', []))
                             })
-                except (KeyError, TypeError, ValueError) as e:
+                except (KeyError, TypeError):
                     # Handle malformed API response data gracefully
                     pass
             callback(packages)

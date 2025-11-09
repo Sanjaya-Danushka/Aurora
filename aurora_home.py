@@ -372,9 +372,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             else:
                 logo_label.setText("🖥️")
                 logo_label.setStyleSheet("font-size: 24px; color: white;")
-        except (OSError, IOError, ValueError) as e:
+        except OSError:
             # Handle file loading or parsing errors
-            self.log(f"Error loading logo: {e}")
+            self.log(f"Error loading logo")
             logo_label.setText("🖥️")
             logo_label.setStyleSheet("font-size: 24px; color: white;")
         
@@ -4020,9 +4020,9 @@ def on_tick(app):
                             if hasattr(widget, 'refresh_plugins_table'):
                                 widget.refresh_plugins_table()
                                 break
-            except (AttributeError, RuntimeError) as e:
+            except Exception:
                 # Handle UI widget access errors gracefully
-                self.log(f"Plugin refresh warning: {e}")
+                pass
         except Exception as e:
             self._show_message("Install Plugin", f"Failed: {e}")
     
@@ -4045,12 +4045,6 @@ def on_tick(app):
     def reload_plugins_and_notify(self):
         self.reload_plugins()
         self._show_message("Plugins", f"Reloaded {len(self.plugins)} plugin(s)")
-    
-    def install_default_plugins(self):
-        self.ensure_default_plugins(force_enable=True)
-        self.refresh_plugins_table()
-        self.reload_plugins()
-        self._show_message("Plugins", "Default plugins installed and enabled")
     
     def scan_plugins(self):
         plugs = []

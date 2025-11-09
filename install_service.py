@@ -133,14 +133,17 @@ def install_packages(app, packages_by_source: dict):
                     if not env.get('SUDO_ASKPASS'):
                         env, cleanup_path = app.prepare_askpass_env()
                 
-                worker = CommandWorker(cmd, sudo=(source == 'pacman'), env=env)
+                worker = CommandWorker(cmd, sudo=False, env=env)
                 worker.output.connect(lambda msg: app.log_signal.emit(msg))
                 worker.error.connect(lambda msg: app.log_signal.emit(msg))
                 worker.output.connect(parse_output_line)
 
                 try:
                     exec_cmd = worker.command
-                    if source == 'pacman' or (force_sudo and source in ('Flatpak', 'npm')):
+                    # Use pkexec for pacman to ensure GUI authentication
+                    if source == 'pacman':
+                        exec_cmd = ["pkexec"] + exec_cmd
+                    elif force_sudo and source in ('Flatpak', 'npm'):
                         from workers import get_auth_command
                         auth_cmd = get_auth_command(worker.env)
                         exec_cmd = auth_cmd + exec_cmd

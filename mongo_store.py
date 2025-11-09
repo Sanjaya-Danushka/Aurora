@@ -244,5 +244,7 @@ def my_custom_function(app, param=None):
         print(f"Error in {plugin_name} custom function: {e}")
 '''
 
+        return template
+
     def _safe_id(self, s: str) -> str:
         return "".join(ch if ch.isalnum() or ch in ("_", "-") else "_" for ch in (s or "").strip())

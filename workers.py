@@ -3,6 +3,44 @@ import subprocess
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
+def get_auth_command(env=None):
+    """Get the appropriate authentication command based on desktop environment"""
+    if env is None:
+        env = os.environ
+    
+    desktop = env.get('XDG_CURRENT_DESKTOP', '').lower()
+    session_type = env.get('XDG_SESSION_TYPE', '').lower()
+    
+    # Check if polkit agent is running
+    try:
+        polkit_agent_running = subprocess.run(['pgrep', '-f', 'polkit.*agent'], capture_output=True).returncode == 0
+    except Exception:
+        polkit_agent_running = False
+    
+    # For Hyprland and other minimal Wayland compositors
+    if 'hyprland' in desktop or (session_type == 'wayland' and not polkit_agent_running):
+        # Prefer sudo with askpass for Hyprland
+        if 'SUDO_ASKPASS' in env:
+            return ["sudo", "-A"]
+        else:
+            return ["pkexec"]
+    
+    # For GNOME, KDE, XFCE with polkit agents
+    elif polkit_agent_running:
+        if desktop in ['gnome', 'kde', 'xfce']:
+            return ["pkexec"]
+        else:
+            return ["pkexec", "--disable-internal-agent"]
+    
+    # Fallback: try sudo with askpass if available
+    elif 'SUDO_ASKPASS' in env:
+        return ["sudo", "-A"]
+    
+    # Final fallback
+    else:
+        return ["pkexec"]
+
+
 class PackageLoaderWorker(QObject):
     packages_loaded = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
@@ -47,7 +85,8 @@ class CommandWorker(QObject):
     def run(self):
         try:
             if self.sudo:
-                self.command = ["pkexec", "--disable-internal-agent"] + self.command
+                auth_cmd = get_auth_command(self.env)
+                self.command = auth_cmd + self.command
             
             process = subprocess.Popen(
                 self.command,

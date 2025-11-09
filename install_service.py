@@ -154,7 +154,9 @@ def install_packages(app, packages_by_source: dict):
                 try:
                     exec_cmd = worker.command
                     if source == 'pacman' or (force_sudo and source in ('Flatpak', 'npm')):
-                        exec_cmd = ["pkexec", "--disable-internal-agent"] + exec_cmd
+                        from workers import get_auth_command
+                        auth_cmd = get_auth_command(worker.env)
+                        exec_cmd = auth_cmd + exec_cmd
                     process = subprocess.Popen(
                         exec_cmd,
                         stdout=subprocess.PIPE,
@@ -208,7 +210,9 @@ def install_packages(app, packages_by_source: dict):
                                 if source == 'npm' and ("EACCES" in error_output or "permission denied" in error_output.lower()):
                                     try:
                                         app.log_signal.emit("Permission denied installing npm package(s). Retrying with system privileges (polkit)...")
-                                        exec_cmd2 = ["pkexec", "--disable-internal-agent", "npm", "install", "-g"] + packages
+                                        from workers import get_auth_command
+                                        auth_cmd2 = get_auth_command(env2)
+                                        exec_cmd2 = auth_cmd2 + ["npm", "install", "-g"] + packages
                                         env2 = os.environ.copy()
                                         process2 = subprocess.Popen(
                                             exec_cmd2,

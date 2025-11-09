@@ -752,7 +752,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
 
     def install_dependencies(self, missing):
         try:
-            pacman_pkgs = [p for p in missing if p != "yay"]
+            # Filter out AUR helper from pacman packages
+            pacman_pkgs = [p for p in missing if p not in ["yay", "yay or paru"]]
             if pacman_pkgs:
                 cmd = ["pacman", "-S", "--needed", "--noconfirm"] + pacman_pkgs
                 worker = CommandWorker(cmd, sudo=True)
@@ -762,15 +763,18 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 worker.finished.connect(lambda: done_event.set())
                 worker.run()
                 done_event.wait(timeout=1)
-            if "yay" in missing and self.cmd_exists("git"):
-                self.install_yay_helper()
+            # Install an AUR helper if none are available
+            if ("yay" in missing or "yay or paru" in missing) and self.cmd_exists("git"):
+                self.install_aur_helper()
             self.show_message.emit("Environment", "Dependency setup completed")
         except Exception as e:
             self.show_message.emit("Environment", f"Setup failed: {str(e)}")
 
-    def install_yay_helper(self):
+    def install_aur_helper(self):
+        """Install yay as the default AUR helper if none are available."""
         tmpdir = tempfile.mkdtemp(prefix="neoarch-yay-")
         try:
+            self.log("Installing yay AUR helper...")
             clone = subprocess.run(["git", "clone", "https://aur.archlinux.org/yay-bin.git", tmpdir], capture_output=True, text=True, timeout=120)
             if clone.returncode != 0:
                 self.log(f"Error: {clone.stderr}")
@@ -3828,12 +3832,14 @@ def on_tick(app):
                 else:
                     app.log(f"Auto-update: Pacman update failed: {result.stderr}")
                     app.show_message.emit("Auto Update", f"Pacman update failed: {result.stderr}")
-            if app.cmd_exists("yay"):
+            # Update AUR packages using any available AUR helper
+            aur_helper = sys_utils.get_aur_helper(app.settings.get('aur_helper', 'auto') if app.settings.get('aur_helper', 'auto') != 'auto' else None)
+            if aur_helper:
                 try:
                     env, _ = app.prepare_askpass_env()
-                    result = subprocess.run(["yay", "-Syu", "--noconfirm", "--sudoflags", "-A"], capture_output=True, text=True, timeout=1800, env=env)
+                    result = subprocess.run([aur_helper, "-Syu", "--noconfirm", "--sudoflags", "-A"], capture_output=True, text=True, timeout=1800, env=env)
                     if result.returncode == 0:
-                        app.log("Auto-update: AUR updates completed successfully")
+                        app.log(f"Auto-update: AUR updates completed successfully using {aur_helper}")
                         update_success = True
                     else:
                         app.log(f"Auto-update: AUR update failed: {result.stderr}")

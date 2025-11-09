@@ -4,6 +4,7 @@ import subprocess
 from threading import Thread
 from PyQt6.QtCore import QTimer
 from workers import CommandWorker
+import sys_utils
 
 
 def update_packages(app, packages_by_source: dict):
@@ -17,8 +18,15 @@ def update_packages(app, packages_by_source: dict):
                     worker.error.connect(app.log)
                     worker.run()
                 elif source == 'AUR':
+                    # Get the configured AUR helper
+                    preferred = app.settings.get('aur_helper', 'auto')
+                    aur_helper = sys_utils.get_aur_helper(None if preferred == 'auto' else preferred)
+                    if not aur_helper:
+                        app.log("Error: No AUR helper available. Install yay, paru, trizen, or pikaur.")
+                        continue
+                    
                     env, _ = app.prepare_askpass_env()
-                    cmd = ["yay", "-S", "--noconfirm"] + pkgs
+                    cmd = [aur_helper, "-S", "--noconfirm"] + pkgs
                     worker = CommandWorker(cmd, sudo=False, env=env)
                     worker.output.connect(app.log)
                     worker.error.connect(app.log)
@@ -206,9 +214,14 @@ def _update_npm(app):
 
 def _update_aur(app):
     """Update AUR packages."""
-    if app.cmd_exists("yay"):
+    # Get the configured AUR helper
+    preferred = app.settings.get('aur_helper', 'auto')
+    aur_helper = sys_utils.get_aur_helper(None if preferred == 'auto' else preferred)
+    if aur_helper:
         env, _ = app.prepare_askpass_env()
-        w4 = CommandWorker(["yay", "-Syu", "--noconfirm", "--sudoflags", "-A"], sudo=False, env=env)
+        w4 = CommandWorker([aur_helper, "-Syu", "--noconfirm", "--sudoflags", "-A"], sudo=False, env=env)
         w4.output.connect(app.log)
         w4.error.connect(app.log)
         w4.run()
+    else:
+        app.log("No AUR helper available. Install yay, paru, trizen, or pikaur.")

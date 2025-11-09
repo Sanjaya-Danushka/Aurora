@@ -10,6 +10,7 @@ import os
 import json
 import sys
 from pathlib import Path
+import sys_utils
 
 class ScheduledUpdater:
     def __init__(self):
@@ -155,12 +156,13 @@ class ScheduledUpdater:
             else:
                 print(f"Pacman update failed: {result.stderr}")
 
-        # Update AUR packages if yay is available
-        if self.cmd_exists("yay"):
-            print("Updating AUR packages...")
+        # Update AUR packages if an AUR helper is available
+        aur_helper = sys_utils.get_aur_helper()
+        if aur_helper:
+            print(f"Updating AUR packages using {aur_helper}...")
             try:
                 env = os.environ.copy()
-                result = subprocess.run(["yay", "-Syu", "--noconfirm", "--sudoflags", "-A"],
+                result = subprocess.run([aur_helper, "-Syu", "--noconfirm", "--sudoflags", "-A"],
                                       capture_output=True, text=True, timeout=1800, env=env)
                 if result.returncode == 0:
                     print("AUR updates completed successfully")

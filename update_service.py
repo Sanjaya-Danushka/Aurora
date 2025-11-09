@@ -170,7 +170,7 @@ def _update_flatpak(app):
         update_ids = set()
         for scope in ([], ["--user"], ["--system"]):
             cmdu = ["flatpak"] + scope + ["list", "--app", "--updates", "--columns=application,version"]
-            fu = subprocess.run(cmdu, capture_output=True, text=True, timeout=60)
+            fu = subprocess.run(cmdu, capture_output=True, text=True, timeout=60, check=False)
             if fu.returncode == 0 and fu.stdout:
                 for ln in [x for x in fu.stdout.strip().split('\n') if x.strip()]:
                     cols = ln.split('\t')

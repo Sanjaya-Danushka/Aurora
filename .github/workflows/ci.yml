@@ -22,8 +22,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          libegl1-mesa \
-          libgl1-mesa-glx \
           libglib2.0-0 \
           libgtk-3-0 \
           libx11-xcb1 \
@@ -41,18 +39,19 @@ jobs:
           libfontconfig1 \
           libfreetype6 \
           libxss1 \
-          libasound2 \
-          libpulse0
+          libasound2t64 \
+          libpulse0 \
+          xvfb
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements_pyqt.txt
+        pip install PyQt6 PyQt6-Qt6
 
     - name: Run tests
       run: |
-        # Add test commands here when tests are implemented
-        python -c "import aurora_home; print('Import test passed')"
+        # Run tests in headless mode
+        xvfb-run -a python -c "import aurora_home; print('Import test passed')"
 
     - name: Lint with flake8
       run: |

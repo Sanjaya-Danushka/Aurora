@@ -19,12 +19,12 @@ class TestAURHelperDetection:
     def test_cmd_exists_with_available_command(self):
         """Test cmd_exists returns True for available commands"""
         # Test with a command that should exist on most systems
-        assert sys_utils.cmd_exists('ls') == True
+        assert sys_utils.cmd_exists('ls') is True
 
     @pytest.mark.unit
     def test_cmd_exists_with_unavailable_command(self):
         """Test cmd_exists returns False for unavailable commands"""
-        assert sys_utils.cmd_exists('nonexistent_command_xyz123') == False
+        assert sys_utils.cmd_exists('nonexistent_command_xyz123') is False
 
     @pytest.mark.unit
     @patch('sys_utils.cmd_exists')

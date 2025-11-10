@@ -43,3 +43,9 @@ node_modules
 package-lock.json
 package.json
 
+# Build artifacts
+pkg/
+src/
+*.pkg.tar.zst
+Aurora/
+neoarch-git/

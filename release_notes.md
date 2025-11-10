@@ -40,14 +40,14 @@ NeoArch v1.0-beta - Initial Release
 yay -S neoarch-git
 
 # Or from source
-git clone https://github.com/Sanjaya-Danushka/Aurora.git
-cd Aurora
+git clone https://github.com/Sanjaya-Danushka/Neoarch.git
+cd Neoarch
 python aurora_home.py
 ```
 
 ## Links
-- **Homepage**: https://github.com/Sanjaya-Danushka/Aurora
-- **Issues**: https://github.com/Sanjaya-Danushka/Aurora/issues
+- **Homepage**: https://github.com/Sanjaya-Danushka/Neoarch
+- **Issues**: https://github.com/Sanjaya-Danushka/Neoarch/issues
 - **AUR Package**: https://aur.archlinux.org/packages/neoarch-git/
 
 ---

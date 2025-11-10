@@ -15,7 +15,7 @@ paru -S neoarch-git
 ```
 
 ### Manual Installation
-See the [README.md](../README.md) for detailed installation instructions.
+See the [README.md](../../README.md) for detailed installation instructions.
 
 ## Interface Overview
 

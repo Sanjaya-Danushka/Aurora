@@ -130,8 +130,8 @@ Thank you for contributing to the NeoArch community! 🎉
     print("3. Copy the plugin file to community_plugins/ directory")
     print("4. Update community_plugins/index.json with the submission info")
     print("5. Submit a pull request")
-    print("\n🔗 Repository: https://github.com/Sanjaya-Danushka/Aurora")
-    print("📚 Documentation: https://github.com/Sanjaya-Danushka/Aurora/blob/main/community_plugins/README.md")
+    print("\n🔗 Repository: https://github.com/Sanjaya-Danushka/Neoarch")
+    print("📚 Documentation: https://github.com/Sanjaya-Danushka/Neoarch/blob/main/community_plugins/README.md")
 
     # Ask if user wants to open the submission directory
     try:

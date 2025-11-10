@@ -5,13 +5,13 @@ Thank you for your interest in contributing to NeoArch! We welcome contributions
 ## Ways to Contribute
 
 ### 🐛 Reporting Bugs
-- Use the [bug report template](https://github.com/Sanjaya-Danushka/Aurora/issues/new?template=bug_report.md)
+- Use the [bug report template](https://github.com/Sanjaya-Danushka/Neoarch/issues/new?template=bug_report.md)
 - Provide detailed steps to reproduce the issue
 - Include system information and error logs
 - Check if the issue already exists before creating a new one
 
 ### 💡 Suggesting Features
-- Use the [feature request template](https://github.com/Sanjaya-Danushka/Aurora/issues/new?template=feature_request.md)
+- Use the [feature request template](https://github.com/Sanjaya-Danushka/Neoarch/issues/new?template=feature_request.md)
 - Describe the problem you're trying to solve
 - Explain why this feature would be useful
 - Consider alternative solutions
@@ -49,8 +49,8 @@ Thank you for your interest in contributing to NeoArch! We welcome contributions
 ### Quick Start
 ```bash
 # Clone the repository
-git clone https://github.com/Sanjaya-Danushka/Aurora.git
-cd Aurora
+git clone https://github.com/Sanjaya-Danushka/Neoarch.git
+cd Neoarch
 
 # Set up virtual environment
 python -m venv .venv

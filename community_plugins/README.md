@@ -133,7 +133,7 @@ All community plugins should be compatible with the NeoArch license. Please incl
 
 ## 🆘 Support
 
-- Check the [NeoArch Documentation](https://github.com/Sanjaya-Danushka/Aurora)
+- Check the [NeoArch Documentation](https://github.com/Sanjaya-Danushka/Neoarch)
 - Open issues for bugs or feature requests
 - Join the community discussions
 

@@ -20,15 +20,14 @@ from PyQt6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter, QImage
 from PyQt6.QtSvg import QSvgRenderer
 from collections import Counter
 
-from git_manager import GitManager
+from managers.git_manager import GitManager
 
-from styles import Styles
+from utils.styles import Styles
 from components import (SourceCard, FilterCard, LargeSearchBox, LoadingSpinner, PluginsView, PluginsSidebar,
                        GeneralSettingsWidget, AutoUpdateSettingsWidget, PluginsSettingsWidget)
-from plugin_manager import PluginsManager
-from workers import CommandWorker, PackageLoaderWorker
-import config_utils
-import sys_utils
+from managers.plugin_manager import PluginsManager
+from utils.workers import CommandWorker, PackageLoaderWorker
+from utils import config_utils, sys_utils
 from services import (snapshot_service, update_service, uninstall_service, ignore_service,
                       bundle_service, askpass_service, settings_service, filters_service,
                       install_service, packages_service, help_service)
@@ -800,7 +799,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     
     def check_authentication_tools(self):
         """Check if authentication tools are available and warn user if not"""
-        import sys_utils
+        from utils import sys_utils
         is_supported, message = sys_utils.check_aur_authentication_support()
         if not is_supported:
             # Show warning after a short delay to ensure UI is ready
@@ -1024,7 +1023,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def show_docker_install_dialog(self):
         """Show Docker container management dialog"""
         if not self.docker_manager:
-            from docker_manager import DockerManager
+            from managers.docker_manager import DockerManager
             self.docker_manager = DockerManager(self.log_signal, self.show_message, self.sources_layout, self)
         
         self.docker_manager.install_from_docker()
@@ -1064,7 +1063,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def show_git_install_dialog(self):
         """Show Git repository installation dialog"""
         if not self.git_manager:
-            from git_manager import GitManager
+            from managers.git_manager import GitManager
             self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
         
         self.git_manager.install_from_git()
@@ -2099,7 +2098,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         self.sources_layout.addWidget(self.source_card)
         if not hasattr(self, 'git_manager') or self.git_manager is None:
-            from git_manager import GitManager
+            from managers.git_manager import GitManager
             self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
         else:
             try:
@@ -2109,7 +2108,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Pin Docker containers card in Discover sidebar
         try:
             if not hasattr(self, 'docker_manager') or self.docker_manager is None:
-                from docker_manager import DockerManager
+                from managers.docker_manager import DockerManager
                 self.docker_manager = DockerManager(self.log_signal, self.show_message, self.sources_layout, self)
             else:
                 # Reattach/recreate the Docker section under the current sources layout
@@ -2141,7 +2140,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.source_card.add_source(source_name, icon_path)
         self.sources_layout.addWidget(self.source_card)
         if not hasattr(self, 'git_manager') or self.git_manager is None:
-            from git_manager import GitManager
+            from managers.git_manager import GitManager
             self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
         else:
             try:
@@ -2215,7 +2214,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Initialize Git Manager for sources panel
         if not hasattr(self, 'git_manager') or self.git_manager is None:
-            from git_manager import GitManager
+            from managers.git_manager import GitManager
             self.git_manager = GitManager(self.log_signal, self.show_message, self.sources_layout, self)
     
     def on_source_selection_changed(self, source_states):

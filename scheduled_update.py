@@ -10,7 +10,7 @@ import os
 import json
 import sys
 from pathlib import Path
-import sys_utils
+from utils import sys_utils
 
 class ScheduledUpdater:
     def __init__(self):

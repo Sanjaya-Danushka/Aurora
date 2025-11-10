@@ -23,7 +23,7 @@ class PluginsManager:
             if not pkg:
                 self._message("Plugins", "No package specified for installation")
                 return
-            from workers import get_auth_command
+            from utils.workers import get_auth_command
             auth_cmd = get_auth_command()
             cmd = auth_cmd + ["pacman", "-S", "--noconfirm", pkg]
             self._log(f"Installing plugin package: {' '.join(cmd)}")
@@ -62,7 +62,7 @@ class PluginsManager:
             use_pkexec = plugin_id in ("timeshift",)
             argv = [cmd]
             if use_pkexec:
-                from workers import get_auth_command
+                from utils.workers import get_auth_command
                 auth_cmd = get_auth_command()
                 argv = auth_cmd + argv
             self._log(f"Launching: {' '.join(argv)}")
@@ -86,7 +86,7 @@ class PluginsManager:
             if not plugins_view.is_installed(spec):
                 QTimer.singleShot(0, plugins_view.refresh_all)
                 return
-            from workers import get_auth_command
+            from utils.workers import get_auth_command
             auth_cmd = get_auth_command()
             cmd = auth_cmd + ["pacman", "-R", "--noconfirm", pkg]
             self._log(f"Uninstalling plugin package: {' '.join(cmd)}")

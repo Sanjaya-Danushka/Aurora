@@ -3,8 +3,8 @@ import re
 import subprocess
 import time
 from threading import Thread, Event
-from workers import CommandWorker
-import sys_utils
+from utils.workers import CommandWorker
+from utils import sys_utils
 
 
 def install_packages(app, packages_by_source: dict):
@@ -145,7 +145,7 @@ def install_packages(app, packages_by_source: dict):
                         exec_cmd = ["pkexec"] + exec_cmd
                         app.log_signal.emit(f"Pacman command with pkexec: {' '.join(exec_cmd)}")
                     elif force_sudo and source in ('Flatpak', 'npm'):
-                        from workers import get_auth_command
+                        from utils.workers import get_auth_command
                         auth_cmd = get_auth_command(worker.env)
                         exec_cmd = auth_cmd + exec_cmd
                     
@@ -225,7 +225,7 @@ def install_packages(app, packages_by_source: dict):
                                     try:
                                         app.log_signal.emit("Permission denied installing npm package(s). Retrying with system privileges (polkit)...")
                                         env2 = os.environ.copy()
-                                        from workers import get_auth_command
+                                        from utils.workers import get_auth_command
                                         auth_cmd2 = get_auth_command(env2)
                                         exec_cmd2 = auth_cmd2 + ["npm", "install", "-g"] + packages
                                         process2 = subprocess.Popen(

@@ -2,7 +2,7 @@ import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QGridLayout,
                              QLabel, QCheckBox, QLineEdit, QPushButton, QFileDialog, QComboBox)
 from PyQt6.QtCore import Qt
-import sys_utils
+from utils import sys_utils
 
 class GeneralSettingsWidget(QWidget):
     def __init__(self, parent=None):

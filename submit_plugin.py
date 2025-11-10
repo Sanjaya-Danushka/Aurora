@@ -8,7 +8,7 @@ import os
 import json
 import shutil
 from pathlib import Path
-from plugin_store import PluginStore
+from stores.plugin_store import PluginStore
 
 def submit_plugin():
     """Interactive plugin submission workflow"""

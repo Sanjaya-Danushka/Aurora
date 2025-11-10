@@ -3,8 +3,8 @@ import json
 import subprocess
 from threading import Thread
 from PyQt6.QtCore import QTimer
-from workers import CommandWorker
-import sys_utils
+from utils.workers import CommandWorker
+from utils import sys_utils
 
 
 def update_packages(app, packages_by_source: dict):

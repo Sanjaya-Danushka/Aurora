@@ -2,7 +2,7 @@ import os
 import subprocess
 from threading import Thread
 from PyQt6.QtCore import QTimer
-from workers import CommandWorker
+from utils.workers import CommandWorker
 
 
 def uninstall_packages(app, packages_by_source: dict):

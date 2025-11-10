@@ -10,14 +10,14 @@ from PyQt6.QtCore import pyqtSignal, Qt, QThread, QTimer
 from PyQt6.QtGui import QGuiApplication
 import os
 
-from plugin_store import PluginStore
+from stores.plugin_store import PluginStore
  
 try:
     from supabase_store import SupabasePluginStore
 except Exception:
     SupabasePluginStore = None  # type: ignore
 try:
-    from mongo_store import MongoPluginStore
+    from stores.mongo_store import MongoPluginStore
 except Exception:
     MongoPluginStore = None  # type: ignore
 

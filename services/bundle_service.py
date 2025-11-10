@@ -4,7 +4,7 @@ import subprocess
 from threading import Thread
 from workers import CommandWorker
 from PyQt6.QtWidgets import QFileDialog, QTableWidgetItem, QLabel
-import install_service
+from . import install_service
 
 
 def add_selected_to_bundle(app):

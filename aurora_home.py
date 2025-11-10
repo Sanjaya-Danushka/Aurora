@@ -29,17 +29,9 @@ from plugin_manager import PluginsManager
 from workers import CommandWorker, PackageLoaderWorker
 import config_utils
 import sys_utils
-import snapshot_service
-import update_service
-import uninstall_service
-import ignore_service
-import bundle_service
-import askpass_service
-import settings_service
-import filters_service
-import install_service
-import packages_service
-import help_service
+from services import (snapshot_service, update_service, uninstall_service, ignore_service,
+                      bundle_service, askpass_service, settings_service, filters_service,
+                      install_service, packages_service, help_service)
 
 def _qt_msg_handler(mode, context, message):
     s = str(message)

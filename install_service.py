@@ -224,10 +224,10 @@ def install_packages(app, packages_by_source: dict):
                                 if source == 'npm' and ("EACCES" in error_output or "permission denied" in error_output.lower()):
                                     try:
                                         app.log_signal.emit("Permission denied installing npm package(s). Retrying with system privileges (polkit)...")
+                                        env2 = os.environ.copy()
                                         from workers import get_auth_command
                                         auth_cmd2 = get_auth_command(env2)
                                         exec_cmd2 = auth_cmd2 + ["npm", "install", "-g"] + packages
-                                        env2 = os.environ.copy()
                                         process2 = subprocess.Popen(
                                             exec_cmd2,
                                             stdout=subprocess.PIPE,

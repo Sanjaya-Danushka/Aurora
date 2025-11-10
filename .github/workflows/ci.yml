@@ -59,14 +59,14 @@ jobs:
         
         # Test basic module imports
         try:
-            import config_utils
+            from utils import config_utils
             print('✓ config_utils imported')
         except ImportError as e:
             print(f'✗ config_utils import failed: {e}')
             sys.exit(1)
             
         try:
-            import sys_utils  
+            from utils import sys_utils  
             print('✓ sys_utils imported')
         except ImportError as e:
             print(f'✗ sys_utils import failed: {e}')

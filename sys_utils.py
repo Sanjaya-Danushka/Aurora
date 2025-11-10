@@ -1,5 +1,6 @@
 import shutil
 import os
+from typing import Tuple
 
 def cmd_exists(cmd: str) -> bool:
     return shutil.which(cmd) is not None
@@ -60,7 +61,7 @@ def get_missing_auth_tools() -> list:
     return []
 
 
-def check_aur_authentication_support() -> tuple[bool, str]:
+def check_aur_authentication_support() -> Tuple[bool, str]:
     """Check if AUR authentication is properly supported
     
     Returns:

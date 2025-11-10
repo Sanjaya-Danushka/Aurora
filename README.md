@@ -102,8 +102,8 @@ We welcome contributions from the community! NeoArch aims to provide a secure, u
 ### Development Setup
 
 ```bash
-git clone https://github.com/Sanjaya-Danushka/Aurora.git
-cd Aurora
+git clone https://github.com/Sanjaya-Danushka/Neoarch.git
+cd Neoarch
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements_pyqt.txt

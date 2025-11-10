@@ -40,9 +40,9 @@
     <keyword>flatpak</keyword>
   </keywords>
   <developer_name>Sanjaya Danushka</developer_name>
-  <url type="homepage">https://github.com/Sanjaya-Danushka/Aurora</url>
-  <url type="bugtracker">https://github.com/Sanjaya-Danushka/Aurora/issues</url>
-  <url type="help">https://github.com/Sanjaya-Danushka/Aurora#readme</url>
+  <url type="homepage">https://github.com/Sanjaya-Danushka/Neoarch</url>
+  <url type="bugtracker">https://github.com/Sanjaya-Danushka/Neoarch/issues</url>
+  <url type="help">https://github.com/Sanjaya-Danushka/Neoarch#readme</url>
   <releases>
     <release version="1.0-beta" date="2025-11-07">
       <description>

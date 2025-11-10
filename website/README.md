@@ -40,7 +40,7 @@ python -m http.server 8000
 The website automatically deploys when:
 - Files in `website/` folder are changed
 - The `deploy-website.yml` workflow is triggered
-- Website will be available at: `https://sanjaya-danushka.github.io/Aurora/`
+- Website will be available at: `https://sanjaya-danushka.github.io/Neoarch/`
 
 ## Customization
 

@@ -4,9 +4,8 @@ NeoArch is a modern, user-friendly package manager designed specifically for Arc
 
 https://drive.google.com/file/d/17cfs7VEui4zfFhghsIWBp2duqpPjWtEQ/view?usp=sharing
 
-<img width="1236" height="851" alt="Screenshot" src="https://github.com/user-attachments/assets/5f4a6129-785c-4f62-a644-5dc903af5c67" />
+<img width="1229" height="851" alt="Screenshot_20251111_185003" src="https://github.com/user-attachments/assets/1539d8eb-7d18-41e9-bc16-96ff061c1b4a" />
 
-<img width="1224" height="862" alt="Screenshot_20251110_205427" src="https://github.com/user-attachments/assets/eb39b4b1-4a0e-4d77-aeb3-f52a2fddac86" />
 
 
 

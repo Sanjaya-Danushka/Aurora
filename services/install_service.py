@@ -121,11 +121,14 @@ def install_packages(app, packages_by_source: dict):
                     app.installation_progress.emit("cancelled", False)
                     return
 
-                # For AUR, we'll use pkexec to integrate with the system's polkit agent
+                # For AUR, prepare askpass environment but DON'T use pkexec/sudo wrapper
+                # AUR helpers MUST run as normal user for security
+                # The helper will internally use sudo when needed (e.g., for pacman -U)
                 if source == 'AUR':
-                    app.log_signal.emit(f"AUR command: pkexec {' '.join(cmd)}")
-                    # pkexec will handle authentication via the running polkit agent
-                    cmd = ["pkexec"] + cmd
+                    app.log_signal.emit(f"AUR install (as user): {' '.join(cmd)}")
+                    # Setup askpass so the AUR helper can authenticate internally
+                    if not env.get('SUDO_ASKPASS'):
+                        env, cleanup_path = app.prepare_askpass_env()
                 
                 # For Flatpak with sudo, ensure proper authentication
                 if source == 'Flatpak' and force_sudo:
@@ -149,7 +152,9 @@ def install_packages(app, packages_by_source: dict):
                         auth_cmd = get_auth_command(worker.env)
                         exec_cmd = auth_cmd + exec_cmd
                     
-                    # Ensure DISPLAY and other GUI environment variables are set for pkexec
+                    # Ensure DISPLAY and other GUI environment variables are set
+                    # For pacman: pkexec needs these to show GUI password dialog
+                    # For AUR: the helper needs these for its own GUI dialogs and sudo prompts
                     if source in ('pacman', 'AUR'):
                         if 'DISPLAY' not in worker.env and 'DISPLAY' in os.environ:
                             worker.env['DISPLAY'] = os.environ['DISPLAY']
@@ -157,12 +162,12 @@ def install_packages(app, packages_by_source: dict):
                             worker.env['XAUTHORITY'] = os.environ['XAUTHORITY']
                         if 'WAYLAND_DISPLAY' not in worker.env and 'WAYLAND_DISPLAY' in os.environ:
                             worker.env['WAYLAND_DISPLAY'] = os.environ['WAYLAND_DISPLAY']
-                        # Critical: pkexec needs D-Bus to communicate with polkit agent
                         if 'DBUS_SESSION_BUS_ADDRESS' not in worker.env and 'DBUS_SESSION_BUS_ADDRESS' in os.environ:
                             worker.env['DBUS_SESSION_BUS_ADDRESS'] = os.environ['DBUS_SESSION_BUS_ADDRESS']
                     
-                    # For pkexec, don't use os.setsid as it breaks D-Bus session connection
-                    use_setsid = source not in ('pacman', 'AUR')
+                    # Only pacman with pkexec needs to avoid setsid (breaks D-Bus connection)
+                    # AUR runs as normal user so it can use setsid
+                    use_setsid = source not in ('pacman',)
                     
                     process = subprocess.Popen(
                         exec_cmd,

@@ -2132,7 +2132,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg")),
             ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
             ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg")),
-            ("Local", os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"))
+            ("Local", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "local.svg"))
         ]
         for source_name, icon_path in sources:
             self.source_card.add_source(source_name, icon_path)

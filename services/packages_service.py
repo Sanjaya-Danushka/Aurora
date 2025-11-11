@@ -43,6 +43,19 @@ def load_updates(app):
         try:
             packages = []
 
+            # Sync package database first to get latest updates
+            try:
+                app.log("Syncing package database...")
+                env, _ = app.prepare_askpass_env()
+                sync_result = subprocess.run(["sudo", "-A", "pacman", "-Sy", "--noconfirm"], 
+                                            capture_output=True, text=True, timeout=120, env=env)
+                if sync_result.returncode == 0:
+                    app.log("Package database synced successfully")
+                else:
+                    app.log(f"Warning: Database sync failed: {sync_result.stderr}")
+            except Exception as e:
+                app.log(f"Warning: Could not sync database: {str(e)}")
+
             result = subprocess.run(["pacman", "-Qu"], capture_output=True, text=True, timeout=60)
             if result.returncode == 0 and result.stdout:
                 for line in result.stdout.strip().split('\n'):

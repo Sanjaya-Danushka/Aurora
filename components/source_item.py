@@ -92,8 +92,6 @@ class SourceItem(QWidget):
                 painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
                 svg_renderer.render(painter, QRectF(pixmap.rect()))
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("white"))
                 painter.end()
 
                 self.icon_label.setPixmap(pixmap)

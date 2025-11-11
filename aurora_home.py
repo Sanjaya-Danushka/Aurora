@@ -676,8 +676,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             renderer = QSvgRenderer(icon_path)
             if renderer.isValid():
                 renderer.render(painter, QRectF(pixmap.rect()))
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(pixmap.rect(), QColor("white"))
                 painter.end()
                 icon = QIcon(pixmap)
             else:

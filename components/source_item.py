@@ -93,10 +93,10 @@ class SourceItem(QWidget):
                 "bg_color": "rgba(255, 153, 85, 0.15)"
             },
             "flatpak": {
-                "text": "📱",  # Phone emoji
-                "color": "#4A90E2",
+                "text": "📦",  # Package box
+                "color": "#4CAF50",  # Green color matching the SVG
                 "size": "14px",
-                "bg_color": "rgba(74, 144, 226, 0.15)"
+                "bg_color": "rgba(76, 175, 80, 0.15)"
             },
             "npm": {
                 "text": "◆",  # Diamond shape

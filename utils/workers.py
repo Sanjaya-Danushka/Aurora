@@ -125,7 +125,7 @@ class CommandWorker(QObject):
                 if auth_cmd == ["sudo", "-A"] and 'SUDO_ASKPASS' not in self.env:
                     # Import here to avoid circular imports
                     from services.askpass_service import prepare_askpass_env
-                    self.env, cleanup_path = prepare_askpass_env()
+                    self.env, _ = prepare_askpass_env()
             
             process = subprocess.Popen(
                 self.command,

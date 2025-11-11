@@ -10,6 +10,8 @@ def get_auth_command(env=None):
     
     desktop = env.get('XDG_CURRENT_DESKTOP', '').lower()
     session_type = env.get('XDG_SESSION_TYPE', '').lower()
+    wayland_display = env.get('WAYLAND_DISPLAY', '')
+    hyprland_instance = env.get('HYPRLAND_INSTANCE_SIGNATURE', '')
     
     # Check if polkit agent is running
     try:
@@ -17,20 +19,51 @@ def get_auth_command(env=None):
     except Exception:
         polkit_agent_running = False
     
-    # For Hyprland and other minimal Wayland compositors
-    if 'hyprland' in desktop or (session_type == 'wayland' and not polkit_agent_running):
-        # Prefer sudo with askpass for Hyprland
+    # Better Hyprland detection - check multiple indicators
+    is_hyprland = (
+        'hyprland' in desktop or 
+        hyprland_instance or 
+        (session_type == 'wayland' and 'hypr' in wayland_display.lower())
+    )
+    
+    # For Hyprland - always prefer sudo with askpass due to pkexec terminal issues
+    if is_hyprland:
+        if 'SUDO_ASKPASS' in env:
+            return ["sudo", "-A"]
+        else:
+            # Force askpass setup for Hyprland even if not set
+            return ["sudo", "-A"]
+    
+    # For minimal Wayland compositors without polkit agent
+    elif session_type == 'wayland' and not polkit_agent_running:
         if 'SUDO_ASKPASS' in env:
             return ["sudo", "-A"]
         else:
             return ["pkexec"]
     
-    # For GNOME, KDE, XFCE with polkit agents
+    # For GNOME, KDE, XFCE with polkit agents - but test pkexec first
     elif polkit_agent_running:
-        if desktop in ['gnome', 'kde', 'xfce']:
-            return ["pkexec"]
-        else:
-            return ["pkexec", "--disable-internal-agent"]
+        # Test if pkexec works (avoid terminal issues)
+        try:
+            test_result = subprocess.run(['pkexec', '--version'], 
+                                       capture_output=True, timeout=5)
+            if test_result.returncode == 0:
+                if desktop in ['gnome', 'kde', 'xfce']:
+                    return ["pkexec"]
+                else:
+                    return ["pkexec", "--disable-internal-agent"]
+            else:
+                # pkexec failed, fallback to sudo
+                if 'SUDO_ASKPASS' in env:
+                    return ["sudo", "-A"]
+                else:
+                    return ["sudo", "-A"]
+        except Exception:
+            # pkexec test failed, use sudo
+            if 'SUDO_ASKPASS' in env:
+                return ["sudo", "-A"]
+            else:
+                return ["sudo", "-A"]
     
     # Fallback: try sudo with askpass if available
     elif 'SUDO_ASKPASS' in env:
@@ -38,7 +71,7 @@ def get_auth_command(env=None):
     
     # Final fallback
     else:
-        return ["pkexec"]
+        return ["sudo", "-A"]
 
 
 class PackageLoaderWorker(QObject):
@@ -87,6 +120,12 @@ class CommandWorker(QObject):
             if self.sudo:
                 auth_cmd = get_auth_command(self.env)
                 self.command = auth_cmd + self.command
+                
+                # If using sudo -A, ensure SUDO_ASKPASS is set
+                if auth_cmd == ["sudo", "-A"] and 'SUDO_ASKPASS' not in self.env:
+                    # Import here to avoid circular imports
+                    from services.askpass_service import prepare_askpass_env
+                    self.env, cleanup_path = prepare_askpass_env()
             
             process = subprocess.Popen(
                 self.command,

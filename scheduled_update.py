@@ -148,8 +148,15 @@ class ScheduledUpdater:
         # Update pacman packages
         if self.cmd_exists("pacman"):
             print("Updating pacman packages...")
-            result = subprocess.run(["pkexec", "pacman", "-Syu", "--noconfirm"],
-                                  capture_output=True, text=True, timeout=1800)
+            # Import here to avoid circular imports
+            from utils.workers import get_auth_command
+            from services.askpass_service import prepare_askpass_env
+            
+            env, _ = prepare_askpass_env()
+            auth_cmd = get_auth_command(env)
+            cmd = auth_cmd + ["pacman", "-Syu", "--noconfirm"]
+            print(f"Using {auth_cmd[0]} for pacman authentication")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, env=env)
             if result.returncode == 0:
                 print("Pacman updates completed successfully")
                 update_success = True

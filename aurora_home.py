@@ -3824,7 +3824,12 @@ def on_tick(app):
         try:
             app.log("Auto-update: Starting scheduled system updates...")
             if app.cmd_exists("pacman"):
-                result = subprocess.run(["pkexec", "pacman", "-Syu", "--noconfirm"], capture_output=True, text=True, timeout=1800)
+                from utils.workers import get_auth_command
+                env, _ = app.prepare_askpass_env()
+                auth_cmd = get_auth_command(env)
+                cmd = auth_cmd + ["pacman", "-Syu", "--noconfirm"]
+                app.log(f"Auto-update: Using {auth_cmd[0]} for pacman")
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, env=env)
                 if result.returncode == 0:
                     app.log("Auto-update: Pacman updates completed successfully")
                     update_success = True

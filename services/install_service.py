@@ -143,10 +143,12 @@ def install_packages(app, packages_by_source: dict):
 
                 try:
                     exec_cmd = worker.command
-                    # Use pkexec for pacman to ensure GUI authentication
+                    # Use appropriate auth command based on environment
                     if source == 'pacman':
-                        exec_cmd = ["pkexec"] + exec_cmd
-                        app.log_signal.emit(f"Pacman command with pkexec: {' '.join(exec_cmd)}")
+                        from utils.workers import get_auth_command
+                        auth_cmd = get_auth_command(worker.env)
+                        exec_cmd = auth_cmd + exec_cmd
+                        app.log_signal.emit(f"Pacman command with {auth_cmd[0]}: {' '.join(exec_cmd)}")
                     elif force_sudo and source in ('Flatpak', 'npm'):
                         from utils.workers import get_auth_command
                         auth_cmd = get_auth_command(worker.env)

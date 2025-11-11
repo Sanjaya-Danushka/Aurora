@@ -60,7 +60,7 @@ class GitManager(QObject):
 
         # Git icon
         git_icon_label = QLabel()
-        git_icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "git.svg")
+        git_icon_path = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "discover", "git.svg")
         try:
             svg_renderer = QSvgRenderer(git_icon_path)
             if svg_renderer.isValid():

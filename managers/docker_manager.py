@@ -51,7 +51,7 @@ class DockerManager(QObject):
 
         # Docker icon
         docker_icon_label = QLabel()
-        docker_icon_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "docker.svg")
+        docker_icon_path = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "discover", "docker.svg")
         try:
             svg_renderer = QSvgRenderer(docker_icon_path)
             if svg_renderer.isValid():

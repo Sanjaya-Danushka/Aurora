@@ -1,18 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generator: Adobe Illustrator 26.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve" width="512" height="512">
-<path id="XMLID_00000155135129155396891040000017597215063133379969_" style="fill:#68A063;fill-rule:evenodd;clip-rule:evenodd;" d="  M12.569,0.152c-0.351-0.203-0.785-0.203-1.136,0L2.026,5.581C1.674,5.784,1.458,6.159,1.458,6.565v10.866  c0,0.406,0.217,0.781,0.568,0.984l9.407,5.433c0.352,0.203,0.785,0.203,1.137,0l9.405-5.433c0.351-0.203,0.568-0.578,0.568-0.984  V6.565c0-0.406-0.217-0.781-0.568-0.984L12.569,0.152z"/>
-
-
-
-
-
-
-
-
-
-
-
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="#000000">
+  <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+  <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+  <g id="SVGRepo_iconCarrier">
+    <circle cx="512" cy="512" r="512" style="fill:#cb3837"></circle>
+    <path d="M407.26 599.29h69.83v-34.92h69.83V424.71H407.26zm69.83-139.66H512v69.83h-34.91zm97.76-34.91v139.65h69.83V459.63h34.91v104.74h34.91V459.63h34.91v104.74h34.91V424.71zM239.67 564.37h69.83V459.63h34.91v104.74h34.91V424.71H239.67z" style="fill:#fff"></path>
+  </g>
 
 
 

@@ -100,9 +100,9 @@ class SourceItem(QWidget):
             },
             "npm": {
                 "text": "◆",  # Diamond shape
-                "color": "#68A063",  # Node.js green
+                "color": "#cb3837",  # npm red
                 "size": "14px",
-                "bg_color": "rgba(104, 160, 99, 0.15)"
+                "bg_color": "rgba(203, 56, 55, 0.15)"
             },
             "local": {
                 "text": "🏠",  # House for local

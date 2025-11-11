@@ -78,28 +78,37 @@ class SourceItem(QWidget):
 
     def set_icon(self, icon_path):
         """Set the icon for this source item"""
-        # For now, let's use a more reliable approach with styled text icons
-        # This bypasses the SVG rendering issues entirely
+        # Use reliable styled text icons that match your SVG colors
         icon_styles = {
             "pacman": {
-                "text": "◐",
-                "color": "#0073e1",
-                "size": "18px"
+                "text": "●",  # Solid circle for Pac-Man
+                "color": "#0073e1",  # Your exact blue color
+                "size": "16px",
+                "bg_color": "rgba(0, 115, 225, 0.15)"
             },
             "aur": {
-                "text": "▲",
-                "color": "#ff9955", 
-                "size": "16px"
+                "text": "▲",  # Triangle for AUR
+                "color": "#ff9955",  # Your exact orange color
+                "size": "14px",
+                "bg_color": "rgba(255, 153, 85, 0.15)"
             },
             "flatpak": {
-                "text": "📱",
+                "text": "📱",  # Phone emoji
                 "color": "#4A90E2",
-                "size": "16px"
+                "size": "14px",
+                "bg_color": "rgba(74, 144, 226, 0.15)"
             },
             "npm": {
-                "text": "◆",
-                "color": "#68A063",
-                "size": "16px"
+                "text": "◆",  # Diamond shape
+                "color": "#68A063",  # Node.js green
+                "size": "14px",
+                "bg_color": "rgba(104, 160, 99, 0.15)"
+            },
+            "local": {
+                "text": "🏠",  # House for local
+                "color": "#00BFAE",
+                "size": "14px",
+                "bg_color": "rgba(0, 191, 174, 0.15)"
             }
         }
         
@@ -108,18 +117,143 @@ class SourceItem(QWidget):
             style = icon_styles[source_key]
             self.icon_label.setText(style["text"])
             self.icon_label.setStyleSheet(f"""
-                font-size: {style["size"]};
-                color: {style["color"]};
-                font-weight: bold;
-                background-color: rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
-                padding: 2px;
+                QLabel {{
+                    font-size: {style["size"]};
+                    color: {style["color"]};
+                    font-weight: bold;
+                    background-color: {style["bg_color"]};
+                    border-radius: 12px;
+                    padding: 4px;
+                    border: 1px solid {style["color"]};
+                    text-align: center;
+                }}
             """)
         else:
             self._set_fallback_icon()
+        
+        # Now that we know SVG works, let's try loading it properly
+        if self._try_load_svg_properly(icon_path):
+            return
+    
+    def _try_load_svg(self, icon_path):
+        """Try to load and render the actual SVG file"""
+        try:
+            if not os.path.exists(icon_path):
+                print(f"SVG file not found: {icon_path}")
+                return False
+                
+            # Read SVG content and clean it up more thoroughly
+            with open(icon_path, 'r', encoding='utf-8') as f:
+                svg_content = f.read()
             
-        # Also try the original SVG approach as backup
-        self._try_svg_fallback(icon_path)
+            # Remove problematic Inkscape elements that cause rendering issues
+            import re
+            
+            # Remove Inkscape-specific namespaces and elements
+            svg_content = re.sub(r'xmlns:inkscape="[^"]*"', '', svg_content)
+            svg_content = re.sub(r'xmlns:sodipodi="[^"]*"', '', svg_content)
+            svg_content = re.sub(r'<sodipodi:namedview[^>]*>.*?</sodipodi:namedview>', '', svg_content, flags=re.DOTALL)
+            svg_content = re.sub(r'<defs[^>]*>\s*</defs>', '', svg_content)
+            svg_content = re.sub(r'inkscape:[^=]*="[^"]*"', '', svg_content)
+            svg_content = re.sub(r'sodipodi:[^=]*="[^"]*"', '', svg_content)
+            
+            # Create SVG renderer from cleaned content
+            svg_renderer = QSvgRenderer()
+            if not svg_renderer.load(svg_content.encode('utf-8')):
+                print(f"Failed to load cleaned SVG: {self.source_name}")
+                return False
+                
+            if svg_renderer.isValid():
+                # Create pixmap with white background first to test
+                size = 32
+                pixmap = QPixmap(size, size)
+                pixmap.fill(QColor(255, 255, 255, 0))  # Fully transparent
+
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+                painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+                painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+                
+                # Set composition mode to ensure proper alpha blending
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+
+                # Render SVG to pixmap with proper bounds
+                svg_renderer.render(painter, QRectF(0, 0, size, size))
+                painter.end()
+
+                # Scale to final size
+                final_pixmap = pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, 
+                                           Qt.TransformationMode.SmoothTransformation)
+                
+                if not final_pixmap.isNull():
+                    self.icon_label.setPixmap(final_pixmap)
+                    # Set label background to transparent to avoid black box
+                    self.icon_label.setStyleSheet("""
+                        QLabel {
+                            background-color: transparent;
+                            border: none;
+                        }
+                    """)
+                    print(f"Successfully loaded SVG for {self.source_name}")
+                    return True
+                    
+            print(f"SVG rendering failed for {self.source_name}")
+            return False
+            
+        except Exception as e:
+            print(f"Exception loading SVG for {self.source_name}: {e}")
+            return False
+    
+    
+    def _try_load_svg_properly(self, icon_path):
+        """Load SVG with proper display handling"""
+        try:
+            if not os.path.exists(icon_path):
+                return False
+                
+            # Simple, direct SVG loading
+            svg_renderer = QSvgRenderer(icon_path)
+            if not svg_renderer.isValid():
+                return False
+                
+            # Create pixmap
+            pixmap = QPixmap(32, 32)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            svg_renderer.render(painter)
+            painter.end()
+            
+            # Scale to final size
+            final_pixmap = pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, 
+                                       Qt.TransformationMode.SmoothTransformation)
+            
+            if not final_pixmap.isNull():
+                # Clear any text content first
+                self.icon_label.setText("")
+                
+                # Set the pixmap
+                self.icon_label.setPixmap(final_pixmap)
+                
+                # Override any background styling that might cause black box
+                self.icon_label.setStyleSheet("""
+                    QLabel {
+                        background-color: transparent;
+                        border: none;
+                        padding: 0px;
+                        margin: 0px;
+                    }
+                """)
+                
+                print(f"Successfully loaded SVG for {self.source_name}")
+                return True
+                
+            return False
+            
+        except Exception as e:
+            print(f"SVG loading failed for {self.source_name}: {e}")
+            return False
     
     def _set_fallback_icon(self):
         """Set fallback emoji icon when SVG loading fails"""

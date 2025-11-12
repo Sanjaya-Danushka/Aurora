@@ -41,8 +41,10 @@ class LargeSearchBox(QWidget):
         # Create expanded sections (initially hidden)
         self.create_expanded_sections()
         
-        # Set initial layout
-        self.update_layout_for_size()
+        # Set initial layout - force compact mode initially
+        self.current_width = 800  # Start with a typical window width
+        self.is_maximized_layout = False
+        self.rebuild_layout()
         self.setStyleSheet(self.get_stylesheet())
 
     def create_hero_card(self):
@@ -298,6 +300,14 @@ class LargeSearchBox(QWidget):
 
         return section
 
+    def showEvent(self, event):
+        """Handle widget show events"""
+        super().showEvent(event)
+        # Ensure layout is properly set when widget becomes visible
+        if self.width() > 0:
+            self.current_width = self.width()
+            self.update_layout_for_size()
+
     def resizeEvent(self, event: QResizeEvent):
         """Handle window resize events"""
         super().resizeEvent(event)
@@ -310,17 +320,20 @@ class LargeSearchBox(QWidget):
 
     def update_layout_for_size(self):
         """Update layout based on current window size"""
+        # Get actual widget width if available, fallback to current_width
+        actual_width = max(self.width(), self.current_width)
+        
         # Determine if we should use maximized layout (wider than 1200px)
-        should_be_maximized = self.current_width > 1200 or self.width() > 1200
+        should_be_maximized = actual_width > 1200
         
         if should_be_maximized != self.is_maximized_layout:
             self.is_maximized_layout = should_be_maximized
             self.rebuild_layout()
         
         # Update margins based on width
-        if self.current_width > 1400:
+        if actual_width > 1400:
             margins = (60, 40, 60, 40)
-        elif self.current_width > 1000:
+        elif actual_width > 1000:
             margins = (40, 30, 40, 30)
         else:
             margins = (20, 30, 20, 30)

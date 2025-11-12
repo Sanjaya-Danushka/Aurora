@@ -2,9 +2,9 @@
 LargeSearchBox Component - Large search box for package discovery
 """
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel, QPushButton, QFrame, QGridLayout, QProgressBar
-from PyQt6.QtCore import Qt, pyqtSignal, QSize, QRectF, QTimer
-from PyQt6.QtGui import QPixmap, QPainter, QIcon, QColor, QResizeEvent
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel, QPushButton, QFrame, QGridLayout, QProgressBar, QGraphicsDropShadowEffect
+from PyQt6.QtCore import Qt, pyqtSignal, QSize, QRectF, QTimer, QPropertyAnimation, QEasingCurve, pyqtProperty
+from PyQt6.QtGui import QPixmap, QPainter, QIcon, QColor, QResizeEvent, QLinearGradient, QBrush, QPen, QFont
 from PyQt6.QtSvg import QSvgRenderer
 import os
 import psutil
@@ -32,7 +32,11 @@ class LargeSearchBox(QWidget):
         self.cpu_value_label = None
         self.memory_progress = None
         self.memory_percentage_label = None
+        self.cpu_progress = None
+        self.disk_progress = None
+        self.disk_percentage_label = None
         self.system_update_timer = QTimer()
+        self.progress_animations = []
         self.system_update_timer.setInterval(2000)  # Update every 2 seconds
         self.system_update_timer.timeout.connect(self.update_system_health)
         self.init_ui()
@@ -322,71 +326,137 @@ class LargeSearchBox(QWidget):
         return section
 
     def create_system_health_section(self):
-        """Create System Health section"""
+        """Create enhanced System Health section with modern design"""
         section = QFrame()
-        section.setObjectName("expandedSection")
+        section.setObjectName("systemHealthSection")
         layout = QVBoxLayout(section)
-        layout.setContentsMargins(24, 20, 24, 20)
-        layout.setSpacing(16)
+        layout.setContentsMargins(28, 24, 28, 24)
+        layout.setSpacing(20)
+
+        # Header with title and status indicator
+        header_container = QWidget()
+        header_layout = QHBoxLayout(header_container)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(12)
 
         title = QLabel("System Health")
-        title.setObjectName("sectionTitle")
-        layout.addWidget(title)
+        title.setObjectName("systemHealthTitle")
+        header_layout.addWidget(title)
 
-        # CPU Load
-        cpu_container = QWidget()
-        cpu_layout = QVBoxLayout(cpu_container)
-        cpu_layout.setContentsMargins(0, 0, 0, 0)
-        cpu_layout.setSpacing(8)
+        # Status indicator
+        status_indicator = QLabel("●")
+        status_indicator.setObjectName("systemHealthStatus")
+        header_layout.addWidget(status_indicator)
+        
+        header_layout.addStretch()
+        layout.addWidget(header_container)
 
-        cpu_header = QHBoxLayout()
-        cpu_icon = QLabel("🖥️")
-        cpu_icon.setObjectName("healthIcon")
-        cpu_header.addWidget(cpu_icon)
+        # Metrics grid container
+        metrics_container = QWidget()
+        metrics_layout = QVBoxLayout(metrics_container)
+        metrics_layout.setContentsMargins(0, 0, 0, 0)
+        metrics_layout.setSpacing(16)
 
-        cpu_label = QLabel("CPU Load")
-        cpu_label.setObjectName("healthLabel")
-        cpu_header.addWidget(cpu_label, 1)
+        # CPU Usage Card
+        cpu_card = self.create_metric_card("🖥️", "CPU Usage", "cpu")
+        metrics_layout.addWidget(cpu_card)
 
-        self.cpu_value_label = QLabel("Loading...")
-        self.cpu_value_label.setObjectName("healthValue")
-        cpu_header.addWidget(self.cpu_value_label)
+        # Memory Usage Card
+        memory_card = self.create_metric_card("💾", "Memory Usage", "memory")
+        metrics_layout.addWidget(memory_card)
 
-        cpu_layout.addLayout(cpu_header)
+        # Disk Usage Card
+        disk_card = self.create_metric_card("💿", "Disk Usage", "disk")
+        metrics_layout.addWidget(disk_card)
 
-        # Memory Usage
-        memory_container = QWidget()
-        memory_layout = QVBoxLayout(memory_container)
-        memory_layout.setContentsMargins(0, 0, 0, 8)
-        memory_layout.setSpacing(8)
-
-        memory_header = QHBoxLayout()
-        memory_icon = QLabel("💾")
-        memory_icon.setObjectName("healthIcon")
-        memory_header.addWidget(memory_icon)
-
-        memory_label = QLabel("Memory Usage")
-        memory_label.setObjectName("healthLabel")
-        memory_header.addWidget(memory_label, 1)
-
-        self.memory_percentage_label = QLabel("Loading...")
-        self.memory_percentage_label.setObjectName("healthValue")
-        memory_header.addWidget(self.memory_percentage_label)
-
-        memory_layout.addLayout(memory_header)
-
-        # Progress bar for memory
-        self.memory_progress = QProgressBar()
-        self.memory_progress.setObjectName("memoryProgress")
-        self.memory_progress.setValue(0)
-        self.memory_progress.setTextVisible(False)
-        self.memory_progress.setFixedHeight(8)
-        memory_layout.addWidget(self.memory_progress)
-
-        layout.addWidget(cpu_container)
-        layout.addWidget(memory_container)
+        layout.addWidget(metrics_container)
+        
+        # Add subtle shadow effect
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(20)
+        shadow.setColor(QColor(0, 0, 0, 40))
+        shadow.setOffset(0, 4)
+        section.setGraphicsEffect(shadow)
 
         return section
+
+    def create_metric_card(self, icon, label_text, metric_type):
+        """Create a modern metric card with progress visualization"""
+        card = QFrame()
+        card.setObjectName("metricCard")
+        card.setFixedHeight(70)
+        
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(8)
+
+        # Header row with icon, label, and value
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(12)
+
+        # Icon with background
+        icon_container = QFrame()
+        icon_container.setObjectName("metricIconContainer")
+        icon_container.setFixedSize(36, 36)
+        icon_layout = QHBoxLayout(icon_container)
+        icon_layout.setContentsMargins(0, 0, 0, 0)
+        
+        icon_label = QLabel(icon)
+        icon_label.setObjectName("metricIcon")
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_layout.addWidget(icon_label)
+        
+        header_layout.addWidget(icon_container)
+
+        # Label
+        label = QLabel(label_text)
+        label.setObjectName("metricLabel")
+        header_layout.addWidget(label, 1)
+
+        # Value label
+        value_label = QLabel("Loading...")
+        value_label.setObjectName("metricValue")
+        header_layout.addWidget(value_label)
+
+        layout.addLayout(header_layout)
+
+        # Progress bar
+        progress = QProgressBar()
+        progress.setObjectName(f"{metric_type}Progress")
+        progress.setValue(0)
+        progress.setTextVisible(False)
+        progress.setFixedHeight(6)
+        layout.addWidget(progress)
+
+        # Store references for updates
+        if metric_type == "cpu":
+            self.cpu_value_label = value_label
+            self.cpu_progress = progress
+        elif metric_type == "memory":
+            self.memory_percentage_label = value_label
+            self.memory_progress = progress
+        elif metric_type == "disk":
+            self.disk_percentage_label = value_label
+            self.disk_progress = progress
+
+        return card
+
+    def animate_progress_bar(self, progress_bar, target_value):
+        """Animate progress bar to target value with smooth transition"""
+        if not progress_bar:
+            return
+            
+        animation = QPropertyAnimation(progress_bar, b"value")
+        animation.setDuration(800)  # 800ms animation
+        animation.setStartValue(progress_bar.value())
+        animation.setEndValue(int(target_value))
+        animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        
+        # Store animation reference to prevent garbage collection
+        self.progress_animations.append(animation)
+        animation.finished.connect(lambda: self.progress_animations.remove(animation))
+        
+        animation.start()
 
     def update_system_health(self):
         """Update system health metrics with real data"""
@@ -395,22 +465,39 @@ class LargeSearchBox(QWidget):
             cpu_percent = psutil.cpu_percent(interval=0.1)
             if self.cpu_value_label:
                 self.cpu_value_label.setText(f"{cpu_percent:.1f}%")
+            if self.cpu_progress:
+                self.animate_progress_bar(self.cpu_progress, cpu_percent)
             
             # Get memory usage
             memory = psutil.virtual_memory()
             memory_percent = memory.percent
             if self.memory_progress:
-                self.memory_progress.setValue(int(memory_percent))
+                self.animate_progress_bar(self.memory_progress, memory_percent)
             if self.memory_percentage_label:
                 self.memory_percentage_label.setText(f"{memory_percent:.1f}%")
+            
+            # Get disk usage
+            disk = psutil.disk_usage('/')
+            disk_percent = (disk.used / disk.total) * 100
+            if self.disk_progress:
+                self.animate_progress_bar(self.disk_progress, disk_percent)
+            if self.disk_percentage_label:
+                self.disk_percentage_label.setText(f"{disk_percent:.1f}%")
                 
-        except Exception:            # Fallback to static data if psutil fails
+        except Exception:
+            # Fallback to static data if psutil fails
             if self.cpu_value_label:
                 self.cpu_value_label.setText("N/A")
+            if self.cpu_progress:
+                self.animate_progress_bar(self.cpu_progress, 0)
             if self.memory_percentage_label:
                 self.memory_percentage_label.setText("N/A")
             if self.memory_progress:
-                self.memory_progress.setValue(0)
+                self.animate_progress_bar(self.memory_progress, 0)
+            if self.disk_percentage_label:
+                self.disk_percentage_label.setText("N/A")
+            if self.disk_progress:
+                self.animate_progress_bar(self.disk_progress, 0)
 
     def showEvent(self, event):
         """Handle widget show events"""
@@ -716,33 +803,111 @@ class LargeSearchBox(QWidget):
                 font-size: 11px;
             }
 
-            /* System Health Styles */
-            QLabel#healthIcon {
-                font-size: 16px;
-                min-width: 20px;
+            /* Enhanced System Health Styles */
+            QFrame#systemHealthSection {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(32, 34, 40, 0.98),
+                    stop:0.5 rgba(28, 30, 36, 0.95),
+                    stop:1 rgba(24, 26, 32, 0.92));
+                border-radius: 24px;
+                border: 1px solid rgba(0, 191, 174, 0.15);
             }
 
-            QLabel#healthLabel {
-                color: #E8F4F3;
-                font-size: 13px;
-                font-weight: 500;
+            QLabel#systemHealthTitle {
+                color: #F6F7FB;
+                font-size: 20px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
             }
 
-            QLabel#healthValue {
-                color: #00BFAE;
+            QLabel#systemHealthStatus {
+                color: #00E6D6;
                 font-size: 12px;
+                margin-left: 8px;
+            }
+
+            QFrame#metricCard {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(20, 22, 28, 0.9),
+                    stop:1 rgba(16, 18, 24, 0.85));
+                border-radius: 16px;
+                border: 1px solid rgba(0, 191, 174, 0.08);
+            }
+
+            QFrame#metricCard:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(24, 26, 32, 0.95),
+                    stop:1 rgba(20, 22, 28, 0.9));
+                border-color: rgba(0, 191, 174, 0.18);
+            }
+
+            QFrame#metricIconContainer {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(0, 191, 174, 0.15),
+                    stop:1 rgba(0, 230, 214, 0.12));
+                border-radius: 18px;
+                border: 1px solid rgba(0, 191, 174, 0.2);
+            }
+
+            QLabel#metricIcon {
+                color: #00E6D6;
+                font-size: 18px;
                 font-weight: 600;
             }
 
+            QLabel#metricLabel {
+                color: #E8F4F3;
+                font-size: 14px;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+            }
+
+            QLabel#metricValue {
+                color: #00BFAE;
+                font-size: 14px;
+                font-weight: 700;
+                background-color: rgba(0, 191, 174, 0.08);
+                padding: 4px 8px;
+                border-radius: 8px;
+                border: 1px solid rgba(0, 191, 174, 0.15);
+            }
+
+            /* CPU Progress Bar */
+            QProgressBar#cpuProgress {
+                background-color: rgba(16, 18, 24, 0.8);
+                border-radius: 3px;
+                border: none;
+            }
+
+            QProgressBar#cpuProgress::chunk {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #FF6B6B, stop:0.3 #FF8E53, stop:0.7 #FF6B35, stop:1 #E74C3C);
+                border-radius: 3px;
+            }
+
+            /* Memory Progress Bar */
             QProgressBar#memoryProgress {
-                background-color: rgba(20, 22, 28, 0.8);
-                border-radius: 4px;
+                background-color: rgba(16, 18, 24, 0.8);
+                border-radius: 3px;
                 border: none;
             }
 
             QProgressBar#memoryProgress::chunk {
-                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #00BFAE, stop:0.7 #00D4C1, stop:1 #00E6D6);
-                border-radius: 4px;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #00BFAE, stop:0.3 #00D4C1, stop:0.7 #00E6D6, stop:1 #4ECDC4);
+                border-radius: 3px;
+            }
+
+            /* Disk Progress Bar */
+            QProgressBar#diskProgress {
+                background-color: rgba(16, 18, 24, 0.8);
+                border-radius: 3px;
+                border: none;
+            }
+
+            QProgressBar#diskProgress::chunk {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #9B59B6, stop:0.3 #8E44AD, stop:0.7 #A569BD, stop:1 #BB8FCE);
+                border-radius: 3px;
             }
         """

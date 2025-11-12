@@ -194,14 +194,11 @@ class SourceItem(QWidget):
                             border: none;
                         }
                     """)
-                    print(f"Successfully loaded SVG for {self.source_name}")
                     return True
                     
-            print(f"SVG rendering failed for {self.source_name}")
             return False
             
         except Exception as e:
-            print(f"Exception loading SVG for {self.source_name}: {e}")
             return False
     
     
@@ -246,13 +243,11 @@ class SourceItem(QWidget):
                     }
                 """)
                 
-                print(f"Successfully loaded SVG for {self.source_name}")
                 return True
                 
             return False
             
         except Exception as e:
-            print(f"SVG loading failed for {self.source_name}: {e}")
             return False
     
     def _set_fallback_icon(self):

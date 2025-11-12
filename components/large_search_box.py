@@ -127,10 +127,10 @@ class LargeSearchBox(QWidget):
         # Define highlights based on layout mode
         if self.is_maximized_layout:
             highlights = [
-                ("🚀", "Blazing Fast search", "Instant unified search"),
-                ("⭕", "Curated Collections", "Instant unified search"),
-                ("⭐", "Curated results", "Trusted package picks"),
-                ("⚙️", "Advanced User Tools", "Advanced user control")
+                ("🚀", "Blazing Fast search"),
+                ("⭕", "Curated Collections"),
+                ("⭐", "Curated results"),
+                ("⚙️", "Advanced User Tools")
             ]
         else:
             highlights = [
@@ -139,7 +139,12 @@ class LargeSearchBox(QWidget):
                 ("⚙️", "Power user ready", "Advanced user control")
             ]
 
-        for emoji, title, description in highlights:
+        for highlight_data in highlights:
+            if len(highlight_data) == 3:
+                emoji, title, description = highlight_data
+            else:
+                emoji, title = highlight_data
+                description = None
             highlight_card = QFrame()
             highlight_card.setObjectName("highlightCard")
             card_layout_inner = QVBoxLayout(highlight_card)
@@ -156,10 +161,12 @@ class LargeSearchBox(QWidget):
             title_label.setWordWrap(True)
             card_layout_inner.addWidget(title_label)
 
-            description_label = QLabel(description)
-            description_label.setObjectName("highlightDescription")
-            description_label.setWordWrap(True)
-            card_layout_inner.addWidget(description_label)
+            description_label = None
+            if description:
+                description_label = QLabel(description)
+                description_label.setObjectName("highlightDescription")
+                description_label.setWordWrap(True)
+                card_layout_inner.addWidget(description_label)
 
             self.highlight_widgets.append({
                 "card": highlight_card,
@@ -430,7 +437,8 @@ class LargeSearchBox(QWidget):
         for w in self.highlight_widgets:
             try:
                 w["icon"].setVisible(not compact)
-                w["desc"].setVisible(not compact)
+                if w["desc"]:  # Only set visibility if description exists
+                    w["desc"].setVisible(not compact)
                 w["title"].setVisible(True)
             except Exception:
                 pass

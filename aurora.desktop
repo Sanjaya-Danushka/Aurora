@@ -2,7 +2,7 @@
 Name=NeoArch
 Comment=NeoArch Package Manager
 Exec=/home/test/New Folder/Aurora/bin/neoarch.sh
-Icon=/home/test/New Folder/Aurora/assets/icons/discover/logo1.png
+Icon=/home/test/New Folder/Aurora/assets/icons/NeoarchLogo.svg
 Terminal=false
 Type=Application
 Categories=System;Utility;

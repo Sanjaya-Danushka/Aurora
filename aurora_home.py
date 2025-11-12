@@ -109,6 +109,7 @@ def _build_window_icon(icon_path: str) -> QIcon:
 def _get_brand_icon_path():
     base_dir = os.path.dirname(__file__)
     candidates = [
+        os.path.join(base_dir, "assets", "icons", "NeoarchLogo.svg"),
         os.path.join(base_dir, "assets", "icons", "brand", "neoarch.svg"),
         os.path.join(base_dir, "assets", "icons", "brand", "neoarch.png"),
         os.path.join(base_dir, "assets", "icons", "discover", "logo.svg"),
@@ -353,16 +354,32 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         # Logo on the left - larger and more prominent
         logo_label = QLabel()
-        logo_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "logo1.png")
+        logo_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "NeoarchLogo.svg")
         try:
-            pixmap = QPixmap(logo_path)
-            if not pixmap.isNull():
-                # Scale logo to 40px for better balance with text
-                scaled_pixmap = pixmap.scaledToWidth(40, Qt.TransformationMode.SmoothTransformation)
-                logo_label.setPixmap(scaled_pixmap)
+            if logo_path.endswith('.svg'):
+                # Handle SVG files
+                renderer = QSvgRenderer(logo_path)
+                if renderer.isValid():
+                    pixmap = QPixmap(40, 40)
+                    pixmap.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(pixmap)
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    renderer.render(painter, QRectF(0, 0, 40, 40))
+                    painter.end()
+                    logo_label.setPixmap(pixmap)
+                else:
+                    logo_label.setText("🖥️")
+                    logo_label.setStyleSheet("font-size: 24px; color: white;")
             else:
-                logo_label.setText("🖥️")
-                logo_label.setStyleSheet("font-size: 24px; color: white;")
+                # Handle raster images
+                pixmap = QPixmap(logo_path)
+                if not pixmap.isNull():
+                    # Scale logo to 40px for better balance with text
+                    scaled_pixmap = pixmap.scaledToWidth(40, Qt.TransformationMode.SmoothTransformation)
+                    logo_label.setPixmap(scaled_pixmap)
+                else:
+                    logo_label.setText("🖥️")
+                    logo_label.setStyleSheet("font-size: 24px; color: white;")
         except OSError:
             # Handle file loading or parsing errors
             self.log("Error loading logo")

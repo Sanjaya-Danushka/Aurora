@@ -152,6 +152,7 @@ class AboutDialog(QDialog):
         try:
             base = os.path.dirname(__file__)
             candidates = [
+                os.path.normpath(os.path.join(base, "..", "assets", "icons", "NeoarchLogo.svg")),
                 os.path.normpath(os.path.join(base, "..", "assets", "icons", "discover", "logo1.png")),
                 os.path.normpath(os.path.join(base, "..", "assets", "icons", "discover.svg")),
                 os.path.normpath(os.path.join(base, "..", "assets", "icons", "about.svg")),

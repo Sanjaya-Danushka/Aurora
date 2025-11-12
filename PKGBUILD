@@ -32,7 +32,7 @@ package() {
   install -Dm644 "$pkgdir/opt/neoarch/Neoarch/aurora.desktop" "$pkgdir/usr/share/applications/neoarch.desktop"
   sed -i 's|/home/test/New Folder/Aurora|/opt/neoarch/Neoarch|g' "$pkgdir/usr/share/applications/neoarch.desktop"
   # Install icon
-  install -Dm644 "$pkgdir/opt/neoarch/Neoarch/assets/icons/discover/logo1.png" "$pkgdir/usr/share/pixmaps/neoarch.png"
+  install -Dm644 "$pkgdir/opt/neoarch/Neoarch/assets/icons/NeoarchLogo.svg" "$pkgdir/usr/share/pixmaps/neoarch.svg"
   # Install license
   install -Dm644 "$pkgdir/opt/neoarch/Neoarch/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

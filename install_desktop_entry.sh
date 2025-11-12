@@ -3,7 +3,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="NeoArch"
 EXEC_PATH="$REPO_DIR/bin/neoarch.sh"
-ICON_PATH="$REPO_DIR/assets/icons/discover/logo1.png"
+ICON_PATH="$REPO_DIR/assets/icons/NeoarchLogo.svg"
 DESKTOP_DIR="$HOME/.local/share/applications"
 DESKTOP_FILE="$DESKTOP_DIR/neoarch.desktop"
 mkdir -p "$DESKTOP_DIR"

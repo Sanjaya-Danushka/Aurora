@@ -7,6 +7,8 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSize, QRectF, QTimer
 from PyQt6.QtGui import QPixmap, QPainter, QIcon, QColor, QResizeEvent
 from PyQt6.QtSvg import QSvgRenderer
 import os
+import psutil
+import platform
 
 
 class LargeSearchBox(QWidget):
@@ -27,6 +29,12 @@ class LargeSearchBox(QWidget):
         self.main_layout = None
         self.hero_card = None
         self.expanded_sections = None
+        self.cpu_value_label = None
+        self.memory_progress = None
+        self.memory_percentage_label = None
+        self.system_update_timer = QTimer()
+        self.system_update_timer.setInterval(2000)  # Update every 2 seconds
+        self.system_update_timer.timeout.connect(self.update_system_health)
         self.init_ui()
 
     def init_ui(self):
@@ -260,6 +268,9 @@ class LargeSearchBox(QWidget):
         expanded_layout.addWidget(system_health, 1)
 
         self.expanded_sections.hide()  # Initially hidden
+        
+        # Initialize system health data
+        self.update_system_health()
 
     def create_recent_updates_section(self):
         """Create Recent Updates section"""
@@ -337,9 +348,9 @@ class LargeSearchBox(QWidget):
         cpu_label.setObjectName("healthLabel")
         cpu_header.addWidget(cpu_label, 1)
 
-        cpu_value = QLabel("1.8-0.7 need")
-        cpu_value.setObjectName("healthValue")
-        cpu_header.addWidget(cpu_value)
+        self.cpu_value_label = QLabel("Loading...")
+        self.cpu_value_label.setObjectName("healthValue")
+        cpu_header.addWidget(self.cpu_value_label)
 
         cpu_layout.addLayout(cpu_header)
 
@@ -358,20 +369,49 @@ class LargeSearchBox(QWidget):
         memory_label.setObjectName("healthLabel")
         memory_header.addWidget(memory_label, 1)
 
+        self.memory_percentage_label = QLabel("Loading...")
+        self.memory_percentage_label.setObjectName("healthValue")
+        memory_header.addWidget(self.memory_percentage_label)
+
         memory_layout.addLayout(memory_header)
 
         # Progress bar for memory
-        memory_progress = QProgressBar()
-        memory_progress.setObjectName("memoryProgress")
-        memory_progress.setValue(65)
-        memory_progress.setTextVisible(False)
-        memory_progress.setFixedHeight(8)
-        memory_layout.addWidget(memory_progress)
+        self.memory_progress = QProgressBar()
+        self.memory_progress.setObjectName("memoryProgress")
+        self.memory_progress.setValue(0)
+        self.memory_progress.setTextVisible(False)
+        self.memory_progress.setFixedHeight(8)
+        memory_layout.addWidget(self.memory_progress)
 
         layout.addWidget(cpu_container)
         layout.addWidget(memory_container)
 
         return section
+
+    def update_system_health(self):
+        """Update system health metrics with real data"""
+        try:
+            # Get CPU usage (average over 1 second)
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            if self.cpu_value_label:
+                self.cpu_value_label.setText(f"{cpu_percent:.1f}%")
+            
+            # Get memory usage
+            memory = psutil.virtual_memory()
+            memory_percent = memory.percent
+            if self.memory_progress:
+                self.memory_progress.setValue(int(memory_percent))
+            if self.memory_percentage_label:
+                self.memory_percentage_label.setText(f"{memory_percent:.1f}%")
+                
+        except Exception as e:
+            # Fallback to static data if psutil fails
+            if self.cpu_value_label:
+                self.cpu_value_label.setText("N/A")
+            if self.memory_percentage_label:
+                self.memory_percentage_label.setText("N/A")
+            if self.memory_progress:
+                self.memory_progress.setValue(0)
 
     def showEvent(self, event):
         """Handle widget show events"""
@@ -402,6 +442,13 @@ class LargeSearchBox(QWidget):
         if should_be_maximized != self.is_maximized_layout:
             self.is_maximized_layout = should_be_maximized
             self.rebuild_layout()
+            
+            # Start/stop system health updates based on layout
+            if should_be_maximized:
+                self.update_system_health()  # Initial update
+                self.system_update_timer.start()
+            else:
+                self.system_update_timer.stop()
         
         # Update margins based on width
         if actual_width > 1400:

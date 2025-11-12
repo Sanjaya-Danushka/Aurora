@@ -404,8 +404,7 @@ class LargeSearchBox(QWidget):
             if self.memory_percentage_label:
                 self.memory_percentage_label.setText(f"{memory_percent:.1f}%")
                 
-        except Exception as e:
-            # Fallback to static data if psutil fails
+        except Exception:            # Fallback to static data if psutil fails
             if self.cpu_value_label:
                 self.cpu_value_label.setText("N/A")
             if self.memory_percentage_label:
@@ -505,7 +504,7 @@ class LargeSearchBox(QWidget):
                     self.search_icon.setText("🔍")
             else:
                 self.search_icon.setText("🔍")
-        except Exception as e:
+        except Exception:
             self.search_icon.setText("🔍")
 
     def set_button_icon(self):
@@ -528,7 +527,7 @@ class LargeSearchBox(QWidget):
                     self.search_button.setText("🔍")
             else:
                 self.search_button.setText("🔍")
-        except Exception as e:
+        except Exception:
             self.search_button.setText("🔍")
 
     def on_text_changed(self):

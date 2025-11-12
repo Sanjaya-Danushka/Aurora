@@ -1,21 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
-
 <svg
    width="128"
    height="128"
    viewBox="0 0 128 128"
    version="1.1"
    id="svg1"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <defs
-     id="defs1" />
-  <g
-     id="layer1">
-    <g
-       id="g31"
-       transform="translate(18, 18) scale(2.6)">
+   xmlns="http://www.w3.org/2000/svg">
+  <defs id="defs1" />
+  <g id="layer1">
+    <g id="g31" transform="translate(18, 18) scale(2.6)">
       <path
          id="path12"
          style="fill:#00ece1;fill-opacity:1;stroke:#00b3e0;stroke-width:1;stroke-opacity:1"

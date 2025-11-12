@@ -161,6 +161,14 @@ class LargeSearchBox(QWidget):
             highlight_card = QFrame()
             highlight_card.setObjectName("highlightCard")
             
+            # Set card height constraints based on layout mode
+            if self.is_maximized_layout:
+                highlight_card.setMinimumHeight(80)
+                highlight_card.setMaximumHeight(100)
+            else:
+                highlight_card.setMinimumHeight(120)
+                highlight_card.setMaximumHeight(150)
+            
             # Adjust card margins for maximized layout
             if self.is_maximized_layout:
                 card_layout_inner = QVBoxLayout(highlight_card)
@@ -168,22 +176,59 @@ class LargeSearchBox(QWidget):
                 card_layout_inner.setSpacing(3)
             else:
                 card_layout_inner = QVBoxLayout(highlight_card)
-                card_layout_inner.setContentsMargins(18, 18, 18, 18)
-                card_layout_inner.setSpacing(6)
+                card_layout_inner.setContentsMargins(20, 20, 20, 20)
+                card_layout_inner.setSpacing(8)
 
             icon_label = QLabel(emoji)
             icon_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             icon_label.setObjectName("highlightIcon")
+            
+            # Set font sizes based on layout mode
+            if self.is_maximized_layout:
+                # Smaller fonts for 4-card layout
+                icon_font = icon_label.font()
+                icon_font.setPointSize(18)
+                icon_label.setFont(icon_font)
+            else:
+                # Larger fonts for 3-card layout
+                icon_font = icon_label.font()
+                icon_font.setPointSize(24)
+                icon_label.setFont(icon_font)
+            
             card_layout_inner.addWidget(icon_label)
 
             title_label = QLabel(title)
             title_label.setObjectName("highlightTitle")
             title_label.setWordWrap(True)
+            
+            # Set title font size based on layout mode
+            if self.is_maximized_layout:
+                title_font = title_label.font()
+                title_font.setPointSize(11)
+                title_font.setBold(True)
+                title_label.setFont(title_font)
+            else:
+                title_font = title_label.font()
+                title_font.setPointSize(15)
+                title_font.setBold(True)
+                title_label.setFont(title_font)
+            
             card_layout_inner.addWidget(title_label)
 
             description_label = QLabel(description)
             description_label.setObjectName("highlightDescription")
             description_label.setWordWrap(True)
+            
+            # Set description font size based on layout mode
+            if self.is_maximized_layout:
+                desc_font = description_label.font()
+                desc_font.setPointSize(8)
+                description_label.setFont(desc_font)
+            else:
+                desc_font = description_label.font()
+                desc_font.setPointSize(11)
+                description_label.setFont(desc_font)
+            
             card_layout_inner.addWidget(description_label)
 
             # Add stretch to push content to top
@@ -553,8 +598,7 @@ class LargeSearchBox(QWidget):
                 background-color: rgba(18, 21, 27, 0.9);
                 border-radius: 18px;
                 border: 1px solid rgba(0, 191, 174, 0.14);
-                min-height: 80px;
-                max-height: 100px;
+                min-height: 100px;
             }
 
             QFrame#highlightCard:hover {
@@ -563,20 +607,20 @@ class LargeSearchBox(QWidget):
             }
 
             QLabel#highlightIcon {
-                font-size: 20px;
+                font-size: 24px;
             }
 
             QLabel#highlightTitle {
                 color: #EAF6F5;
-                font-size: 13px;
+                font-size: 15px;
                 font-weight: 600;
-                line-height: 1.1em;
+                line-height: 1.2em;
             }
 
             QLabel#highlightDescription {
                 color: #9CA6B4;
-                font-size: 9px;
-                line-height: 1.2em;
+                font-size: 11px;
+                line-height: 1.4em;
             }
 
             /* Expanded Sections Styles */

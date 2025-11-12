@@ -9,6 +9,9 @@ from PyQt6.QtSvg import QSvgRenderer
 import os
 import psutil
 import platform
+import subprocess
+import datetime
+import re
 
 
 class LargeSearchBox(QWidget):
@@ -37,6 +40,12 @@ class LargeSearchBox(QWidget):
         self.disk_percentage_label = None
         self.system_update_timer = QTimer()
         self.progress_animations = []
+        self.recent_updates_container = None
+        self.recent_updates = []
+        self.system_data_cache = {}
+        self.cache_timestamp = 0
+        self.cache_duration = 30  # Cache for 30 seconds
+        self.layout_switching = False
         self.system_update_timer.setInterval(2000)  # Update every 2 seconds
         self.system_update_timer.timeout.connect(self.update_system_health)
         self.init_ui()
@@ -275,55 +284,378 @@ class LargeSearchBox(QWidget):
         
         # Initialize system health data
         self.update_system_health()
+        
+        # Set up timer to refresh updates periodically
+        self.updates_timer = QTimer()
+        self.updates_timer.setInterval(300000)  # Refresh every 5 minutes
+        self.updates_timer.timeout.connect(self.refresh_updates)
+        
+    def refresh_updates(self):
+        """Refresh the recent updates display"""
+        if self.is_maximized_layout and self.recent_updates_container:
+            self.load_recent_updates()
 
     def create_recent_updates_section(self):
-        """Create Recent Updates section"""
+        """Create enhanced Recent Updates section with real package data"""
         section = QFrame()
-        section.setObjectName("expandedSection")
+        section.setObjectName("recentUpdatesSection")
         layout = QVBoxLayout(section)
-        layout.setContentsMargins(24, 20, 24, 20)
-        layout.setSpacing(16)
+        layout.setContentsMargins(28, 24, 28, 24)
+        layout.setSpacing(20)
+
+        # Header with title and refresh button
+        header_container = QWidget()
+        header_layout = QHBoxLayout(header_container)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(12)
 
         title = QLabel("Recent Updates")
-        title.setObjectName("sectionTitle")
-        layout.addWidget(title)
+        title.setObjectName("recentUpdatesTitle")
+        header_layout.addWidget(title)
 
-        # Sample update items
-        updates = [
-            ("🍽️", "Pacman Tui plates", "SSU saved"),
-            ("⚪", "System monitor, auutils, l ar poputils", "10789 at stage"),
-            ("🔧", "Docs system Cleansage", "231.83/22-1/712"),
-            ("⚪", "Neovim/nvim/neovim/nvim.ly, Tizen 22", "101.3/3 pis Aut/1.83/712")
-        ]
+        # Last updated indicator
+        last_updated = QLabel("Live")
+        last_updated.setObjectName("lastUpdatedLabel")
+        header_layout.addWidget(last_updated)
+        
+        header_layout.addStretch()
+        layout.addWidget(header_container)
 
-        for icon, title_text, status in updates:
-            item = QFrame()
-            item.setObjectName("updateItem")
-            item_layout = QHBoxLayout(item)
-            item_layout.setContentsMargins(12, 8, 12, 8)
-            item_layout.setSpacing(12)
+        # Updates container (will be populated dynamically)
+        self.recent_updates_container = QWidget()
+        self.recent_updates_layout = QVBoxLayout(self.recent_updates_container)
+        self.recent_updates_layout.setContentsMargins(0, 0, 0, 0)
+        self.recent_updates_layout.setSpacing(12)
+        
+        layout.addWidget(self.recent_updates_container)
+        
+        # Add subtle shadow effect
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(20)
+        shadow.setColor(QColor(0, 0, 0, 40))
+        shadow.setOffset(0, 4)
+        section.setGraphicsEffect(shadow)
 
-            icon_label = QLabel(icon)
-            icon_label.setObjectName("updateIcon")
-            item_layout.addWidget(icon_label)
-
-            text_container = QWidget()
-            text_layout = QVBoxLayout(text_container)
-            text_layout.setContentsMargins(0, 0, 0, 0)
-            text_layout.setSpacing(2)
-
-            title_label = QLabel(title_text)
-            title_label.setObjectName("updateTitle")
-            text_layout.addWidget(title_label)
-
-            status_label = QLabel(status)
-            status_label.setObjectName("updateStatus")
-            text_layout.addWidget(status_label)
-
-            item_layout.addWidget(text_container, 1)
-            layout.addWidget(item)
+        # Load initial updates
+        self.load_recent_updates()
 
         return section
+
+    def get_package_icon(self, package_name):
+        """Get appropriate icon for package type"""
+        package_name = package_name.lower()
+        
+        # System packages
+        if any(sys_pkg in package_name for sys_pkg in ['kernel', 'systemd', 'glibc', 'gcc']):
+            return "⚙️"  # Gear for system packages
+        # Development tools
+        elif any(dev_pkg in package_name for dev_pkg in ['python', 'nodejs', 'git', 'vim', 'code', 'gcc', 'make']):
+            return "🛠️"  # Hammer and wrench for dev tools
+        # Media packages
+        elif any(media_pkg in package_name for media_pkg in ['ffmpeg', 'vlc', 'gimp', 'blender']):
+            return "🎨"  # Artist palette for media
+        # Network/web packages
+        elif any(net_pkg in package_name for net_pkg in ['firefox', 'chrome', 'wget', 'curl', 'nginx']):
+            return "🌐"  # Globe for network
+        # Gaming
+        elif any(game_pkg in package_name for game_pkg in ['steam', 'wine', 'lutris']):
+            return "🎮"  # Game controller
+        # Security
+        elif any(sec_pkg in package_name for sec_pkg in ['gpg', 'ssh', 'openssl']):
+            return "🔒"  # Lock for security
+        else:
+            return "📦"  # Package for general packages
+
+    def format_time_ago(self, timestamp):
+        """Format timestamp to human-readable time ago"""
+        try:
+            now = datetime.datetime.now()
+            diff = now - timestamp
+            
+            if diff.days > 0:
+                return f"{diff.days}d ago"
+            elif diff.seconds > 3600:
+                hours = diff.seconds // 3600
+                return f"{hours}h ago"
+            elif diff.seconds > 60:
+                minutes = diff.seconds // 60
+                return f"{minutes}m ago"
+            else:
+                return "Just now"
+        except:
+            return "Unknown"
+
+    def load_recent_updates(self):
+        """Load recent package updates from system logs"""
+        try:
+            # Clear existing updates
+            while self.recent_updates_layout.count():
+                child = self.recent_updates_layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+            
+            # Get recent pacman updates from log
+            updates = self.get_pacman_updates()
+            
+            if not updates:
+                # Show system status instead of empty message
+                self.show_system_status()
+                return
+            
+            # Display up to 4 most recent updates
+            for update in updates[:4]:
+                self.create_update_item(update)
+                
+        except Exception as e:
+            self.show_system_status()  # Show system status instead of error
+
+    def get_pacman_updates(self):
+        """Get recent pacman updates from system log"""
+        updates = []
+        try:
+            # Try to read pacman log
+            result = subprocess.run(
+                ['tail', '-n', '50', '/var/log/pacman.log'],
+                capture_output=True, text=True, timeout=5
+            )
+            
+            if result.returncode == 0:
+                lines = result.stdout.strip().split('\n')
+                for line in lines:
+                    if '[ALPM] upgraded' in line or '[ALPM] installed' in line:
+                        match = re.search(r'\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}).*\] \[ALPM\] (upgraded|installed) ([^\s]+) \(([^)]+)\)', line)
+                        if match:
+                            timestamp_str, action, package, version = match.groups()
+                            timestamp = datetime.datetime.fromisoformat(timestamp_str)
+                            updates.append({
+                                'package': package,
+                                'version': version,
+                                'action': action,
+                                'timestamp': timestamp
+                            })
+            
+            # Sort by timestamp (newest first)
+            updates.sort(key=lambda x: x['timestamp'], reverse=True)
+            
+        except Exception:
+            # Return empty list to show system status instead
+            updates = []
+        
+        return updates
+
+    def create_update_item(self, update_data):
+        """Create a modern update item widget"""
+        item = QFrame()
+        item.setObjectName("modernUpdateItem")
+        item_layout = QHBoxLayout(item)
+        item_layout.setContentsMargins(16, 12, 16, 12)
+        item_layout.setSpacing(14)
+
+        # Package icon with background
+        icon_container = QFrame()
+        icon_container.setObjectName("updateIconContainer")
+        icon_container.setFixedSize(40, 40)
+        icon_layout = QHBoxLayout(icon_container)
+        icon_layout.setContentsMargins(0, 0, 0, 0)
+        
+        icon_label = QLabel(self.get_package_icon(update_data['package']))
+        icon_label.setObjectName("updatePackageIcon")
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_layout.addWidget(icon_label)
+        
+        item_layout.addWidget(icon_container)
+
+        # Package info container
+        info_container = QWidget()
+        info_layout = QVBoxLayout(info_container)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+        info_layout.setSpacing(4)
+
+        # Package name and action
+        name_action = QLabel(f"{update_data['package']} {update_data['action']}")
+        name_action.setObjectName("updatePackageName")
+        info_layout.addWidget(name_action)
+
+        # Version info
+        version_label = QLabel(f"Version {update_data['version']}")
+        version_label.setObjectName("updateVersion")
+        info_layout.addWidget(version_label)
+
+        item_layout.addWidget(info_container, 1)
+
+        # Time ago
+        time_label = QLabel(self.format_time_ago(update_data['timestamp']))
+        time_label.setObjectName("updateTime")
+        item_layout.addWidget(time_label)
+
+        self.recent_updates_layout.addWidget(item)
+
+    def show_system_status(self):
+        """Show useful system information when no updates are available"""
+        try:
+            # Load basic info first (fast)
+            uptime_info = self.get_system_uptime()
+            self.create_status_item("⏱️", "System Uptime", uptime_info, "System running smoothly")
+            
+            boot_time = self.get_last_boot_time()
+            self.create_status_item("🚀", "Last Boot", boot_time, "System startup")
+            
+            # Load heavier operations asynchronously
+            QTimer.singleShot(100, self.load_package_info)
+            QTimer.singleShot(300, self.load_update_info)
+            
+        except Exception:
+            # Fallback to basic system info
+            self.create_status_item("💻", "System Status", "Running", "All systems operational")
+            self.create_status_item("📊", "Package Manager", "Ready", "Pacman available")
+    
+    def load_package_info(self):
+        """Load package information asynchronously"""
+        try:
+            pkg_count = self.get_package_count()
+            self.create_status_item("📦", "Installed Packages", f"{pkg_count} packages", "System packages")
+        except:
+            self.create_status_item("📦", "Installed Packages", "Unknown", "System packages")
+    
+    def load_update_info(self):
+        """Load update information asynchronously"""
+        try:
+            available_updates = self.check_available_updates()
+            self.create_status_item("🔄", "Available Updates", available_updates, "Package manager")
+        except:
+            self.create_status_item("🔄", "Available Updates", "Check manually", "Package manager")
+
+    def get_cached_system_data(self, key, fetch_func):
+        """Get cached system data or fetch if expired"""
+        current_time = datetime.datetime.now().timestamp()
+        
+        # Check if cache is valid
+        if (key in self.system_data_cache and 
+            current_time - self.cache_timestamp < self.cache_duration):
+            return self.system_data_cache[key]
+        
+        # Fetch new data
+        try:
+            data = fetch_func()
+            self.system_data_cache[key] = data
+            self.cache_timestamp = current_time
+            return data
+        except:
+            # Return cached data if available, otherwise default
+            return self.system_data_cache.get(key, "Unknown")
+    
+    def get_system_uptime(self):
+        """Get system uptime information with caching"""
+        def fetch_uptime():
+            boot_time = psutil.boot_time()
+            uptime_seconds = datetime.datetime.now().timestamp() - boot_time
+            
+            days = int(uptime_seconds // 86400)
+            hours = int((uptime_seconds % 86400) // 3600)
+            
+            if days > 0:
+                return f"{days}d {hours}h"
+            elif hours > 0:
+                return f"{hours}h {int((uptime_seconds % 3600) // 60)}m"
+            else:
+                return f"{int(uptime_seconds // 60)}m"
+        
+        return self.get_cached_system_data('uptime', fetch_uptime)
+
+    def get_package_count(self):
+        """Get installed package count with caching"""
+        def fetch_package_count():
+            result = subprocess.run(
+                ['pacman', '-Q'], 
+                capture_output=True, text=True, timeout=3
+            )
+            if result.returncode == 0:
+                return len(result.stdout.strip().split('\n'))
+            return "Unknown"
+        
+        return self.get_cached_system_data('package_count', fetch_package_count)
+
+    def get_last_boot_time(self):
+        """Get last boot time with caching"""
+        def fetch_boot_time():
+            boot_time = psutil.boot_time()
+            boot_datetime = datetime.datetime.fromtimestamp(boot_time)
+            now = datetime.datetime.now()
+            diff = now - boot_datetime
+            
+            if diff.days > 0:
+                return f"{diff.days}d ago"
+            elif diff.seconds > 3600:
+                hours = diff.seconds // 3600
+                return f"{hours}h ago"
+            else:
+                minutes = diff.seconds // 60
+                return f"{minutes}m ago"
+        
+        return self.get_cached_system_data('boot_time', fetch_boot_time)
+
+    def check_available_updates(self):
+        """Check for available updates with caching and timeout optimization"""
+        def fetch_updates():
+            # Use faster timeout for better responsiveness
+            result = subprocess.run(
+                ['checkupdates'], 
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                count = len(result.stdout.strip().split('\n'))
+                return f"{count} available"
+            else:
+                return "Up to date"
+        
+        return self.get_cached_system_data('available_updates', fetch_updates)
+
+    def create_status_item(self, icon, title, value, description):
+        """Create a system status item"""
+        item = QFrame()
+        item.setObjectName("modernUpdateItem")
+        item_layout = QHBoxLayout(item)
+        item_layout.setContentsMargins(16, 12, 16, 12)
+        item_layout.setSpacing(14)
+
+        # Icon with background
+        icon_container = QFrame()
+        icon_container.setObjectName("updateIconContainer")
+        icon_container.setFixedSize(40, 40)
+        icon_layout = QHBoxLayout(icon_container)
+        icon_layout.setContentsMargins(0, 0, 0, 0)
+        
+        icon_label = QLabel(icon)
+        icon_label.setObjectName("updatePackageIcon")
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_layout.addWidget(icon_label)
+        
+        item_layout.addWidget(icon_container)
+
+        # Info container
+        info_container = QWidget()
+        info_layout = QVBoxLayout(info_container)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+        info_layout.setSpacing(4)
+
+        # Title
+        title_label = QLabel(title)
+        title_label.setObjectName("updatePackageName")
+        info_layout.addWidget(title_label)
+
+        # Description
+        desc_label = QLabel(description)
+        desc_label.setObjectName("updateVersion")
+        info_layout.addWidget(desc_label)
+
+        item_layout.addWidget(info_container, 1)
+
+        # Value
+        value_label = QLabel(value)
+        value_label.setObjectName("updateTime")
+        item_layout.addWidget(value_label)
+
+        self.recent_updates_layout.addWidget(item)
 
     def create_system_health_section(self):
         """Create enhanced System Health section with modern design"""
@@ -518,7 +850,10 @@ class LargeSearchBox(QWidget):
             self.update_layout_for_size()
 
     def update_layout_for_size(self):
-        """Update layout based on current window size"""
+        """Update layout based on current window size with performance optimization"""
+        if self.layout_switching:
+            return  # Prevent recursive calls during layout switching
+            
         # Get actual widget width if available, fallback to current_width
         actual_width = max(self.width(), self.current_width)
         
@@ -526,15 +861,20 @@ class LargeSearchBox(QWidget):
         should_be_maximized = actual_width > 1200
         
         if should_be_maximized != self.is_maximized_layout:
+            self.layout_switching = True
             self.is_maximized_layout = should_be_maximized
-            self.rebuild_layout()
             
-            # Start/stop system health updates based on layout
+            # Use QTimer.singleShot to defer heavy operations
             if should_be_maximized:
-                self.update_system_health()  # Initial update
-                self.system_update_timer.start()
+                self.rebuild_layout()
+                # Defer data loading to avoid blocking UI
+                QTimer.singleShot(100, self.load_maximized_data)
             else:
+                self.rebuild_layout()
                 self.system_update_timer.stop()
+                self.updates_timer.stop()
+            
+            self.layout_switching = False
         
         # Update margins based on width
         if actual_width > 1400:
@@ -545,6 +885,20 @@ class LargeSearchBox(QWidget):
             margins = (20, 30, 20, 30)
         
         self.main_layout.setContentsMargins(*margins)
+    
+    def load_maximized_data(self):
+        """Load data for maximized layout with performance optimization"""
+        if self.is_maximized_layout:
+            # Start timers first for immediate feedback
+            self.system_update_timer.start()
+            self.updates_timer.start()
+            
+            # Load system health data (lightweight)
+            QTimer.singleShot(50, self.update_system_health)
+            
+            # Load recent updates data (heavier operation)
+            if self.recent_updates_container:
+                QTimer.singleShot(200, self.load_recent_updates)
 
     def rebuild_layout(self):
         """Rebuild the layout when switching between modes"""
@@ -774,33 +1128,97 @@ class LargeSearchBox(QWidget):
                 margin-bottom: 8px;
             }
 
-            /* Recent Updates Styles */
-            QFrame#updateItem {
-                background-color: rgba(20, 22, 28, 0.7);
-                border-radius: 12px;
-                border: 1px solid rgba(0, 191, 174, 0.08);
-                margin: 2px 0px;
+            /* Enhanced Recent Updates Styles */
+            QFrame#recentUpdatesSection {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(32, 34, 40, 0.98),
+                    stop:0.5 rgba(28, 30, 36, 0.95),
+                    stop:1 rgba(24, 26, 32, 0.92));
+                border-radius: 24px;
+                border: 1px solid rgba(0, 191, 174, 0.15);
             }
 
-            QFrame#updateItem:hover {
-                background-color: rgba(24, 26, 32, 0.9);
-                border-color: rgba(0, 191, 174, 0.15);
+            QLabel#recentUpdatesTitle {
+                color: #F6F7FB;
+                font-size: 20px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
             }
 
-            QLabel#updateIcon {
-                font-size: 16px;
-                min-width: 20px;
-            }
-
-            QLabel#updateTitle {
-                color: #E8F4F3;
-                font-size: 13px;
-                font-weight: 500;
-            }
-
-            QLabel#updateStatus {
-                color: #9CA6B4;
+            QLabel#lastUpdatedLabel {
+                color: #00E6D6;
                 font-size: 11px;
+                font-weight: 600;
+                background-color: rgba(0, 230, 214, 0.12);
+                padding: 3px 8px;
+                border-radius: 10px;
+                border: 1px solid rgba(0, 230, 214, 0.2);
+            }
+
+            QFrame#modernUpdateItem {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(20, 22, 28, 0.9),
+                    stop:1 rgba(16, 18, 24, 0.85));
+                border-radius: 16px;
+                border: 1px solid rgba(0, 191, 174, 0.08);
+            }
+
+            QFrame#modernUpdateItem:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(24, 26, 32, 0.95),
+                    stop:1 rgba(20, 22, 28, 0.9));
+                border-color: rgba(0, 191, 174, 0.18);
+            }
+
+            QFrame#updateIconContainer {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(100, 150, 255, 0.15),
+                    stop:1 rgba(0, 191, 174, 0.12));
+                border-radius: 20px;
+                border: 1px solid rgba(100, 150, 255, 0.2);
+            }
+
+            QLabel#updatePackageIcon {
+                color: #6496FF;
+                font-size: 18px;
+                font-weight: 600;
+            }
+
+            QLabel#updatePackageName {
+                color: #E8F4F3;
+                font-size: 14px;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+            }
+
+            QLabel#updateVersion {
+                color: #9CA6B4;
+                font-size: 12px;
+                font-weight: 400;
+            }
+
+            QLabel#updateTime {
+                color: #00BFAE;
+                font-size: 12px;
+                font-weight: 700;
+                background-color: rgba(0, 191, 174, 0.08);
+                padding: 4px 8px;
+                border-radius: 8px;
+                border: 1px solid rgba(0, 191, 174, 0.15);
+                min-width: 50px;
+            }
+
+            QLabel#noUpdatesMessage {
+                color: #9CA6B4;
+                font-size: 14px;
+                font-style: italic;
+                padding: 20px;
+            }
+
+            QLabel#errorMessage {
+                color: #FF6B6B;
+                font-size: 12px;
+                padding: 20px;
             }
 
             /* Enhanced System Health Styles */

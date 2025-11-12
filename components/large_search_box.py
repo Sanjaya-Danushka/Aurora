@@ -51,26 +51,39 @@ class LargeSearchBox(QWidget):
         """Create the main search card"""
         self.hero_card = QFrame()
         self.hero_card.setObjectName("largeSearchCard")
-        card_layout = QVBoxLayout(self.hero_card)
-        card_layout.setContentsMargins(36, 40, 36, 40)
-        card_layout.setSpacing(24)
+        self.hero_card_layout = QVBoxLayout(self.hero_card)
+        
+        # Initial layout - will be updated in update_hero_card_layout
+        self.hero_card_layout.setContentsMargins(36, 40, 36, 40)
+        self.hero_card_layout.setSpacing(24)
 
         # Title and subtitle
-        title_label = QLabel("Discover New Packages")
-        title_label.setObjectName("heroTitle")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        card_layout.addWidget(title_label)
+        self.title_label = QLabel("Discover New Packages")
+        self.title_label.setObjectName("heroTitle")
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.hero_card_layout.addWidget(self.title_label)
 
-        subtitle_label = QLabel("Search across pacman, AUR, Flatpak, and npm repositories")
-        subtitle_label.setObjectName("heroSubtitle")
-        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        card_layout.addWidget(subtitle_label)
+        self.subtitle_label = QLabel("Search across pacman, AUR, Flatpak, and npm repositories")
+        self.subtitle_label.setObjectName("heroSubtitle")
+        self.subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.hero_card_layout.addWidget(self.subtitle_label)
 
         # Search container
-        self.create_search_container(card_layout)
+        self.create_search_container(self.hero_card_layout)
         
         # Highlights container
-        self.create_highlights_container(card_layout)
+        self.create_highlights_container(self.hero_card_layout)
+
+    def update_hero_card_layout(self):
+        """Update hero card layout based on current mode"""
+        if self.is_maximized_layout:
+            # Much tighter spacing for maximized layout to fit 4 cards
+            self.hero_card_layout.setContentsMargins(28, 24, 28, 24)
+            self.hero_card_layout.setSpacing(14)
+        else:
+            # Normal spacing for compact layout
+            self.hero_card_layout.setContentsMargins(36, 40, 36, 40)
+            self.hero_card_layout.setSpacing(24)
 
     def create_search_container(self, parent_layout):
         """Create the search input container"""
@@ -127,29 +140,36 @@ class LargeSearchBox(QWidget):
         # Define highlights based on layout mode
         if self.is_maximized_layout:
             highlights = [
-                ("🚀", "Blazing Fast search"),
-                ("⭕", "Curated Collections"),
-                ("⭐", "Curated results"),
-                ("⚙️", "Advanced User Tools")
+                ("🚀", "Blazing Fast search", "Instant multi-repo search"),
+                ("⭕", "Curated Collections", "Handpicked package sets"),
+                ("⭐", "Curated results", "Trusted package picks"),
+                ("⚙️", "Advanced User Tools", "Power user controls")
             ]
+            # Adjust spacing for 4 cards
+            self.highlights_layout.setSpacing(8)
         else:
             highlights = [
                 ("🚀", "Instant multi repo search", "Instant unified search"),
                 ("⭐", "Curated results", "Trusted package picks"),
                 ("⚙️", "Power user ready", "Advanced user control")
             ]
+            # Normal spacing for 3 cards
+            self.highlights_layout.setSpacing(18)
 
         for highlight_data in highlights:
-            if len(highlight_data) == 3:
-                emoji, title, description = highlight_data
-            else:
-                emoji, title = highlight_data
-                description = None
+            emoji, title, description = highlight_data
             highlight_card = QFrame()
             highlight_card.setObjectName("highlightCard")
-            card_layout_inner = QVBoxLayout(highlight_card)
-            card_layout_inner.setContentsMargins(18, 18, 18, 18)
-            card_layout_inner.setSpacing(6)
+            
+            # Adjust card margins for maximized layout
+            if self.is_maximized_layout:
+                card_layout_inner = QVBoxLayout(highlight_card)
+                card_layout_inner.setContentsMargins(12, 10, 12, 10)
+                card_layout_inner.setSpacing(3)
+            else:
+                card_layout_inner = QVBoxLayout(highlight_card)
+                card_layout_inner.setContentsMargins(18, 18, 18, 18)
+                card_layout_inner.setSpacing(6)
 
             icon_label = QLabel(emoji)
             icon_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -161,12 +181,13 @@ class LargeSearchBox(QWidget):
             title_label.setWordWrap(True)
             card_layout_inner.addWidget(title_label)
 
-            description_label = None
-            if description:
-                description_label = QLabel(description)
-                description_label.setObjectName("highlightDescription")
-                description_label.setWordWrap(True)
-                card_layout_inner.addWidget(description_label)
+            description_label = QLabel(description)
+            description_label.setObjectName("highlightDescription")
+            description_label.setWordWrap(True)
+            card_layout_inner.addWidget(description_label)
+
+            # Add stretch to push content to top
+            card_layout_inner.addStretch()
 
             self.highlight_widgets.append({
                 "card": highlight_card,
@@ -367,6 +388,9 @@ class LargeSearchBox(QWidget):
             self.main_layout.addStretch()
             self.expanded_sections.hide()
         
+        # Update hero card layout for new mode
+        self.update_hero_card_layout()
+        
         # Recreate highlight cards for new layout
         self.create_highlight_cards()
 
@@ -437,8 +461,7 @@ class LargeSearchBox(QWidget):
         for w in self.highlight_widgets:
             try:
                 w["icon"].setVisible(not compact)
-                if w["desc"]:  # Only set visibility if description exists
-                    w["desc"].setVisible(not compact)
+                w["desc"].setVisible(not compact)
                 w["title"].setVisible(True)
             except Exception:
                 pass
@@ -530,7 +553,8 @@ class LargeSearchBox(QWidget):
                 background-color: rgba(18, 21, 27, 0.9);
                 border-radius: 18px;
                 border: 1px solid rgba(0, 191, 174, 0.14);
-                min-height: 100px;
+                min-height: 80px;
+                max-height: 100px;
             }
 
             QFrame#highlightCard:hover {
@@ -539,19 +563,20 @@ class LargeSearchBox(QWidget):
             }
 
             QLabel#highlightIcon {
-                font-size: 24px;
+                font-size: 20px;
             }
 
             QLabel#highlightTitle {
                 color: #EAF6F5;
-                font-size: 15px;
+                font-size: 13px;
                 font-weight: 600;
+                line-height: 1.1em;
             }
 
             QLabel#highlightDescription {
                 color: #9CA6B4;
-                font-size: 11px;
-                line-height: 1.4em;
+                font-size: 9px;
+                line-height: 1.2em;
             }
 
             /* Expanded Sections Styles */

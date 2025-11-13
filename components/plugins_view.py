@@ -571,18 +571,18 @@ class PluginsView(QWidget):
         install_btn.setFixedSize(80, 32)
         install_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(0, 191, 174, 0.9);
+                background-color: rgba(30, 30, 30, 0.9);
                 color: white;
                 border: none;
-                border-radius: 8px;
+                border-radius: 16px;
                 font-weight: 600;
                 font-size: 12px;
             }
             QPushButton:hover {
-                background-color: rgba(0, 191, 174, 1.0);
+                background-color: rgba(50, 50, 50, 0.9);
             }
             QPushButton:pressed {
-                background-color: rgba(0, 150, 140, 1.0);
+                background-color: rgba(20, 20, 20, 0.9);
             }
         """)
         bottom_layout.addWidget(install_btn)

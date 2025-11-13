@@ -434,16 +434,20 @@ class PluginsView(QWidget):
         slider_layout.setContentsMargins(20, 20, 20, 20)
         slider_layout.setSpacing(16)
         
-        # Popular apps data - keep all 8 but now they can scroll
+        # Popular apps data - real popular applications
         popular_apps = [
-            {"name": "System Monitor", "desc": "Advanced system monitoring", "category": "System Tools", "rating": 4.5},
-            {"name": "KDE Plasma Extensions", "desc": "Enhance your desktop", "category": "Desktop", "rating": 4.3},
-            {"name": "Western Digitalized", "desc": "AUR Fork Infore", "category": "Development", "rating": 4.7},
-            {"name": "Maxthon M", "desc": "Pro Browser", "category": "Internet", "rating": 4.2},
-            {"name": "Code Editor Pro", "desc": "Advanced code editing", "category": "Development", "rating": 4.6},
-            {"name": "Media Player Ultra", "desc": "High-quality media player", "category": "Multimedia", "rating": 4.4},
-            {"name": "File Manager Plus", "desc": "Enhanced file management", "category": "Utilities", "rating": 4.1},
-            {"name": "Terminal Emulator", "desc": "Modern terminal interface", "category": "System Tools", "rating": 4.8}
+            {"name": "Firefox", "desc": "Fast, private & safe web browser", "category": "Internet", "rating": 4.6},
+            {"name": "Visual Studio Code", "desc": "Powerful code editor", "category": "Development", "rating": 4.8},
+            {"name": "Timeshift", "desc": "System restore utility", "category": "System Tools", "rating": 4.5},
+            {"name": "BleachBit", "desc": "System cleaner & privacy tool", "category": "System Tools", "rating": 4.3},
+            {"name": "GIMP", "desc": "GNU Image Manipulation Program", "category": "Graphics", "rating": 4.4},
+            {"name": "VLC Media Player", "desc": "Universal media player", "category": "Multimedia", "rating": 4.7},
+            {"name": "Discord", "desc": "Voice, video and text chat", "category": "Communication", "rating": 4.2},
+            {"name": "OBS Studio", "desc": "Live streaming & recording", "category": "Multimedia", "rating": 4.6},
+            {"name": "Thunderbird", "desc": "Email client by Mozilla", "category": "Office", "rating": 4.1},
+            {"name": "LibreOffice", "desc": "Free office suite", "category": "Office", "rating": 4.3},
+            {"name": "Steam", "desc": "Gaming platform", "category": "Games", "rating": 4.5},
+            {"name": "Blender", "desc": "3D creation suite", "category": "Graphics", "rating": 4.7}
         ]
         
         for app in popular_apps:

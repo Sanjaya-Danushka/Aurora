@@ -371,36 +371,385 @@ class PluginsView(QWidget):
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(20)
 
-        # Remove title label - no title needed for empty plugins section
-
-        # Create empty container instead of plugin cards
-        empty_container = QWidget()
-        empty_layout = QVBoxLayout(empty_container)
-        empty_layout.setContentsMargins(20, 20, 20, 20)
-        empty_layout.setSpacing(0)
+        # Popular Apps Slider Section
+        self.create_popular_slider(layout)
         
-        # Add stretch to center any future content vertically
-        empty_layout.addStretch()
+        # Filter Buttons Row
+        self.create_filter_buttons(layout)
         
-        scroll_root = QWidget()
-        s_layout = QVBoxLayout(scroll_root)
-        s_layout.setContentsMargins(0, 0, 0, 0)
-        s_layout.setSpacing(0)
-        s_layout.addWidget(empty_container)
-        s_layout.addStretch()
+        # Secondary Filter Row
+        self.create_secondary_filters(layout)
+        
+        # Apps Grid
+        self.create_apps_grid(layout)
 
+    def create_popular_slider(self, parent_layout):
+        """Create the popular apps slider at the top"""
+        slider_container = QWidget()
+        slider_container.setFixedHeight(200)
+        slider_container.setStyleSheet("""
+            QWidget {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 rgba(20, 25, 35, 0.9),
+                    stop:1 rgba(25, 30, 40, 0.9));
+                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+        """)
+        
+        # Create scroll area for horizontal scrolling
+        scroll_area = QScrollArea()
+        scroll_area.setFixedHeight(200)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                background: transparent;
+                border: none;
+            }
+            QScrollBar:horizontal {
+                border: none;
+                background: rgba(255, 255, 255, 0.1);
+                height: 8px;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:horizontal {
+                background: rgba(0, 191, 174, 0.6);
+                border-radius: 4px;
+                min-width: 20px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background: rgba(0, 191, 174, 0.8);
+            }
+        """)
+        
+        # Create content widget for the scroll area
+        scroll_content = QWidget()
+        slider_layout = QHBoxLayout(scroll_content)
+        slider_layout.setContentsMargins(20, 20, 20, 20)
+        slider_layout.setSpacing(16)
+        
+        # Popular apps data - keep all 8 but now they can scroll
+        popular_apps = [
+            {"name": "System Monitor", "desc": "Advanced system monitoring", "category": "System Tools", "rating": 4.5},
+            {"name": "KDE Plasma Extensions", "desc": "Enhance your desktop", "category": "Desktop", "rating": 4.3},
+            {"name": "Western Digitalized", "desc": "AUR Fork Infore", "category": "Development", "rating": 4.7},
+            {"name": "Maxthon M", "desc": "Pro Browser", "category": "Internet", "rating": 4.2},
+            {"name": "Code Editor Pro", "desc": "Advanced code editing", "category": "Development", "rating": 4.6},
+            {"name": "Media Player Ultra", "desc": "High-quality media player", "category": "Multimedia", "rating": 4.4},
+            {"name": "File Manager Plus", "desc": "Enhanced file management", "category": "Utilities", "rating": 4.1},
+            {"name": "Terminal Emulator", "desc": "Modern terminal interface", "category": "System Tools", "rating": 4.8}
+        ]
+        
+        for app in popular_apps:
+            card = self.create_slider_card(app)
+            slider_layout.addWidget(card)
+        
+        # Set the content widget to the scroll area
+        scroll_area.setWidget(scroll_content)
+        
+        # Add scroll area to the main container
+        container_layout = QVBoxLayout(slider_container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.addWidget(scroll_area)
+        
+        parent_layout.addWidget(slider_container)
+
+    def create_slider_card(self, app_data):
+        """Create a card for the popular apps slider"""
+        card = QFrame()
+        card.setFixedSize(200, 160)  # Increased width from 180 to 200
+        card.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(30, 35, 45, 0.95),
+                    stop:1 rgba(25, 30, 40, 0.95));
+                border-radius: 10px;
+                border: 1px solid rgba(0, 191, 174, 0.3);
+            }
+            QFrame:hover {
+                border: 1px solid rgba(0, 191, 174, 0.6);
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(35, 40, 50, 0.95),
+                    stop:1 rgba(30, 35, 45, 0.95));
+            }
+        """)
+        
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 12, 16, 12)  # Increased horizontal margins
+        layout.setSpacing(6)  # Reduced spacing to fit content better
+        
+        # App icon placeholder
+        icon_label = QLabel("📱")
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_label.setStyleSheet("font-size: 28px; color: #00BFAE;")  # Slightly smaller icon
+        layout.addWidget(icon_label)
+        
+        # App name
+        name_label = QLabel(app_data["name"])
+        name_label.setStyleSheet("color: #F0F0F0; font-weight: 600; font-size: 12px;")  # Slightly smaller font
+        name_label.setWordWrap(True)
+        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        name_label.setMaximumHeight(30)  # Limit height to prevent overflow
+        layout.addWidget(name_label)
+        
+        # App description
+        desc_label = QLabel(app_data["desc"])
+        desc_label.setStyleSheet("color: #A0A0A0; font-size: 9px;")  # Smaller description font
+        desc_label.setWordWrap(True)
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc_label.setMaximumHeight(25)  # Limit height to prevent overflow
+        layout.addWidget(desc_label)
+        
+        # Install button
+        install_btn = QPushButton("Install")
+        install_btn.setFixedHeight(26)  # Slightly smaller button
+        install_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #00BFAE;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-weight: 600;
+                font-size: 10px;
+            }
+            QPushButton:hover {
+                background-color: #00A89A;
+            }
+        """)
+        layout.addWidget(install_btn)
+        
+        return card
+
+    def create_filter_buttons(self, parent_layout):
+        """Create the main filter buttons row"""
+        filter_container = QWidget()
+        filter_layout = QHBoxLayout(filter_container)
+        filter_layout.setContentsMargins(0, 0, 0, 0)
+        filter_layout.setSpacing(12)
+        
+        filters = ["All", "Popular", "Updated", "Categories"]
+        
+        for i, filter_name in enumerate(filters):
+            btn = QPushButton(filter_name)
+            btn.setFixedHeight(36)
+            
+            if i == 0:  # "All" button selected by default
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #00BFAE;
+                        color: white;
+                        border: none;
+                        border-radius: 18px;
+                        padding: 0 20px;
+                        font-weight: 600;
+                        font-size: 13px;
+                    }
+                """)
+            else:
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: rgba(255, 255, 255, 0.1);
+                        color: #E0E0E0;
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                        border-radius: 18px;
+                        padding: 0 20px;
+                        font-weight: 500;
+                        font-size: 13px;
+                    }
+                    QPushButton:hover {
+                        background-color: rgba(0, 191, 174, 0.2);
+                        border-color: rgba(0, 191, 174, 0.4);
+                    }
+                """)
+            
+            filter_layout.addWidget(btn)
+        
+        filter_layout.addStretch()
+        parent_layout.addWidget(filter_container)
+
+    def create_secondary_filters(self, parent_layout):
+        """Create the secondary filter row"""
+        secondary_container = QWidget()
+        secondary_layout = QHBoxLayout(secondary_container)
+        secondary_layout.setContentsMargins(0, 0, 0, 0)
+        secondary_layout.setSpacing(8)
+        
+        secondary_filters = ["New", "Updated", "Upgraded", "Sorts", "Companies"]
+        
+        for filter_name in secondary_filters:
+            btn = QPushButton(filter_name)
+            btn.setFixedHeight(32)
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(255, 255, 255, 0.05);
+                    color: #B0B0B0;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 16px;
+                    padding: 0 16px;
+                    font-weight: 500;
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background-color: rgba(0, 191, 174, 0.15);
+                    border-color: rgba(0, 191, 174, 0.3);
+                    color: #E0E0E0;
+                }
+            """)
+            secondary_layout.addWidget(btn)
+        
+        secondary_layout.addStretch()
+        parent_layout.addWidget(secondary_container)
+
+    def create_apps_grid(self, parent_layout):
+        """Create the apps grid section"""
         scroll = QScrollArea()
-        try:
-            scroll.setWidgetResizable(True)
-            scroll.setFrameShape(QFrame.Shape.NoFrame)
-        except Exception:
-            pass
-        scroll.setWidget(scroll_root)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        scroll_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_layout.setSpacing(16)
+        
+        # Create grid container
+        grid_container = QWidget()
+        self.grid_layout = QGridLayout(grid_container)
+        self.grid_layout.setSpacing(16)
+        self.grid_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Add sample app cards
+        self.populate_app_cards()
+        
+        scroll_layout.addWidget(grid_container)
+        scroll_layout.addStretch()
+        
+        scroll.setWidget(scroll_widget)
+        parent_layout.addWidget(scroll)
 
-        layout.addWidget(scroll)
+    def populate_app_cards(self):
+        """Populate the grid with app cards"""
+        apps = [
+            {"name": "System Monitor Pro", "desc": "Advanced system monitoring", "category": "System Tools", "rating": 4.5, "downloads": "10K+"},
+            {"name": "KDE Plasma Designer", "desc": "Desktop customization", "category": "Desktop", "rating": 4.3, "downloads": "5K+"},
+            {"name": "KDE Plasma", "desc": "Desktop environment", "category": "Desktop", "rating": 4.8, "downloads": "50K+"},
+            {"name": "KDE Plasma Framework", "desc": "Framework components", "category": "Development", "rating": 4.6, "downloads": "25K+"},
+            {"name": "Roxann Government", "desc": "Government tools", "category": "Office", "rating": 3.9, "downloads": "2K+"},
+            {"name": "Revival of Khwaja", "desc": "Cultural application", "category": "Education", "rating": 4.1, "downloads": "1K+"},
+            {"name": "Flatpak Manager", "desc": "Manage Flatpak apps", "category": "System Tools", "rating": 4.4, "downloads": "15K+"},
+            {"name": "Power Manager", "desc": "Advanced power management", "category": "System Tools", "rating": 4.2, "downloads": "8K+"}
+        ]
+        
+        cols = 4
+        for i, app in enumerate(apps):
+            row = i // cols
+            col = i % cols
+            card = self.create_app_card(app)
+            self.grid_layout.addWidget(card, row, col)
+
+    def create_app_card(self, app_data):
+        """Create a modern app card"""
+        card = QFrame()
+        card.setFixedSize(160, 220)
+        card.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(25, 30, 40, 0.9),
+                    stop:1 rgba(20, 25, 35, 0.9));
+                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+            }
+            QFrame:hover {
+                border: 1px solid rgba(0, 191, 174, 0.4);
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(30, 35, 45, 0.9),
+                    stop:1 rgba(25, 30, 40, 0.9));
+            }
+        """)
+        
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+        
+        # App icon
+        icon_container = QWidget()
+        icon_container.setFixedSize(48, 48)
+        icon_container.setStyleSheet("""
+            QWidget {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(0, 191, 174, 0.8),
+                    stop:1 rgba(0, 150, 140, 0.8));
+                border-radius: 12px;
+            }
+        """)
+        icon_layout = QVBoxLayout(icon_container)
+        icon_layout.setContentsMargins(0, 0, 0, 0)
+        icon_label = QLabel("📱")
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_label.setStyleSheet("font-size: 24px; color: white;")
+        icon_layout.addWidget(icon_label)
+        layout.addWidget(icon_container, 0, Qt.AlignmentFlag.AlignHCenter)
+        
+        # App name
+        name_label = QLabel(app_data["name"])
+        name_label.setStyleSheet("color: #F0F0F0; font-weight: 600; font-size: 13px;")
+        name_label.setWordWrap(True)
+        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(name_label)
+        
+        # App description
+        desc_label = QLabel(app_data["desc"])
+        desc_label.setStyleSheet("color: #A0A0A0; font-size: 10px;")
+        desc_label.setWordWrap(True)
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(desc_label)
+        
+        # Rating and downloads
+        info_container = QWidget()
+        info_layout = QHBoxLayout(info_container)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+        info_layout.setSpacing(4)
+        
+        # Rating
+        rating_label = QLabel(f"⭐ {app_data['rating']}")
+        rating_label.setStyleSheet("color: #FFD700; font-size: 10px; font-weight: 500;")
+        info_layout.addWidget(rating_label)
+        
+        info_layout.addStretch()
+        
+        # Downloads
+        downloads_label = QLabel(app_data['downloads'])
+        downloads_label.setStyleSheet("color: #A0A0A0; font-size: 10px;")
+        info_layout.addWidget(downloads_label)
+        
+        layout.addWidget(info_container)
+        
+        # Install button
+        install_btn = QPushButton("Install")
+        install_btn.setFixedHeight(32)
+        install_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #00BFAE;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #00A89A;
+            }
+        """)
+        layout.addWidget(install_btn)
+        
+        layout.addStretch()
+        return card
 
     def _icon_for(self, spec):
         try:

@@ -389,7 +389,7 @@ class PluginsView(QWidget):
     def create_popular_slider(self, parent_layout):
         """Create the popular apps slider at the top"""
         slider_container = QWidget()
-        slider_container.setFixedHeight(200)
+        slider_container.setFixedHeight(220)  # Increased height for larger cards
         slider_container.setStyleSheet("""
             QWidget {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -402,7 +402,7 @@ class PluginsView(QWidget):
         
         # Create scroll area for horizontal scrolling
         scroll_area = QScrollArea()
-        scroll_area.setFixedHeight(200)
+        scroll_area.setFixedHeight(220)  # Increased height for larger cards
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setWidgetResizable(True)
@@ -434,20 +434,20 @@ class PluginsView(QWidget):
         slider_layout.setContentsMargins(20, 20, 20, 20)
         slider_layout.setSpacing(16)
         
-        # Popular apps data - curated selection
+        # Popular apps data - curated selection with image filenames
         popular_apps = [
-            {"name": "Firefox", "desc": "Fast, private & safe web browser", "category": "Internet", "rating": 4.6},
-            {"name": "Visual Studio Code", "desc": "Powerful code editor", "category": "Development", "rating": 4.8},
-            {"name": "Timeshift", "desc": "System restore utility", "category": "System Tools", "rating": 4.5},
-            {"name": "BleachBit", "desc": "System cleaner & privacy tool", "category": "System Tools", "rating": 4.3},
-            {"name": "GIMP", "desc": "GNU Image Manipulation Program", "category": "Graphics", "rating": 4.4},
-            {"name": "VLC Media Player", "desc": "Universal media player", "category": "Multimedia", "rating": 4.7},
-            {"name": "Discord", "desc": "Voice, video and text chat", "category": "Communication", "rating": 4.2},
-            {"name": "Krita", "desc": "Digital painting application", "category": "Graphics", "rating": 4.6},
-            {"name": "Spotify", "desc": "Music streaming service", "category": "Multimedia", "rating": 4.1},
-            {"name": "Telegram", "desc": "Fast and secure messaging", "category": "Communication", "rating": 4.4},
-            {"name": "Google Chrome", "desc": "Fast and secure web browser", "category": "Internet", "rating": 4.3},
-            {"name": "Kitty", "desc": "Fast, feature-rich terminal", "category": "System Tools", "rating": 4.5}
+            {"name": "Firefox", "desc": "Fast, private & safe web browser", "category": "Internet", "rating": 4.6, "image": "firefox.jpg"},
+            {"name": "Visual Studio Code", "desc": "Powerful code editor", "category": "Development", "rating": 4.8, "image": "vscode.jpg"},
+            {"name": "Timeshift", "desc": "System restore utility", "category": "System Tools", "rating": 4.5, "image": "timeshift.jpg"},
+            {"name": "BleachBit", "desc": "System cleaner & privacy tool", "category": "System Tools", "rating": 4.3, "image": "bleachbit.jpg"},
+            {"name": "GIMP", "desc": "GNU Image Manipulation Program", "category": "Graphics", "rating": 4.4, "image": "gimp.jpg"},
+            {"name": "VLC Media Player", "desc": "Universal media player", "category": "Multimedia", "rating": 4.7, "image": "vlc.jpg"},
+            {"name": "Discord", "desc": "Voice, video and text chat", "category": "Communication", "rating": 4.2, "image": "discode.jpg"},
+            {"name": "Krita", "desc": "Digital painting application", "category": "Graphics", "rating": 4.6, "image": "krita.jpg"},
+            {"name": "Spotify", "desc": "Music streaming service", "category": "Multimedia", "rating": 4.1, "image": "spotify.jpg"},
+            {"name": "Telegram", "desc": "Fast and secure messaging", "category": "Communication", "rating": 4.4, "image": "telegram.jpg"},
+            {"name": "Google Chrome", "desc": "Fast and secure web browser", "category": "Internet", "rating": 4.3, "image": "chrome.jpg"},
+            {"name": "Kitty", "desc": "Fast, feature-rich terminal", "category": "System Tools", "rating": 4.5, "image": "kitty.jpg"}
         ]
         
         for app in popular_apps:
@@ -465,113 +465,117 @@ class PluginsView(QWidget):
         parent_layout.addWidget(slider_container)
 
     def create_slider_card(self, app_data):
-        """Create a card for the popular apps slider"""
+        """Create a card for the popular apps slider with background image"""
         card = QFrame()
-        card.setFixedSize(200, 160)  # Increased width from 180 to 200
+        card.setFixedSize(240, 180)  # Larger size for better visibility
         
-        # Try to load background image for the app
-        app_name = app_data["name"].lower().replace(" ", "_")
-        icons_dir = os.path.join(os.path.dirname(__file__), "..", "assets", "icons")
+        # Get background image path
+        image_filename = app_data.get("image", "")
+        background_image_path = os.path.join(os.path.dirname(__file__), "..", "assets", "plugins", "slidebar", image_filename)
         
-        # Look for background image files
-        background_image = None
-        for ext in ['.png', '.jpg', '.jpeg', '.svg']:
-            image_path = os.path.join(icons_dir, f"{app_name}{ext}")
-            print(f"Looking for image: {image_path}")  # Debug print
-            if os.path.exists(image_path):
-                background_image = os.path.normpath(image_path)
-                print(f"Found background image: {background_image}")  # Debug print
-                break
+        # Create the card with background image
+        card.setStyleSheet(f"""
+            QFrame {{
+                background-image: url({background_image_path});
+                background-repeat: no-repeat;
+                background-position: center;
+                background-size: cover;
+                border-radius: 12px;
+                border: 2px solid rgba(255, 255, 255, 0.1);
+            }}
+            QFrame:hover {{
+                border: 2px solid rgba(0, 191, 174, 0.6);
+                transform: scale(1.02);
+            }}
+        """)
         
-        if not background_image:
-            print(f"No background image found for {app_name} in {icons_dir}")  # Debug print
+        # Create overlay container for text content
+        overlay = QWidget(card)
+        overlay.setGeometry(0, 0, 240, 180)
+        overlay.setStyleSheet("""
+            QWidget {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(0, 0, 0, 0.1),
+                    stop:0.6 rgba(0, 0, 0, 0.3),
+                    stop:1 rgba(0, 0, 0, 0.8));
+                border-radius: 12px;
+            }
+        """)
         
-        # Create stylesheet with or without background image
-        if background_image:
-            # Use QPixmap to load and scale the image properly
-            from PyQt6.QtGui import QPixmap, QPalette, QBrush
-            pixmap = QPixmap(background_image)
-            if not pixmap.isNull():
-                # Scale pixmap to card size
-                scaled_pixmap = pixmap.scaled(200, 160, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
-                
-                # Create QBrush from pixmap and set as background
-                brush = QBrush(scaled_pixmap)
-                palette = card.palette()
-                palette.setBrush(QPalette.ColorRole.Window, brush)
-                card.setPalette(palette)
-                card.setAutoFillBackground(True)
-                
-            card.setStyleSheet("""
-                QFrame {
-                    border-radius: 10px;
-                    border: 1px solid rgba(0, 191, 174, 0.3);
-                }
-                QFrame:hover {
-                    border: 1px solid rgba(0, 191, 174, 0.6);
-                }
-            """)
-        else:
-            # Fallback to gradient if no image found
-            card.setStyleSheet("""
-                QFrame {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 rgba(30, 35, 45, 0.95),
-                        stop:1 rgba(25, 30, 40, 0.95));
-                    border-radius: 10px;
-                    border: 1px solid rgba(0, 191, 174, 0.3);
-                }
-                QFrame:hover {
-                    border: 1px solid rgba(0, 191, 174, 0.6);
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 rgba(35, 40, 50, 0.95),
-                        stop:1 rgba(30, 35, 45, 0.95));
-                }
-            """)
+        layout = QVBoxLayout(overlay)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(8)
         
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(16, 12, 16, 12)  # Increased horizontal margins
-        layout.setSpacing(6)  # Reduced spacing to fit content better
-        
-        # App icon placeholder
-        icon_label = QLabel("📱")
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_label.setStyleSheet("font-size: 28px; color: #00BFAE;")  # Slightly smaller icon
-        layout.addWidget(icon_label)
+        # Add stretch to push content to bottom
+        layout.addStretch()
         
         # App name
         name_label = QLabel(app_data["name"])
-        name_label.setStyleSheet("color: #F0F0F0; font-weight: 600; font-size: 12px;")  # Slightly smaller font
+        name_label.setStyleSheet("""
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        """)
         name_label.setWordWrap(True)
-        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        name_label.setMaximumHeight(30)  # Limit height to prevent overflow
+        name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(name_label)
         
         # App description
         desc_label = QLabel(app_data["desc"])
-        desc_label.setStyleSheet("color: #A0A0A0; font-size: 9px;")  # Smaller description font
+        desc_label.setStyleSheet("""
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 12px;
+            font-weight: 400;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        """)
         desc_label.setWordWrap(True)
-        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setMaximumHeight(25)  # Limit height to prevent overflow
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        desc_label.setMaximumHeight(32)
         layout.addWidget(desc_label)
+        
+        # Bottom row with rating and install button
+        bottom_row = QWidget()
+        bottom_layout = QHBoxLayout(bottom_row)
+        bottom_layout.setContentsMargins(0, 8, 0, 0)
+        bottom_layout.setSpacing(8)
+        
+        # Rating
+        rating_label = QLabel(f"⭐ {app_data['rating']}")
+        rating_label.setStyleSheet("""
+            color: #FFD700;
+            font-size: 12px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        """)
+        bottom_layout.addWidget(rating_label)
+        
+        bottom_layout.addStretch()
         
         # Install button
         install_btn = QPushButton("Install")
-        install_btn.setFixedHeight(26)  # Slightly smaller button
+        install_btn.setFixedSize(80, 32)
         install_btn.setStyleSheet("""
             QPushButton {
-                background-color: #00BFAE;
+                background-color: rgba(0, 191, 174, 0.9);
                 color: white;
                 border: none;
-                border-radius: 6px;
+                border-radius: 8px;
                 font-weight: 600;
-                font-size: 10px;
+                font-size: 12px;
+                text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
             }
             QPushButton:hover {
-                background-color: #00A89A;
+                background-color: rgba(0, 191, 174, 1.0);
+                transform: scale(1.05);
+            }
+            QPushButton:pressed {
+                background-color: rgba(0, 150, 140, 1.0);
             }
         """)
-        layout.addWidget(install_btn)
+        bottom_layout.addWidget(install_btn)
+        
+        layout.addWidget(bottom_row)
         
         return card
 

@@ -15,11 +15,86 @@ class GeneralSettingsWidget(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
+        # Add title with subtitle
+        title = QLabel("General")
+        title.setStyleSheet("""
+            font-size: 28px; 
+            font-weight: 700; 
+            color: #ffffff; 
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        """)
+        self.layout.addWidget(title)
+        
+        subtitle = QLabel("Configure basic application settings and preferences")
+        subtitle.setStyleSheet("""
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 20px;
+        """)
+        self.layout.addWidget(subtitle)
+        
         # Basic Settings
         basic_box = QGroupBox("Basic Settings")
+        basic_box.setStyleSheet("""
+            QGroupBox {
+                font-size: 15px;
+                font-weight: 600;
+                color: #ffffff;
+                background-color: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 10px;
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 16px;
+                padding: 0 8px;
+                background-color: transparent;
+            }
+            QCheckBox {
+                color: #e0e0e0;
+                font-size: 14px;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 2px solid #555;
+                background-color: #2a2a2a;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #0d7377;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #0d7377;
+                border-color: #0d7377;
+                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDNMNC41IDguNUwyIDYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
+            }
+            QComboBox {
+                background-color: #333;
+                border: 1px solid #555;
+                border-radius: 6px;
+                padding: 6px 12px;
+                color: #e0e0e0;
+                min-width: 150px;
+            }
+            QComboBox:hover {
+                border-color: #0d7377;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QLabel {
+                color: #b0b0b0;
+            }
+        """)
         grid = QGridLayout(basic_box)
-        grid.setContentsMargins(12, 12, 12, 12)
-        grid.setSpacing(8)
+        grid.setContentsMargins(16, 20, 16, 16)
+        grid.setSpacing(12)
 
         # Auto check updates on launch
         self.cb_auto_check = QCheckBox("Auto check updates on launch")
@@ -80,9 +155,72 @@ class GeneralSettingsWidget(QWidget):
 
         # Bundle Settings
         bundle_box = QGroupBox("Bundle Autosave")
+        bundle_box.setStyleSheet("""
+            QGroupBox {
+                font-size: 15px;
+                font-weight: 600;
+                color: #ffffff;
+                background-color: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 10px;
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 16px;
+                padding: 0 8px;
+                background-color: transparent;
+            }
+            QCheckBox {
+                color: #e0e0e0;
+                font-size: 14px;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 2px solid #555;
+                background-color: #2a2a2a;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #0d7377;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #0d7377;
+                border-color: #0d7377;
+            }
+            QLineEdit {
+                background-color: #333;
+                border: 1px solid #555;
+                border-radius: 6px;
+                padding: 8px 12px;
+                color: #e0e0e0;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border-color: #0d7377;
+            }
+            QPushButton {
+                background-color: #0d7377;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: 600;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background-color: #0a5c5f;
+            }
+            QLabel {
+                color: #b0b0b0;
+            }
+        """)
         pgrid = QGridLayout(bundle_box)
-        pgrid.setContentsMargins(12, 12, 12, 12)
-        pgrid.setSpacing(8)
+        pgrid.setContentsMargins(16, 20, 16, 16)
+        pgrid.setSpacing(12)
 
         self.cb_bsave = QCheckBox("Autosave bundle to file")
         self.cb_bsave.setChecked(bool(self.app.settings.get('bundle_autosave', True)))
@@ -106,9 +244,38 @@ class GeneralSettingsWidget(QWidget):
 
         # Import/Export buttons
         btns = QHBoxLayout()
-        btn_export = QPushButton("Export Settings")
+        btns.setSpacing(12)
+        btn_export = QPushButton("📤 Export Settings")
+        btn_export.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(13, 115, 119, 0.15);
+                color: #0d7377;
+                border: 1px solid #0d7377;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-weight: 600;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: rgba(13, 115, 119, 0.25);
+            }
+        """)
         btn_export.clicked.connect(self.app.export_settings)
-        btn_import = QPushButton("Import Settings")
+        btn_import = QPushButton("📥 Import Settings")
+        btn_import.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(13, 115, 119, 0.15);
+                color: #0d7377;
+                border: 1px solid #0d7377;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-weight: 600;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: rgba(13, 115, 119, 0.25);
+            }
+        """)
         btn_import.clicked.connect(self.app.import_settings)
         btns.addWidget(btn_export)
         btns.addWidget(btn_import)

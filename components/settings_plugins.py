@@ -1,6 +1,6 @@
 import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-                             QHeaderView, QPushButton)
+                             QHeaderView, QPushButton, QLabel)
 from PyQt6.QtCore import Qt
 
 class PluginsSettingsWidget(QWidget):
@@ -14,9 +14,41 @@ class PluginsSettingsWidget(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
+        # Add title with subtitle
+        title = QLabel("Plugins")
+        title.setStyleSheet("""
+            font-size: 28px; 
+            font-weight: 700; 
+            color: #ffffff; 
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        """)
+        self.layout.addWidget(title)
+        
+        subtitle = QLabel("Manage installed plugins and extensions")
+        subtitle.setStyleSheet("""
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 20px;
+        """)
+        self.layout.addWidget(subtitle)
+        
         # Plugin Actions
         actions = QHBoxLayout()
         btn_add = QPushButton("Install Plugin")
+        btn_add.setStyleSheet("""
+            QPushButton {
+                padding: 8px 16px;
+                background-color: #0d7377;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #0a5c5f;
+            }
+        """)
         btn_add.clicked.connect(self.app.install_plugin)
         btn_remove = QPushButton("Remove Selected")
         btn_remove.clicked.connect(self.app.remove_selected_plugins)

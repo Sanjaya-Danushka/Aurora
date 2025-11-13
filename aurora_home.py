@@ -1964,11 +1964,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.load_more_btn.setVisible(False)
             self.settings_container.setVisible(True)
             
-            # Clear any existing source cards from sources_layout (cleanup from plugins view)
-            while self.sources_layout.count() > 1:
-                item = self.sources_layout.takeAt(1)
-                if item.widget():
-                    item.widget().deleteLater()
+            # Retain source checkboxes; no clearing needed
             
             # Clear filters layout
             while self.filters_layout.count():
@@ -3493,19 +3489,148 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         return plugs
     
     def build_settings_ui(self):
+        # Clear existing layout
         while self.settings_layout.count():
             item = self.settings_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        tabs = QTabWidget()
-        gen = GeneralSettingsWidget(self)
-        auto_update = AutoUpdateSettingsWidget(self)
-        plugs = PluginsSettingsWidget(self)
-        tabs.addTab(gen, "General")
-        tabs.addTab(auto_update, "Auto Update")
-        tabs.addTab(plugs, "Plugins")
-        self.settings_layout.addWidget(tabs)
-        self.settings_layout.addStretch()
+        
+        # Create main horizontal layout for sidebar + content
+        main_layout = QHBoxLayout()
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        
+        # Create left sidebar for navigation
+        sidebar = QFrame()
+        sidebar.setObjectName("settingsSidebar")
+        sidebar.setFixedWidth(280)
+        sidebar.setStyleSheet("""
+            QFrame#settingsSidebar {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #1a1a1a, stop:1 #1e1e1e);
+                border-right: 1px solid #2d2d2d;
+            }
+            QPushButton {
+                text-align: left;
+                padding: 14px 20px;
+                border: none;
+                background-color: transparent;
+                color: #b0b0b0;
+                font-size: 15px;
+                font-weight: 500;
+                border-radius: 8px;
+                margin: 3px 12px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 0.05);
+                color: #ffffff;
+            }
+            QPushButton:checked {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #0d7377, stop:1 #14919b);
+                color: #ffffff;
+                font-weight: 600;
+                box-shadow: 0 2px 8px rgba(13, 115, 119, 0.3);
+            }
+        """)
+        
+        sidebar_layout = QVBoxLayout(sidebar)
+        sidebar_layout.setContentsMargins(12, 16, 12, 16)
+        sidebar_layout.setSpacing(4)
+        
+        # Create navigation buttons
+        self.settings_nav_buttons = {}
+        
+        # Add a header label
+        header_label = QLabel("SETTINGS")
+        header_label.setStyleSheet("""
+            color: #666;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 8px 20px;
+            margin-top: 8px;
+        """)
+        sidebar_layout.addWidget(header_label)
+        
+        btn_general = QPushButton("  ⚙  General")
+        btn_general.setCheckable(True)
+        btn_general.setChecked(True)
+        btn_general.clicked.connect(lambda: self.switch_settings_category("general"))
+        self.settings_nav_buttons["general"] = btn_general
+        sidebar_layout.addWidget(btn_general)
+        
+        btn_auto_update = QPushButton("  🔄  Auto Update")
+        btn_auto_update.setCheckable(True)
+        btn_auto_update.clicked.connect(lambda: self.switch_settings_category("auto_update"))
+        self.settings_nav_buttons["auto_update"] = btn_auto_update
+        sidebar_layout.addWidget(btn_auto_update)
+        
+        btn_plugins = QPushButton("  🧩  Plugins")
+        btn_plugins.setCheckable(True)
+        btn_plugins.clicked.connect(lambda: self.switch_settings_category("plugins"))
+        self.settings_nav_buttons["plugins"] = btn_plugins
+        sidebar_layout.addWidget(btn_plugins)
+        
+        sidebar_layout.addStretch()
+        
+        # Add version info at bottom
+        version_label = QLabel("NeoArch v1.0")
+        version_label.setStyleSheet("""
+            color: #555;
+            font-size: 11px;
+            padding: 12px 20px;
+        """)
+        sidebar_layout.addWidget(version_label)
+        
+        # Create right content area
+        content_area = QFrame()
+        content_area.setObjectName("settingsContent")
+        content_area.setStyleSheet("""
+            QFrame#settingsContent {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #2a2a2a, stop:1 #232323);
+                border-radius: 12px;
+                margin: 16px;
+            }
+        """)
+        
+        self.settings_content_layout = QVBoxLayout(content_area)
+        self.settings_content_layout.setContentsMargins(24, 24, 24, 24)
+        self.settings_content_layout.setSpacing(16)
+        
+        # Create and store settings widgets
+        self.settings_widgets = {
+            "general": GeneralSettingsWidget(self),
+            "auto_update": AutoUpdateSettingsWidget(self),
+            "plugins": PluginsSettingsWidget(self)
+        }
+        
+        # Add widgets to content area (initially show general)
+        for key, widget in self.settings_widgets.items():
+            widget.setVisible(key == "general")
+            self.settings_content_layout.addWidget(widget)
+        
+        self.settings_content_layout.addStretch()
+        
+        # Add sidebar and content to main layout
+        main_layout.addWidget(sidebar)
+        main_layout.addWidget(content_area, 1)
+        
+        # Add main layout to settings layout
+        container_widget = QWidget()
+        container_widget.setLayout(main_layout)
+        self.settings_layout.addWidget(container_widget)
+    
+    def switch_settings_category(self, category):
+        """Switch between settings categories"""
+        # Update button states
+        for key, btn in self.settings_nav_buttons.items():
+            btn.setChecked(key == category)
+        
+        # Show/hide appropriate widget
+        for key, widget in self.settings_widgets.items():
+            widget.setVisible(key == category)
     
     def build_general_settings(self, layout):
         box = QGroupBox("General Settings")

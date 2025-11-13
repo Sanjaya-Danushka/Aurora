@@ -1581,14 +1581,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             )
             layout.addWidget(docker_btn)
             
-            # Community button next to Docker
-            community_btn = self.create_toolbar_button(
-                os.path.join(icon_dir, "favourite.svg"),
-                "Add to favorites",
-                self.show_community_hub
-            )
-            layout.addWidget(community_btn)
-            
             layout.addStretch()  # Push remaining buttons to the right
             
             # Action buttons on the right side

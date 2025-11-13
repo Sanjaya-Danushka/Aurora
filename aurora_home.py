@@ -1171,10 +1171,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         install_service.install_packages(self, to_install)
     
     def create_filters_panel(self):
-        panel = QFrame()
-        panel.setStyleSheet(Styles.get_filters_panel_stylesheet())
+        self.filters_panel = QFrame()
+        self.filters_panel.setStyleSheet(Styles.get_filters_panel_stylesheet())
         
-        layout = QVBoxLayout(panel)
+        layout = QVBoxLayout(self.filters_panel)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(12)
         
@@ -1208,7 +1208,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.addWidget(self.filters_section)
         layout.addStretch()
         
-        return panel
+        return self.filters_panel
     
     def create_packages_panel(self):
         panel = QWidget()
@@ -1778,6 +1778,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         if view_id != "discover":
             self.large_search_box.setVisible(False)
         
+        # Show filters panel for all views except settings and bundles
+        if hasattr(self, 'filters_panel'):
+            self.filters_panel.setVisible(view_id not in ("settings", "bundles"))
+        
         # Load data for view
         if view_id == "updates":
             # Prepare UI for loading updates
@@ -1959,6 +1963,23 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.setVisible(False)
             self.load_more_btn.setVisible(False)
             self.settings_container.setVisible(True)
+            
+            # Clear any existing source cards from sources_layout (cleanup from plugins view)
+            while self.sources_layout.count() > 1:
+                item = self.sources_layout.takeAt(1)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # Clear filters layout
+            while self.filters_layout.count():
+                item = self.filters_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # Hide sources and filters sections in settings view
+            self.sources_section.setVisible(False)
+            self.filters_section.setVisible(False)
+            
             # Hide console in Settings view
             try:
                 self.console_label.setVisible(False)

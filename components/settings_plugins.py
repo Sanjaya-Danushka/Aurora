@@ -132,7 +132,7 @@ class PluginsSettingsWidget(QWidget):
         
         # Community hub actions
         community_actions = QHBoxLayout()
-        btn_add = QPushButton("Install Plugin")
+        btn_add = QPushButton("Upload Plugin")
         btn_add.setStyleSheet("""
             QPushButton {
                 padding: 10px 20px;
@@ -147,7 +147,7 @@ class PluginsSettingsWidget(QWidget):
                 background-color: #0a5c5f;
             }
         """)
-        btn_add.clicked.connect(self.app.install_plugin)
+        btn_add.clicked.connect(self.show_upload_plugin_form)
         btn_remove = QPushButton("Remove Selected")
         btn_remove.setStyleSheet("""
             QPushButton {
@@ -189,15 +189,13 @@ class PluginsSettingsWidget(QWidget):
         community_actions.addStretch()
         community_layout.addLayout(community_actions)
         
-        # Community Bundles Table (repurpose the existing table)
+        # Community Packages Table (repurpose the existing table)
         self.community_plugins_table = QTableWidget()
-        self.community_plugins_table.setColumnCount(5)
-        self.community_plugins_table.setHorizontalHeaderLabels(["Select", "Bundle Name", "Description", "Packages", "Actions"])
+        self.community_plugins_table.setColumnCount(3)
+        self.community_plugins_table.setHorizontalHeaderLabels(["Select", "Package Name", "Source"])
         self.community_plugins_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self.community_plugins_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self.community_plugins_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self.community_plugins_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        self.community_plugins_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        self.community_plugins_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.community_plugins_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self.community_plugins_table.setStyleSheet("""
             QTableWidget {
                 background-color: #2a2a2a;
@@ -318,33 +316,50 @@ class PluginsSettingsWidget(QWidget):
             print(f"Could not switch to plugins page: {e}")
 
     def refresh_community_bundles(self):
-        """Refresh the community bundles display"""
+        """Refresh the community packages display"""
         try:
-            from services.bundle_service import list_community_bundles, import_community_bundle
+            from services.bundle_service import list_community_bundles
             from PyQt6.QtWidgets import QCheckBox
             
-            # Clear existing bundles
+            # Clear existing packages
             self.community_plugins_table.setRowCount(0)
             
-            # Load community bundles
+            # Load community bundles and extract all packages
             bundles = list_community_bundles()
+            all_packages = []
             
-            if not bundles:
+            # Extract all packages from all bundles
+            for bundle_data in bundles:
+                items = bundle_data.get('items', [])
+                for item in items:
+                    if isinstance(item, dict) and item.get('name') and item.get('source'):
+                        all_packages.append(item)
+            
+            if not all_packages:
                 # Add a single row with message
                 self.community_plugins_table.setRowCount(1)
-                message_item = QTableWidgetItem("No community bundles found. Share bundles from the Bundle page to see them here!")
+                message_item = QTableWidgetItem("No community packages found. Share bundles from the Bundle page to see them here!")
                 message_item.setFlags(message_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.community_plugins_table.setItem(0, 1, message_item)
-                self.community_plugins_table.setSpan(0, 1, 1, 4)  # Span across all columns except first
+                self.community_plugins_table.setSpan(0, 1, 1, 2)  # Span across remaining columns
                 return
             
-            # Populate table with bundles
-            self.community_plugins_table.setRowCount(len(bundles))
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_packages = []
+            for pkg in all_packages:
+                key = (pkg.get('name'), pkg.get('source'))
+                if key not in seen:
+                    seen.add(key)
+                    unique_packages.append(pkg)
             
-            for row, bundle_data in enumerate(bundles):
+            # Populate table with packages
+            self.community_plugins_table.setRowCount(len(unique_packages))
+            
+            for row, package in enumerate(unique_packages):
                 # Checkbox column
                 checkbox = QCheckBox()
-                checkbox.setObjectName("bundleCheckbox")
+                checkbox.setObjectName("packageCheckbox")
                 cb_container = QWidget()
                 cb_container.setStyleSheet("background: transparent;")
                 cb_layout = QHBoxLayout(cb_container)
@@ -354,96 +369,22 @@ class PluginsSettingsWidget(QWidget):
                 cb_layout.addStretch()
                 self.community_plugins_table.setCellWidget(row, 0, cb_container)
                 
-                # Bundle name
-                name_item = QTableWidgetItem(bundle_data.get('name', 'Unnamed Bundle'))
+                # Package name
+                name_item = QTableWidgetItem(package.get('name', 'Unknown Package'))
                 name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.community_plugins_table.setItem(row, 1, name_item)
                 
-                # Description
-                desc_item = QTableWidgetItem(bundle_data.get('description', 'No description available'))
-                desc_item.setFlags(desc_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                desc_item.setToolTip(bundle_data.get('description', 'No description available'))
-                self.community_plugins_table.setItem(row, 2, desc_item)
-                
-                # Package count
-                item_count = bundle_data.get('item_count', len(bundle_data.get('items', [])))
-                count_item = QTableWidgetItem(f"{item_count} packages")
-                count_item.setFlags(count_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.community_plugins_table.setItem(row, 3, count_item)
-                
-                # Import button
-                import_btn = QPushButton("Import Bundle")
-                import_btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #0d7377;
-                        color: white;
-                        border: none;
-                        border-radius: 4px;
-                        padding: 6px 12px;
-                        font-weight: 500;
-                        font-size: 12px;
-                    }
-                    QPushButton:hover {
-                        background-color: #0a5c5f;
-                    }
-                """)
-                import_btn.clicked.connect(lambda checked, data=bundle_data: self.import_bundle(data, import_community_bundle))
-                self.community_plugins_table.setCellWidget(row, 4, import_btn)
+                # Source
+                source_item = QTableWidgetItem(package.get('source', 'Unknown'))
+                source_item.setFlags(source_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.community_plugins_table.setItem(row, 2, source_item)
                 
         except Exception as e:
             # Show error in table
             self.community_plugins_table.setRowCount(1)
-            error_item = QTableWidgetItem(f"Error loading community bundles: {str(e)}")
+            error_item = QTableWidgetItem(f"Error loading community packages: {str(e)}")
             error_item.setFlags(error_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.community_plugins_table.setItem(0, 1, error_item)
-            self.community_plugins_table.setSpan(0, 1, 1, 4)
+            self.community_plugins_table.setSpan(0, 1, 1, 2)
 
 
-    def import_selected_bundles(self):
-        """Import all selected community bundles"""
-        try:
-            from services.bundle_service import import_community_bundle, list_community_bundles
-            
-            bundles = list_community_bundles()
-            selected_bundles = []
-            
-            # Find selected bundles
-            for row in range(self.community_plugins_table.rowCount()):
-                checkbox_widget = self.community_plugins_table.cellWidget(row, 0)
-                if checkbox_widget:
-                    checkbox = checkbox_widget.findChild(QCheckBox)
-                    if checkbox and checkbox.isChecked() and row < len(bundles):
-                        selected_bundles.append(bundles[row])
-            
-            if not selected_bundles:
-                QMessageBox.information(self, "Import Bundles", "No bundles selected. Please select bundles to import.")
-                return
-            
-            # Import each selected bundle
-            total_imported = 0
-            for bundle_data in selected_bundles:
-                try:
-                    import_community_bundle(self.app, bundle_data)
-                    total_imported += 1
-                except Exception as e:
-                    print(f"Failed to import bundle {bundle_data.get('name', 'Unknown')}: {e}")
-            
-            if total_imported > 0:
-                QMessageBox.information(self, "Import Complete", 
-                                      f"Successfully imported {total_imported} bundle(s)!")
-                # Switch to bundles view to show imported items
-                self.app.switch_view("bundles")
-            else:
-                QMessageBox.warning(self, "Import Failed", "Failed to import any bundles.")
-                
-        except Exception as e:
-            QMessageBox.critical(self, "Import Error", f"Failed to import bundles: {str(e)}")
-
-    def import_bundle(self, bundle_data, import_callback):
-        """Import a community bundle"""
-        try:
-            import_callback(self.app, bundle_data)
-            # Switch to bundles view to show imported items
-            self.app.switch_view("bundles")
-        except Exception as e:
-            QMessageBox.critical(self, "Import Error", f"Failed to import bundle: {str(e)}")

@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QGridLayout, QSizePolicy
 from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QPixmap, QPainter
 import os
 import shutil
 import re
@@ -473,16 +473,35 @@ class PluginsView(QWidget):
         image_filename = app_data.get("image", "")
         background_image_path = os.path.join(os.path.dirname(__file__), "..", "assets", "plugins", "slidebar", image_filename)
         
-        # Create the card with background image
-        card.setStyleSheet(f"""
-            QFrame {{
-                background-image: url({background_image_path});
+        # Create background image label
+        background_label = QLabel(card)
+        background_label.setGeometry(0, 0, 240, 180)
+        
+        # Load and scale the background image
+        if os.path.exists(background_image_path):
+            pixmap = QPixmap(background_image_path)
+            if not pixmap.isNull():
+                # Scale the pixmap to cover the entire card while maintaining aspect ratio
+                scaled_pixmap = pixmap.scaled(240, 180, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+                
+                # If the scaled image is larger than the card, crop it to center
+                if scaled_pixmap.width() > 240 or scaled_pixmap.height() > 180:
+                    x_offset = max(0, (scaled_pixmap.width() - 240) // 2)
+                    y_offset = max(0, (scaled_pixmap.height() - 180) // 2)
+                    cropped_pixmap = scaled_pixmap.copy(x_offset, y_offset, 240, 180)
+                    background_label.setPixmap(cropped_pixmap)
+                else:
+                    background_label.setPixmap(scaled_pixmap)
+        
+        # Style the card frame
+        card.setStyleSheet("""
+            QFrame {
                 border-radius: 12px;
                 border: 2px solid rgba(255, 255, 255, 0.1);
-            }}
-            QFrame:hover {{
+            }
+            QFrame:hover {
                 border: 2px solid rgba(0, 191, 174, 0.6);
-            }}
+            }
         """)
         
         # Create overlay container for text content
@@ -511,6 +530,7 @@ class PluginsView(QWidget):
             color: white;
             font-weight: 700;
             font-size: 16px;
+            background: transparent;
         """)
         name_label.setWordWrap(True)
         name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -522,6 +542,7 @@ class PluginsView(QWidget):
             color: rgba(255, 255, 255, 0.9);
             font-size: 12px;
             font-weight: 400;
+            background: transparent;
         """)
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -530,6 +551,7 @@ class PluginsView(QWidget):
         
         # Bottom row with rating and install button
         bottom_row = QWidget()
+        bottom_row.setStyleSheet("background: transparent;")
         bottom_layout = QHBoxLayout(bottom_row)
         bottom_layout.setContentsMargins(0, 8, 0, 0)
         bottom_layout.setSpacing(8)
@@ -540,6 +562,7 @@ class PluginsView(QWidget):
             color: #FFD700;
             font-size: 12px;
             font-weight: 600;
+            background: transparent;
         """)
         bottom_layout.addWidget(rating_label)
         

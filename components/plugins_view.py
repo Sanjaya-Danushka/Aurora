@@ -497,10 +497,7 @@ class PluginsView(QWidget):
         card.setStyleSheet("""
             QFrame {
                 border-radius: 12px;
-                border: 2px solid rgba(255, 255, 255, 0.1);
-            }
-            QFrame:hover {
-                border: 2px solid rgba(0, 191, 174, 0.6);
+                border: none;
             }
         """)
         
@@ -563,6 +560,7 @@ class PluginsView(QWidget):
             font-size: 12px;
             font-weight: 600;
             background: transparent;
+            border: none;
         """)
         bottom_layout.addWidget(rating_label)
         

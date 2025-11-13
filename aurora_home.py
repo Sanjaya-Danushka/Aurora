@@ -1043,6 +1043,29 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         self.docker_manager.install_from_docker()
     
+    def show_community_hub(self):
+        """Show Community Hub for plugins and extensions"""
+        try:
+            # Switch to plugins view and show community tab
+            self.switch_view("settings")
+            # Wait a moment for the settings UI to load
+            QTimer.singleShot(100, lambda: self.switch_to_community_tab())
+        except Exception as e:
+            self._show_message("Community Hub", f"Error opening community hub: {e}")
+    
+    def switch_to_community_tab(self):
+        """Switch to the community tab in plugins settings"""
+        try:
+            if hasattr(self, 'settings_widgets') and 'plugins' in self.settings_widgets:
+                # Switch to plugins category in settings
+                self.switch_settings_category("plugins")
+                # Switch to community tab in plugins widget
+                plugins_widget = self.settings_widgets['plugins']
+                if hasattr(plugins_widget, 'tabs'):
+                    plugins_widget.tabs.setCurrentIndex(1)  # Community Hub is index 1
+        except Exception as e:
+            self._show_message("Community Hub", f"Error switching to community tab: {e}")
+    
     def on_plugin_install_requested(self, plugin_id):
         try:
             if hasattr(self, 'plugins_view') and self.plugins_view:
@@ -1557,6 +1580,14 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.show_docker_install_dialog
             )
             layout.addWidget(docker_btn)
+            
+            # Community button next to Docker
+            community_btn = self.create_toolbar_button(
+                os.path.join(icon_dir, "favourite.svg"),
+                "Add to favorites",
+                self.show_community_hub
+            )
+            layout.addWidget(community_btn)
             
             layout.addStretch()  # Push remaining buttons to the right
             

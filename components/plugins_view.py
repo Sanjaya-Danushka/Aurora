@@ -477,15 +477,11 @@ class PluginsView(QWidget):
         card.setStyleSheet(f"""
             QFrame {{
                 background-image: url({background_image_path});
-                background-repeat: no-repeat;
-                background-position: center;
-                background-size: cover;
                 border-radius: 12px;
                 border: 2px solid rgba(255, 255, 255, 0.1);
             }}
             QFrame:hover {{
                 border: 2px solid rgba(0, 191, 174, 0.6);
-                transform: scale(1.02);
             }}
         """)
         
@@ -515,7 +511,6 @@ class PluginsView(QWidget):
             color: white;
             font-weight: 700;
             font-size: 16px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
         """)
         name_label.setWordWrap(True)
         name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -527,7 +522,6 @@ class PluginsView(QWidget):
             color: rgba(255, 255, 255, 0.9);
             font-size: 12px;
             font-weight: 400;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
         """)
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -546,7 +540,6 @@ class PluginsView(QWidget):
             color: #FFD700;
             font-size: 12px;
             font-weight: 600;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
         """)
         bottom_layout.addWidget(rating_label)
         
@@ -563,11 +556,9 @@ class PluginsView(QWidget):
                 border-radius: 8px;
                 font-weight: 600;
                 font-size: 12px;
-                text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
             }
             QPushButton:hover {
                 background-color: rgba(0, 191, 174, 1.0);
-                transform: scale(1.05);
             }
             QPushButton:pressed {
                 background-color: rgba(0, 150, 140, 1.0);

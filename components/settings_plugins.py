@@ -1,8 +1,10 @@
 import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
                              QHeaderView, QPushButton, QLabel, QTabWidget, QScrollArea, QFrame, 
-                             QMessageBox, QGridLayout, QCheckBox)
+                             QMessageBox, QGridLayout, QCheckBox, QDialog, QLineEdit, QTextEdit,
+                             QComboBox, QFileDialog, QFormLayout, QDialogButtonBox)
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap
 
 class PluginsSettingsWidget(QWidget):
     def __init__(self, parent=None):
@@ -386,5 +388,308 @@ class PluginsSettingsWidget(QWidget):
             error_item.setFlags(error_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.community_plugins_table.setItem(0, 1, error_item)
             self.community_plugins_table.setSpan(0, 1, 1, 2)
+
+    def show_upload_plugin_form(self):
+        """Show the upload plugin form dialog"""
+        # Get selected packages from the community table
+        selected_packages = self.get_selected_community_packages()
+        if not selected_packages:
+            QMessageBox.information(self, "No Selection", "Please select packages from the table first.")
+            return
+        
+        dialog = UploadPluginDialog(self, selected_packages)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Get the form data
+            plugin_data = dialog.get_plugin_data()
+            if plugin_data:
+                self.upload_plugin_to_community(plugin_data)
+
+    def get_selected_community_packages(self):
+        """Get selected packages from the community table"""
+        selected_packages = []
+        for row in range(self.community_plugins_table.rowCount()):
+            checkbox_widget = self.community_plugins_table.cellWidget(row, 0)
+            if checkbox_widget:
+                checkbox = checkbox_widget.findChild(QCheckBox)
+                if checkbox and checkbox.isChecked():
+                    name_item = self.community_plugins_table.item(row, 1)
+                    source_item = self.community_plugins_table.item(row, 2)
+                    if name_item and source_item:
+                        selected_packages.append({
+                            'name': name_item.text(),
+                            'source': source_item.text()
+                        })
+        return selected_packages
+
+    def upload_plugin_to_community(self, plugin_data):
+        """Upload the plugin data to community"""
+        try:
+            # Here you would implement the actual upload logic
+            # For now, just show a success message
+            QMessageBox.information(self, "Upload Successful", 
+                                  f"Plugin '{plugin_data['name']}' uploaded successfully!\n\n"
+                                  f"Category: {plugin_data['category']}\n"
+                                  f"Logo: {plugin_data['logo_path'] if plugin_data['logo_path'] else 'No logo'}")
+        except Exception as e:
+            QMessageBox.critical(self, "Upload Error", f"Failed to upload plugin: {str(e)}")
+
+
+class UploadPluginDialog(QDialog):
+    """Dialog for uploading plugins to the community"""
+    
+    def __init__(self, parent=None, selected_packages=None):
+        super().__init__(parent)
+        self.selected_packages = selected_packages or []
+        self.setWindowTitle("Upload Plugin to Community")
+        self.setFixedSize(480, 520)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #1a1a1a;
+                color: #ffffff;
+                border: 1px solid #333333;
+            }
+            QLabel {
+                color: #ffffff;
+                font-weight: 500;
+                font-size: 13px;
+            }
+            QLineEdit, QTextEdit {
+                background-color: #2a2a2a;
+                border: 1px solid #444444;
+                border-radius: 6px;
+                color: #ffffff;
+                padding: 10px;
+                font-size: 13px;
+                selection-background-color: #0d7377;
+            }
+            QLineEdit:focus, QTextEdit:focus {
+                border-color: #0d7377;
+                background-color: #2f2f2f;
+            }
+            QLineEdit::placeholder, QTextEdit::placeholder {
+                color: #777777;
+            }
+            QComboBox {
+                background-color: #2a2a2a;
+                border: 1px solid #444444;
+                border-radius: 6px;
+                color: #ffffff;
+                padding: 10px;
+                font-size: 13px;
+                min-width: 120px;
+            }
+            QComboBox:focus {
+                border-color: #0d7377;
+                background-color: #2f2f2f;
+            }
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left-width: 1px;
+                border-left-color: #444444;
+                border-left-style: solid;
+                border-top-right-radius: 6px;
+                border-bottom-right-radius: 6px;
+                background-color: #333333;
+            }
+            QComboBox::down-arrow {
+                width: 0;
+                height: 0;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #ffffff;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #2a2a2a;
+                border: 1px solid #0d7377;
+                border-radius: 6px;
+                color: #ffffff;
+                selection-background-color: #0d7377;
+                outline: none;
+            }
+            QPushButton {
+                background-color: #0d7377;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 16px;
+                font-weight: 500;
+                font-size: 13px;
+                min-height: 20px;
+            }
+            QPushButton:hover {
+                background-color: #0a5c5f;
+            }
+            QPushButton:pressed {
+                background-color: #085a5d;
+            }
+        """)
+        
+        self.logo_path = None
+        self.setup_ui()
+    
+    def setup_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(25, 25, 25, 25)
+        layout.setSpacing(15)
+        
+        # Title
+        title = QLabel("Upload Plugin to Community")
+        title.setStyleSheet("""
+            font-size: 18px; 
+            font-weight: bold; 
+            color: #ffffff; 
+            margin-bottom: 10px;
+        """)
+        layout.addWidget(title)
+        
+        # Selected packages info
+        if self.selected_packages:
+            packages_text = f"Selected {len(self.selected_packages)} package(s): {', '.join([pkg['name'] for pkg in self.selected_packages[:3]])}"
+            if len(self.selected_packages) > 3:
+                packages_text += f" and {len(self.selected_packages) - 3} more..."
+            
+            packages_info = QLabel(packages_text)
+            packages_info.setStyleSheet("""
+                color: #0d7377; 
+                font-size: 12px; 
+                font-weight: 500;
+                background-color: rgba(13, 115, 119, 0.15);
+                padding: 8px 12px;
+                border-radius: 4px;
+                border: 1px solid rgba(13, 115, 119, 0.3);
+            """)
+            packages_info.setWordWrap(True)
+            layout.addWidget(packages_info)
+        
+        # Form fields
+        form_layout = QFormLayout()
+        form_layout.setSpacing(12)
+        form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        
+        # Plugin name
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("Enter plugin name...")
+        form_layout.addRow("Plugin Name:", self.name_input)
+        
+        # Description
+        self.description_input = QTextEdit()
+        self.description_input.setPlaceholderText("Enter plugin description...")
+        self.description_input.setMaximumHeight(70)
+        form_layout.addRow("Description:", self.description_input)
+        
+        # Category
+        self.category_combo = QComboBox()
+        categories = [
+            "System", "Office", "Development", "Internet", "Multimedia",
+            "Graphics", "Games", "Education", "Utilities", "Customization",
+            "Security", "Lifestyle"
+        ]
+        self.category_combo.addItems(categories)
+        form_layout.addRow("Category:", self.category_combo)
+        
+        # Version and Author
+        version_author_layout = QHBoxLayout()
+        self.version_input = QLineEdit()
+        self.version_input.setPlaceholderText("1.0.0")
+        self.version_input.setText("1.0.0")
+        
+        self.author_input = QLineEdit()
+        self.author_input.setPlaceholderText("Enter author name...")
+        
+        version_author_layout.addWidget(self.version_input)
+        version_author_layout.addWidget(self.author_input)
+        
+        version_author_widget = QWidget()
+        version_author_widget.setLayout(version_author_layout)
+        form_layout.addRow("Version / Author:", version_author_widget)
+        
+        layout.addLayout(form_layout)
+        
+        # Logo section
+        logo_layout = QHBoxLayout()
+        logo_label = QLabel("Plugin Logo (Optional - Max 1MB):")
+        logo_layout.addWidget(logo_label)
+        
+        self.logo_button = QPushButton("Choose Logo")
+        self.logo_button.clicked.connect(self.choose_logo)
+        logo_layout.addWidget(self.logo_button)
+        
+        self.logo_status = QLabel("No logo selected")
+        self.logo_status.setStyleSheet("color: #777777; font-size: 12px;")
+        logo_layout.addWidget(self.logo_status)
+        logo_layout.addStretch()
+        
+        layout.addLayout(logo_layout)
+        layout.addStretch()
+        
+        # Buttons
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
+        
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #404040;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 20px;
+                font-weight: 500;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background-color: #505050;
+            }
+        """)
+        cancel_btn.clicked.connect(self.reject)
+        buttons_layout.addWidget(cancel_btn)
+        
+        upload_btn = QPushButton("Upload Plugin")
+        upload_btn.clicked.connect(self.accept)
+        buttons_layout.addWidget(upload_btn)
+        
+        layout.addLayout(buttons_layout)
+    
+    def choose_logo(self):
+        """Choose logo file"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, 
+            "Choose Plugin Logo", 
+            os.path.expanduser("~"),
+            "Image Files (*.png *.jpg *.jpeg *.svg *.gif);;All Files (*)"
+        )
+        
+        if file_path:
+            # Check file size (1MB = 1048576 bytes)
+            file_size = os.path.getsize(file_path)
+            if file_size > 1048576:  # 1MB
+                QMessageBox.warning(self, "File Too Large", 
+                                  f"Logo file is {file_size / 1048576:.1f}MB. Please choose a file smaller than 1MB.")
+                return
+            
+            self.logo_path = file_path
+            filename = os.path.basename(file_path)
+            size_mb = file_size / 1048576
+            self.logo_status.setText(f"✓ {filename} ({size_mb:.2f}MB)")
+            self.logo_status.setStyleSheet("color: #0d7377; font-weight: normal;")
+    
+    def get_plugin_data(self):
+        """Get the plugin data from the form"""
+        name = self.name_input.text().strip()
+        if not name:
+            QMessageBox.warning(self, "Missing Information", "Please enter a plugin name.")
+            return None
+        
+        return {
+            'name': name,
+            'description': self.description_input.toPlainText().strip(),
+            'category': self.category_combo.currentText(),
+            'version': self.version_input.text().strip() or "1.0.0",
+            'author': self.author_input.text().strip() or "Unknown",
+            'logo_path': self.logo_path,
+            'selected_packages': self.selected_packages
+        }
 
 

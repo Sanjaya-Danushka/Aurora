@@ -4,6 +4,7 @@ from PyQt6.QtGui import QIcon, QPixmap, QPainter
 import os
 import shutil
 import re
+import random
 
 
 class ElideLabel(QLabel):
@@ -450,7 +451,11 @@ class PluginsView(QWidget):
             {"name": "Kitty", "desc": "Fast, feature-rich terminal", "category": "System Tools", "rating": 4.5, "image": "kitty.jpg"}
         ]
         
-        for app in popular_apps:
+        # Shuffle the apps list to randomize the order
+        shuffled_apps = popular_apps.copy()
+        random.shuffle(shuffled_apps)
+        
+        for app in shuffled_apps:
             card = self.create_slider_card(app)
             slider_layout.addWidget(card)
         

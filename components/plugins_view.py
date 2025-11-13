@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QGridLayout, QSizePolicy
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QGridLayout, QSizePolicy, QMenu
 from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtGui import QIcon, QPixmap, QPainter
+from PyQt6.QtGui import QIcon, QPixmap, QPainter, QAction
 import os
 import shutil
 import re
@@ -381,9 +381,6 @@ class PluginsView(QWidget):
         # Filter Buttons Row
         self.create_filter_buttons(layout)
         
-        # Secondary Filter Row
-        self.create_secondary_filters(layout)
-        
         # Apps Grid
         self.create_apps_grid(layout)
 
@@ -609,6 +606,41 @@ class PluginsView(QWidget):
             btn = QPushButton(filter_name)
             btn.setFixedHeight(36)
             
+            # Special handling for Categories button
+            if filter_name == "Categories":
+                # Create dropdown menu for categories
+                categories_menu = QMenu(self)
+                categories_menu.setStyleSheet("""
+                    QMenu {
+                        background-color: #1a1a1a;
+                        color: #E0E0E0;
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                        border-radius: 8px;
+                        padding: 4px;
+                    }
+                    QMenu::item {
+                        padding: 8px 16px;
+                        border-radius: 4px;
+                    }
+                    QMenu::item:selected {
+                        background-color: rgba(0, 191, 174, 0.2);
+                    }
+                """)
+                
+                # Add all categories to the menu
+                categories = [
+                    "System", "Office", "Development", "Internet", 
+                    "Multimedia", "Graphics", "Games", "Education", 
+                    "Utilities", "Customization", "Security", "Lifestyle"
+                ]
+                
+                for category in categories:
+                    action = QAction(category, self)
+                    action.triggered.connect(lambda checked, cat=category: self.filter_by_category(cat))
+                    categories_menu.addAction(action)
+                
+                btn.setMenu(categories_menu)
+            
             if i == 0:  # "All" button selected by default
                 btn.setStyleSheet("""
                     QPushButton {
@@ -643,38 +675,6 @@ class PluginsView(QWidget):
         filter_layout.addStretch()
         parent_layout.addWidget(filter_container)
 
-    def create_secondary_filters(self, parent_layout):
-        """Create the secondary filter row"""
-        secondary_container = QWidget()
-        secondary_layout = QHBoxLayout(secondary_container)
-        secondary_layout.setContentsMargins(0, 0, 0, 0)
-        secondary_layout.setSpacing(8)
-        
-        secondary_filters = ["New", "Updated", "Upgraded", "Sorts", "Companies"]
-        
-        for filter_name in secondary_filters:
-            btn = QPushButton(filter_name)
-            btn.setFixedHeight(32)
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: rgba(255, 255, 255, 0.05);
-                    color: #B0B0B0;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 16px;
-                    padding: 0 16px;
-                    font-weight: 500;
-                    font-size: 12px;
-                }
-                QPushButton:hover {
-                    background-color: rgba(0, 191, 174, 0.15);
-                    border-color: rgba(0, 191, 174, 0.3);
-                    color: #E0E0E0;
-                }
-            """)
-            secondary_layout.addWidget(btn)
-        
-        secondary_layout.addStretch()
-        parent_layout.addWidget(secondary_container)
 
     def create_apps_grid(self, parent_layout):
         """Create the apps grid section"""
@@ -971,3 +971,9 @@ class PluginsView(QWidget):
     def set_installing(self, plugin_id: str, installing: bool):
         # No plugin cards to update in empty view
         pass
+    
+    def filter_by_category(self, category):
+        """Handle category selection from dropdown menu"""
+        print(f"Filtering by category: {category}")
+        # TODO: Implement actual filtering logic here
+        # This will be connected to your CRUD system later

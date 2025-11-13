@@ -38,12 +38,13 @@ class PluginsSettingsWidget(QWidget):
         btn_add = QPushButton("Install Plugin")
         btn_add.setStyleSheet("""
             QPushButton {
-                padding: 8px 16px;
+                padding: 10px 20px;
                 background-color: #0d7377;
                 color: white;
                 border: none;
                 border-radius: 4px;
-                font-weight: bold;
+                font-weight: 500;
+                font-size: 13px;
             }
             QPushButton:hover {
                 background-color: #0a5c5f;

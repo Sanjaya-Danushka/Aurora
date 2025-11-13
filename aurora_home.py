@@ -3506,28 +3506,27 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         sidebar.setFixedWidth(280)
         sidebar.setStyleSheet("""
             QFrame#settingsSidebar {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #1a1a1a, stop:1 #1e1e1e);
-                border-right: 1px solid #2d2d2d;
+                background-color: #181818;
+                border-right: 1px solid #2a2a2a;
             }
             QPushButton {
                 text-align: left;
-                padding: 14px 20px;
+                padding: 16px 24px;
                 border: none;
                 background-color: transparent;
-                color: #b0b0b0;
-                font-size: 15px;
+                color: #9a9a9a;
+                font-size: 14px;
                 font-weight: 500;
-                border-radius: 8px;
-                margin: 3px 12px;
+                border-radius: 6px;
+                margin: 2px 16px;
+                letter-spacing: 0.2px;
             }
             QPushButton:hover {
-                background-color: rgba(255, 255, 255, 0.05);
+                background-color: rgba(255, 255, 255, 0.06);
                 color: #ffffff;
             }
             QPushButton:checked {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #0d7377, stop:1 #14919b);
+                background-color: #0d7377;
                 color: #ffffff;
                 font-weight: 600;
             }
@@ -3552,20 +3551,20 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         """)
         sidebar_layout.addWidget(header_label)
         
-        btn_general = QPushButton("  ⚙  General")
+        btn_general = QPushButton("General")
         btn_general.setCheckable(True)
         btn_general.setChecked(True)
         btn_general.clicked.connect(lambda: self.switch_settings_category("general"))
         self.settings_nav_buttons["general"] = btn_general
         sidebar_layout.addWidget(btn_general)
         
-        btn_auto_update = QPushButton("  🔄  Auto Update")
+        btn_auto_update = QPushButton("Auto Update")
         btn_auto_update.setCheckable(True)
         btn_auto_update.clicked.connect(lambda: self.switch_settings_category("auto_update"))
         self.settings_nav_buttons["auto_update"] = btn_auto_update
         sidebar_layout.addWidget(btn_auto_update)
         
-        btn_plugins = QPushButton("  🧩  Plugins")
+        btn_plugins = QPushButton("Plugins")
         btn_plugins.setCheckable(True)
         btn_plugins.clicked.connect(lambda: self.switch_settings_category("plugins"))
         self.settings_nav_buttons["plugins"] = btn_plugins
@@ -3587,10 +3586,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         content_area.setObjectName("settingsContent")
         content_area.setStyleSheet("""
             QFrame#settingsContent {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #2a2a2a, stop:1 #232323);
-                border-radius: 12px;
-                margin: 16px;
+                background-color: #1f1f1f;
+                border-radius: 8px;
+                margin: 20px;
             }
         """)
         

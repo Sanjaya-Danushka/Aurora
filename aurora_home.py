@@ -1291,17 +1291,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             pass
         self.plugins_view.setVisible(False)
         
-        # Create plugins tab widget
-        self.plugins_tab_widget = QTabWidget()
-        self.plugins_tab_widget.setVisible(False)
-        
-        # Built-in plugins tab
-        builtin_tab = QWidget()
-        builtin_layout = QVBoxLayout(builtin_tab)
-        builtin_layout.addWidget(self.plugins_view)
-        self.plugins_tab_widget.addTab(builtin_tab, "Built-in Plugins")
-        
-        self.packages_panel_layout.addWidget(self.plugins_tab_widget)
+        # Add plugins view directly (no tabs needed)
+        self.plugins_view.setVisible(False)
+        self.packages_panel_layout.addWidget(self.plugins_view)
         
         # Packages Table
         self.package_table = QTableWidget()
@@ -1599,20 +1591,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             self.toolbar_layout.addLayout(layout)
         elif self.current_view == "plugins":
-            layout = QHBoxLayout()
-            layout.setSpacing(12)
-            refresh_btn = QPushButton("Refresh")
-            refresh_btn.setMinimumHeight(36)
-            refresh_btn.clicked.connect(lambda: self.plugins_view.refresh_all())
-            layout.addWidget(refresh_btn)
-            layout.addStretch()
-            help_btn = self.create_toolbar_button(
-                os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
-                "Help & Documentation",
-                self.show_help
-            )
-            layout.addWidget(help_btn)
-            self.toolbar_layout.addLayout(layout)
+            # Empty toolbar for plugins section
+            pass
         elif self.current_view == "bundles":
             layout = QHBoxLayout()
             layout.setSpacing(12)
@@ -1722,8 +1702,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.settings_container.setVisible(False)
             if hasattr(self, 'plugins_view') and self.plugins_view:
                 self.plugins_view.setVisible(False)
-            if hasattr(self, 'plugins_tab_widget') and self.plugins_tab_widget:
-                self.plugins_tab_widget.setVisible(False)
+            # plugins_tab_widget removed - plugins_view is handled above
             if hasattr(self, 'no_results_widget'):
                 self.no_results_widget.setVisible(False)
             if hasattr(self, 'console_toggle_btn'):
@@ -1930,8 +1909,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 self.filters_layout.addWidget(self.plugins_sidebar)
             except Exception:
                 pass
-            self.plugins_tab_widget.setVisible(True)
-            # Ensure built-in plugins grid is visible
+            # Show plugins view directly (no tab widget)
             try:
                 self.plugins_view.setVisible(True)
             except Exception:

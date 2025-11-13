@@ -3530,7 +3530,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                     stop:0 #0d7377, stop:1 #14919b);
                 color: #ffffff;
                 font-weight: 600;
-                box-shadow: 0 2px 8px rgba(13, 115, 119, 0.3);
             }
         """)
         

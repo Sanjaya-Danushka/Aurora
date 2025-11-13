@@ -775,6 +775,42 @@ class CommunityPluginsTab(QWidget):
         if not res.get("ok"):
             QMessageBox.critical(self, "Login", str(res.get("error")))
             return
+        # Community Bundles Tab
+        bundles_tab = QWidget()
+        bundles_layout = QVBoxLayout(bundles_tab)
+        bundles_layout.setContentsMargins(12, 12, 12, 12)
+        bundles_layout.setSpacing(8)
+        
+        # Bundles header
+        bundles_header = QHBoxLayout()
+        bundles_title = QLabel("Community Bundles")
+        bundles_title.setObjectName("sectionLabel")
+        bundles_header.addWidget(bundles_title)
+        bundles_header.addStretch()
+        
+        refresh_bundles_btn = QPushButton("Refresh")
+        refresh_bundles_btn.clicked.connect(self.refresh_community_bundles)
+        bundles_header.addWidget(refresh_bundles_btn)
+        
+        bundles_layout.addLayout(bundles_header)
+        
+        # Bundles scroll area
+        bundles_scroll = QScrollArea()
+        bundles_scroll.setWidgetResizable(True)
+        bundles_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
+        self.bundles_content = QWidget()
+        self.bundles_grid = QGridLayout(self.bundles_content)
+        self.bundles_grid.setContentsMargins(6, 6, 6, 6)
+        self.bundles_grid.setSpacing(6)
+        
+        bundles_scroll.setWidget(self.bundles_content)
+        bundles_layout.addWidget(bundles_scroll)
+        
+        # Add tabs to tab widget
+        self.tabs.addTab(core_tab, "Core Plugins")
+        self.tabs.addTab(community_tab, "Community Hub")
+        self.tabs.addTab(bundles_tab, "Community Bundles")
         self._update_auth_ui()
         self._load_my_plugins()
 

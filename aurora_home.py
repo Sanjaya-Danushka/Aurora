@@ -1681,6 +1681,32 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             remove_sel_btn.clicked.connect(self.remove_selected_from_bundle)
             layout.addWidget(remove_sel_btn)
 
+            # Add to Community button
+            add_to_community_btn = QPushButton("Add to Community")
+            add_to_community_btn.setMinimumHeight(36)
+            add_to_community_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    color: #00BFAE;
+                    border: 1px solid rgba(0, 191, 174, 0.4);
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                QPushButton:hover { 
+                    background-color: rgba(0, 191, 174, 0.15); 
+                    border-color: rgba(0, 191, 174, 0.6); 
+                    color: #00D4C4;
+                }
+                QPushButton:pressed { 
+                    background-color: rgba(0, 191, 174, 0.25); 
+                }
+                """)
+            add_to_community_btn.clicked.connect(self.add_selected_to_community)
+            add_to_community_btn.setToolTip("Share selected bundle items with the community")
+            layout.addWidget(add_to_community_btn)
+
             clear_btn = QPushButton("Clear Bundle")
             clear_btn.setMinimumHeight(36)
             clear_btn.setStyleSheet(install_bundle_btn.styleSheet())
@@ -3313,6 +3339,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
 
     def install_bundle(self):
         return bundle_service.install_bundle(self)
+
+    def add_selected_to_community(self):
+        return bundle_service.add_selected_to_community(self)
     
     def install_selected(self):
         packages_by_source = {}

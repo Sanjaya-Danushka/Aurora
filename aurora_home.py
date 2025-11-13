@@ -433,7 +433,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover.svg"), "Discover", "discover"),
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "updates.svg"), "Updates", "updates"), 
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "installed.svg"), "Installed", "installed"),
-            (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins", "plugins.svg"), "Plugins", "plugins"),
+            (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins.svg"), "Plugins", "plugins"),
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"), "Bundles", "bundles")
         ]
         
@@ -1749,7 +1749,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             "installed": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "installed.svg"), "Installed Packages", ""),
             "discover": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "search.svg"), "Discover Packages", "Search and discover new packages to install"),
             "bundles": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "bundle.svg"), "Package Bundles", "Manage package bundles"),
-            "plugins": (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins", "plugins.svg"), "Plugins", "Extensions and system tools"),
+            "plugins": (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins.svg"), "Plugins", "Extensions and system tools"),
             "settings": (os.path.join(os.path.dirname(__file__), "assets", "icons", "settings.svg"), "Settings", "Configure NeoArch settings and plugins"),
         }
         

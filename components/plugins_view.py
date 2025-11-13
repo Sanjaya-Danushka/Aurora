@@ -222,7 +222,7 @@ class PluginsView(QWidget):
 
     def _init_specs(self):
         icons_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins"))
-        base_icon = os.path.join(icons_dir, "plugins.svg")
+        base_icon = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins.svg")
         bb_icon = os.path.join(icons_dir, "bleachbit.svg")
         ts_icon = os.path.join(icons_dir, "timeshift.svg")
         self.plugins = [
@@ -434,7 +434,7 @@ class PluginsView(QWidget):
         slider_layout.setContentsMargins(20, 20, 20, 20)
         slider_layout.setSpacing(16)
         
-        # Popular apps data - real popular applications
+        # Popular apps data - curated selection
         popular_apps = [
             {"name": "Firefox", "desc": "Fast, private & safe web browser", "category": "Internet", "rating": 4.6},
             {"name": "Visual Studio Code", "desc": "Powerful code editor", "category": "Development", "rating": 4.8},
@@ -443,11 +443,11 @@ class PluginsView(QWidget):
             {"name": "GIMP", "desc": "GNU Image Manipulation Program", "category": "Graphics", "rating": 4.4},
             {"name": "VLC Media Player", "desc": "Universal media player", "category": "Multimedia", "rating": 4.7},
             {"name": "Discord", "desc": "Voice, video and text chat", "category": "Communication", "rating": 4.2},
-            {"name": "OBS Studio", "desc": "Live streaming & recording", "category": "Multimedia", "rating": 4.6},
-            {"name": "Thunderbird", "desc": "Email client by Mozilla", "category": "Office", "rating": 4.1},
-            {"name": "LibreOffice", "desc": "Free office suite", "category": "Office", "rating": 4.3},
-            {"name": "Steam", "desc": "Gaming platform", "category": "Games", "rating": 4.5},
-            {"name": "Blender", "desc": "3D creation suite", "category": "Graphics", "rating": 4.7}
+            {"name": "Krita", "desc": "Digital painting application", "category": "Graphics", "rating": 4.6},
+            {"name": "Spotify", "desc": "Music streaming service", "category": "Multimedia", "rating": 4.1},
+            {"name": "Telegram", "desc": "Fast and secure messaging", "category": "Communication", "rating": 4.4},
+            {"name": "Google Chrome", "desc": "Fast and secure web browser", "category": "Internet", "rating": 4.3},
+            {"name": "Kitty", "desc": "Fast, feature-rich terminal", "category": "System Tools", "rating": 4.5}
         ]
         
         for app in popular_apps:
@@ -468,21 +468,66 @@ class PluginsView(QWidget):
         """Create a card for the popular apps slider"""
         card = QFrame()
         card.setFixedSize(200, 160)  # Increased width from 180 to 200
-        card.setStyleSheet("""
-            QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(30, 35, 45, 0.95),
-                    stop:1 rgba(25, 30, 40, 0.95));
-                border-radius: 10px;
-                border: 1px solid rgba(0, 191, 174, 0.3);
-            }
-            QFrame:hover {
-                border: 1px solid rgba(0, 191, 174, 0.6);
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(35, 40, 50, 0.95),
-                    stop:1 rgba(30, 35, 45, 0.95));
-            }
-        """)
+        
+        # Try to load background image for the app
+        app_name = app_data["name"].lower().replace(" ", "_")
+        icons_dir = os.path.join(os.path.dirname(__file__), "..", "assets", "icons")
+        
+        # Look for background image files
+        background_image = None
+        for ext in ['.png', '.jpg', '.jpeg', '.svg']:
+            image_path = os.path.join(icons_dir, f"{app_name}{ext}")
+            print(f"Looking for image: {image_path}")  # Debug print
+            if os.path.exists(image_path):
+                background_image = os.path.normpath(image_path)
+                print(f"Found background image: {background_image}")  # Debug print
+                break
+        
+        if not background_image:
+            print(f"No background image found for {app_name} in {icons_dir}")  # Debug print
+        
+        # Create stylesheet with or without background image
+        if background_image:
+            # Use QPixmap to load and scale the image properly
+            from PyQt6.QtGui import QPixmap, QPalette, QBrush
+            pixmap = QPixmap(background_image)
+            if not pixmap.isNull():
+                # Scale pixmap to card size
+                scaled_pixmap = pixmap.scaled(200, 160, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+                
+                # Create QBrush from pixmap and set as background
+                brush = QBrush(scaled_pixmap)
+                palette = card.palette()
+                palette.setBrush(QPalette.ColorRole.Window, brush)
+                card.setPalette(palette)
+                card.setAutoFillBackground(True)
+                
+            card.setStyleSheet("""
+                QFrame {
+                    border-radius: 10px;
+                    border: 1px solid rgba(0, 191, 174, 0.3);
+                }
+                QFrame:hover {
+                    border: 1px solid rgba(0, 191, 174, 0.6);
+                }
+            """)
+        else:
+            # Fallback to gradient if no image found
+            card.setStyleSheet("""
+                QFrame {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 rgba(30, 35, 45, 0.95),
+                        stop:1 rgba(25, 30, 40, 0.95));
+                    border-radius: 10px;
+                    border: 1px solid rgba(0, 191, 174, 0.3);
+                }
+                QFrame:hover {
+                    border: 1px solid rgba(0, 191, 174, 0.6);
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 rgba(35, 40, 50, 0.95),
+                        stop:1 rgba(30, 35, 45, 0.95));
+                }
+            """)
         
         layout = QVBoxLayout(card)
         layout.setContentsMargins(16, 12, 16, 12)  # Increased horizontal margins
@@ -768,7 +813,7 @@ class PluginsView(QWidget):
                 return self.get_icon_callback(os.path.normpath(resolved), 36)
 
             # Fallback to default plugin icon
-            fallback = os.path.join(icons_dir, "plugins.svg")
+            fallback = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins.svg")
             return self.get_icon_callback(os.path.normpath(fallback), 36)
         except Exception:
             return QIcon()

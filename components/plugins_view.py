@@ -510,7 +510,7 @@ class PluginsView(QWidget):
                     stop:0 rgba(0, 0, 0, 0.1),
                     stop:0.6 rgba(0, 0, 0, 0.3),
                     stop:1 rgba(0, 0, 0, 0.8));
-                border-radius: 12px;
+                border: none;
             }
         """)
         

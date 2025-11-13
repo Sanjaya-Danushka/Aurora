@@ -214,7 +214,6 @@ class PluginsView(QWidget):
         super().__init__(parent)
         self.main_app = main_app
         self.get_icon_callback = get_icon_callback
-        self.cards = {}
         self._filter_text = ""
         self._installed_only = False
         self._categories = set()
@@ -379,48 +378,20 @@ class PluginsView(QWidget):
         title.setObjectName("sectionLabel")
         layout.addWidget(title)
 
-        grid_container = QWidget()
-        self.grid = QGridLayout(grid_container)
-        self.grid.setContentsMargins(12, 12, 12, 12)
-        self.grid.setHorizontalSpacing(12)
-        self.grid.setVerticalSpacing(36)
-        try:
-            grid_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        except Exception:
-            pass
-        try:
-            self.grid.setAlignment(Qt.AlignmentFlag.AlignTop)
-        except Exception:
-            pass
-
-        col_count = 3
-        try:
-            for i in range(col_count):
-                self.grid.setColumnStretch(i, 1)
-        except Exception:
-            pass
-        for idx, spec in enumerate(self.plugins):
-            installed = self.is_installed(spec)
-            icon = self._icon_for(spec)
-            card = PluginCard(
-                spec,
-                icon,
-                installed,
-                on_install=lambda s, self=self: self.install_requested.emit(s['id']),
-                on_open=lambda s, self=self: self.launch_requested.emit(s['id']),
-                on_uninstall=lambda s, self=self: self.uninstall_requested.emit(s['id']),
-                parent=self,
-            )
-            row = idx // col_count
-            col = idx % col_count
-            self.grid.addWidget(card, row, col)
-            self.cards[spec['id']] = card
-
+        # Create empty container instead of plugin cards
+        empty_container = QWidget()
+        empty_layout = QVBoxLayout(empty_container)
+        empty_layout.setContentsMargins(20, 20, 20, 20)
+        empty_layout.setSpacing(0)
+        
+        # Add stretch to center any future content vertically
+        empty_layout.addStretch()
+        
         scroll_root = QWidget()
         s_layout = QVBoxLayout(scroll_root)
         s_layout.setContentsMargins(0, 0, 0, 0)
         s_layout.setSpacing(0)
-        s_layout.addWidget(grid_container)
+        s_layout.addWidget(empty_container)
         s_layout.addStretch()
 
         scroll = QScrollArea()
@@ -561,17 +532,8 @@ class PluginsView(QWidget):
             return False
 
     def refresh_all(self):
-        for spec in self.plugins:
-            card = self.cards.get(spec['id'])
-            if not card:
-                continue
-            try:
-                new_icon = self._icon_for(spec)
-                card.update_icon(new_icon)
-            except Exception:
-                pass
-            card.update_state(self.is_installed(spec))
-        self.apply_filter()
+        # No plugin cards to refresh in empty view
+        pass
 
     def get_plugin(self, plugin_id):
         for spec in self.plugins:
@@ -586,54 +548,9 @@ class PluginsView(QWidget):
         self.apply_filter()
 
     def apply_filter(self):
-        txt = self._filter_text
-        only = self._installed_only
-        cats_lower = {c.lower() for c in self._categories}
-
-        visible_ids = []
-        for spec in self.plugins:
-            pid = spec['id']
-            name = (spec.get('name') or spec.get('id') or "").lower()
-            desc = (spec.get('desc') or "").lower()
-            cat = (spec.get('category') or "").lower()
-            matches_txt = (not txt) or (txt in name) or (txt in desc)
-            is_inst = self.is_installed(spec) if only else True
-            matches_cat = (not cats_lower) or (cat in cats_lower)
-            ok = matches_txt and is_inst and matches_cat
-            card = self.cards.get(pid)
-            if card:
-                card.setVisible(ok)
-            if ok:
-                visible_ids.append(pid)
-
-        # Reflow grid to pack visible cards without gaps
-        self._rebuild_grid(visible_ids)
+        # No plugin cards to filter in empty view
+        pass
 
     def set_installing(self, plugin_id: str, installing: bool):
-        card = self.cards.get(plugin_id)
-        if card:
-            card.set_installing(installing)
-
-    def _rebuild_grid(self, order_ids):
-        try:
-            # Detach all widgets from grid
-            for i in reversed(range(self.grid.count())):
-                item = self.grid.takeAt(i)
-                w = item.widget()
-                if w is not None:
-                    try:
-                        self.grid.removeWidget(w)
-                    except Exception:
-                        pass
-            cols = 3
-            idx = 0
-            for pid in order_ids:
-                card = self.cards.get(pid)
-                if not card:
-                    continue
-                row = idx // cols
-                col = idx % cols
-                self.grid.addWidget(card, row, col)
-                idx += 1
-        except Exception:
-            pass
+        # No plugin cards to update in empty view
+        pass

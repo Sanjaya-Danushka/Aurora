@@ -1866,7 +1866,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 pass
             QTimer.singleShot(0, self.refresh_bundles_table)
         elif view_id == "plugins":
-            # Show plugins view with tabs, hide others
             try:
                 self.loading_widget.setVisible(False)
                 self.loading_widget.stop_animation()
@@ -1881,51 +1880,43 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.setVisible(False)
             self.load_more_btn.setVisible(False)
             
-            # Clear and add PluginsSidebar
+            # Clear any existing source cards from sources_layout
+            while self.sources_layout.count() > 1:
+                item = self.sources_layout.takeAt(1)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # Clear filters layout
             while self.filters_layout.count():
                 item = self.filters_layout.takeAt(0)
                 if item.widget():
                     item.widget().deleteLater()
-            try:
-                self.plugins_sidebar = PluginsSidebar(self)
-                self.plugins_sidebar.filter_changed.connect(self.on_plugins_filter_changed)
-                # Populate sidebar with the same list as cards
-                try:
-                    if hasattr(self, 'plugins_view') and self.plugins_view:
-                        self.plugins_sidebar.set_plugins(self.plugins_view.plugins)
-                        cats = sorted({(p.get('category') or '') for p in self.plugins_view.plugins if p.get('category')})
-                        try:
-                            self.plugins_sidebar.set_categories(cats)
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-                # Allow install from sidebar
-                try:
-                    self.plugins_sidebar.install_requested.connect(self.on_plugin_install_requested)
-                    self.plugins_sidebar.uninstall_requested.connect(self.on_plugin_uninstall_requested)
-                except Exception:
-                    pass
-                self.filters_layout.addWidget(self.plugins_sidebar)
-            except Exception:
-                pass
+            
+            # For plugins view, create filter by plugin status (like installed view)
+            self.filter_card = FilterCard(self)
+            self.filter_card.filter_changed.connect(self.on_filter_selection_changed)
+            
+            # Add plugin status filters
+            self.filter_card.add_filter("Available")
+            self.filter_card.add_filter("Installed")
+            
+            self.filters_layout.addWidget(self.filter_card)
+            
+            # Update visibility like installed view
+            self.sources_section.setVisible(True)
+            self.filters_section.setVisible(True)
+            if hasattr(self, 'sources_title_label'):
+                self.sources_title_label.setVisible(False)
+            
+            # Add source cards like installed section
+            self.update_plugins_sources()
+            
             # Show plugins view directly (no tab widget)
             try:
                 self.plugins_view.setVisible(True)
             except Exception:
                 pass
             self.plugins_view.refresh_all()
-            # Sync sidebar search box with global search text (visual consistency)
-            try:
-                if hasattr(self, 'plugins_sidebar') and self.plugins_sidebar:
-                    q = self.search_input.text() if hasattr(self, 'search_input') else ""
-                    try:
-                        self.plugins_sidebar.search.blockSignals(True)
-                        self.plugins_sidebar.search.setText(q)
-                    finally:
-                        self.plugins_sidebar.search.blockSignals(False)
-            except Exception:
-                pass
 
             self.header_info.setText("Install and launch extensions like BleachBit and Timeshift")
             try:
@@ -2064,6 +2055,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.apply_filters()
         elif self.current_view == "updates":
             self.apply_update_filters()
+        elif self.current_view == "plugins":
+            # For plugins, just refresh the view (since it's empty anyway)
+            pass
     
     def update_discover_sources(self):
         """Update the discover sources using the new SourceCard component"""
@@ -2173,9 +2167,43 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             pass
         self.sources_layout.addWidget(self.source_card)
 
+    def update_plugins_sources(self):
+        """Update plugins sources using the same SourceCard component as installed section"""
+        # Clear existing sources layout (except the title label)
+        while self.sources_layout.count() > 1:
+            item = self.sources_layout.takeAt(1)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # Create source card for plugins (same as installed section)
+        self.source_card = SourceCard(self)
+        self.source_card.source_changed.connect(self.on_plugins_source_changed)
+        sources = [
+            ("pacman", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "pacman.svg")),
+            ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg")),
+            ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
+            ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg"))
+        ]
+        for source_name, icon_path in sources:
+            self.source_card.add_source(source_name, icon_path)
+        try:
+            for obj_name in ("searchModeTitle",):
+                w = self.source_card.findChild(QLabel, obj_name)
+                if w:
+                    w.setVisible(False)
+            for rb in self.source_card.findChildren(QRadioButton, "searchModeRadio"):
+                rb.setVisible(False)
+        except Exception:
+            pass
+        self.sources_layout.addWidget(self.source_card)
+
     def on_installed_source_changed(self, source_states):
         # Re-apply combined filters (source + status)
         self.apply_filters()
+
+    def on_plugins_source_changed(self, source_states):
+        # For plugins, just refresh the view (since it's empty anyway)
+        pass
 
     def on_updates_source_changed(self, source_states):
         base = getattr(self, 'updates_all', self.all_packages)

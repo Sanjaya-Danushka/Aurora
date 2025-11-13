@@ -1591,8 +1591,32 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             
             self.toolbar_layout.addLayout(layout)
         elif self.current_view == "plugins":
-            # Empty toolbar for plugins section
-            pass
+            layout = QHBoxLayout()
+            layout.setSpacing(12)
+            
+            # Add stretch to push icon buttons to the right
+            layout.addStretch()
+            
+            icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+            bundles_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
+                "Add selected to Bundle",
+                lambda: None  # Empty handler for now
+            )
+            layout.addWidget(bundles_btn)
+            tools_btn = self.create_toolbar_button(
+                os.path.join(icon_dir, "download.svg"),
+                "Onclick Update",
+                lambda: None  # Empty handler for now
+            )
+            help_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
+                "Help & Documentation",
+                self.show_help
+            )
+            layout.addWidget(tools_btn)
+            layout.addWidget(help_btn)
+            self.toolbar_layout.addLayout(layout)
         elif self.current_view == "bundles":
             layout = QHBoxLayout()
             layout.setSpacing(12)

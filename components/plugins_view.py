@@ -374,9 +374,7 @@ class PluginsView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
-        title = QLabel("Plugins")
-        title.setObjectName("sectionLabel")
-        layout.addWidget(title)
+        # Remove title label - no title needed for empty plugins section
 
         # Create empty container instead of plugin cards
         empty_container = QWidget()

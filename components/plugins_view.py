@@ -248,6 +248,8 @@ class PluginsView(QWidget):
         self._selected_category = None  # Track selected category
         self._current_cols = 2  # Track current column count
         self._all_cards = []  # Store all created cards for performance
+        self._current_filter_states = {}  # Track current filter states
+        self._current_source_states = {"pacman": True, "AUR": True, "Flatpak": True, "npm": True}  # Track source states
         
         # Pagination variables for infinite scrolling
         self._all_plugins = []  # All available plugins
@@ -1422,13 +1424,33 @@ class PluginsView(QWidget):
     
     def apply_filters(self, filter_states):
         """Apply Available/Installed filters to the plugins view"""
+        # Store current filter states
+        self._current_filter_states = filter_states
+        # Re-apply all filters (both status and source)
+        self._apply_combined_filters()
+    
+    def apply_source_filters(self, source_states):
+        """Apply source filters (pacman, AUR, Flatpak, npm) to the plugins view"""
+        # Store current source states
+        self._current_source_states = source_states
+        # Re-apply all filters (both status and source)
+        self._apply_combined_filters()
+    
+    def _apply_combined_filters(self):
+        """Apply both status and source filters together"""
         # Create cards if not already created
         if not self._all_cards:
             self._create_all_cards()
         
         # Get filter states
-        show_available = filter_states.get('Available', True)
-        show_installed = filter_states.get('Installed', True)
+        show_available = self._current_filter_states.get('Available', True)
+        show_installed = self._current_filter_states.get('Installed', True)
+        
+        # Get source states
+        show_pacman = self._current_source_states.get('pacman', True)
+        show_aur = self._current_source_states.get('AUR', True)
+        show_flatpak = self._current_source_states.get('Flatpak', True)
+        show_npm = self._current_source_states.get('npm', True)
         
         # Clear the grid layout
         while self.grid_layout.count():
@@ -1438,11 +1460,29 @@ class PluginsView(QWidget):
         for card_data in self._all_cards:
             card_data['widget'].hide()
         
-        # Filter and display cards based on filter states
+        # Filter and display cards based on both status and source filters
         filtered_cards = []
         for card_data in self._all_cards:
             is_installed = card_data['installed']
-            if (is_installed and show_installed) or (not is_installed and show_available):
+            plugin = card_data['plugin']
+            source = self._get_package_source(plugin).lower()
+            
+            # Check status filter
+            status_match = (is_installed and show_installed) or (not is_installed and show_available)
+            
+            # Check source filter
+            source_match = False
+            if source == 'pacman' and show_pacman:
+                source_match = True
+            elif source == 'aur' and show_aur:
+                source_match = True
+            elif source == 'flatpak' and show_flatpak:
+                source_match = True
+            elif source == 'npm' and show_npm:
+                source_match = True
+            
+            # Include card only if both filters match
+            if status_match and source_match:
                 filtered_cards.append(card_data)
         
         # Use tracked column count

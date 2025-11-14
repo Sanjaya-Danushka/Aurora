@@ -2293,8 +2293,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.apply_filters()
 
     def on_plugins_source_changed(self, source_states):
-        # For plugins, just refresh the view (since it's empty anyway)
-        pass
+        # Apply source filters to plugins view
+        if hasattr(self, 'plugins_view') and self.plugins_view:
+            self.plugins_view.apply_source_filters(source_states)
 
     def on_updates_source_changed(self, source_states):
         base = getattr(self, 'updates_all', self.all_packages)

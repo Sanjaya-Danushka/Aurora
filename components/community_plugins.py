@@ -5,7 +5,8 @@ Allows users to discover, install, and share plugins from the community
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
                              QScrollArea, QFrame, QGridLayout, QTextEdit, QLineEdit,
-                             QMessageBox, QProgressBar, QGroupBox, QListWidget, QFileDialog)
+                             QMessageBox, QProgressBar, QGroupBox, QListWidget, QFileDialog,
+                             QTabWidget)
 from PyQt6.QtCore import pyqtSignal, Qt, QThread, QTimer
 from PyQt6.QtGui import QGuiApplication
 import os

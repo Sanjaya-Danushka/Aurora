@@ -244,6 +244,7 @@ class PluginsView(QWidget):
         self._filter_text = ""
         self._installed_only = False
         self._categories = set()
+        self._selected_category = None  # Track selected category
         self._current_cols = 2  # Track current column count
         
         # Debounce timer for resize events
@@ -762,14 +763,16 @@ class PluginsView(QWidget):
                     }
                 """)
                 
-                # Add all categories to the menu
-                categories = [
-                    "System", "Office", "Development", "Internet", 
-                    "Multimedia", "Graphics", "Games", "Education", 
-                    "Utilities", "Customization", "Security", "Lifestyle"
-                ]
+                # Add "All Categories" option first
+                all_action = QAction("All Categories", self)
+                all_action.triggered.connect(self.show_all_apps)
+                categories_menu.addAction(all_action)
+                categories_menu.addSeparator()
                 
-                for category in categories:
+                # Get unique categories from plugins
+                unique_categories = sorted(set(p.get('category', 'Utility') for p in self.plugins))
+                
+                for category in unique_categories:
                     action = QAction(category, self)
                     action.triggered.connect(lambda checked, cat=category: self.filter_by_category(cat))
                     categories_menu.addAction(action)
@@ -777,6 +780,7 @@ class PluginsView(QWidget):
                 btn.setMenu(categories_menu)
             
             if i == 0:  # "All" button selected by default
+                btn.clicked.connect(self.show_all_apps)  # Connect All button to show all apps
                 btn.setStyleSheet("""
                     QPushButton {
                         background-color: #00BFAE;
@@ -933,7 +937,7 @@ class PluginsView(QWidget):
         parent_layout.addWidget(scroll)
 
     def populate_app_cards(self):
-        """Populate the grid with real plugin cards"""
+        """Populate the grid with real plugin cards filtered by category"""
         # Clear existing items
         while self.grid_layout.count():
             child = self.grid_layout.takeAt(0)
@@ -947,7 +951,13 @@ class PluginsView(QWidget):
         for i in range(cols):
             self.grid_layout.setColumnStretch(i, 1)
         
-        for i, plugin in enumerate(self.plugins):
+        # Filter plugins based on selected category
+        filtered_plugins = self.plugins
+        if self._selected_category:
+            filtered_plugins = [p for p in self.plugins if p.get('category') == self._selected_category]
+        
+        # Populate grid with filtered plugins
+        for i, plugin in enumerate(filtered_plugins):
             row = i // cols
             col = i % cols
             installed = self.is_installed(plugin)
@@ -1377,9 +1387,13 @@ class PluginsView(QWidget):
     
     def filter_by_category(self, category):
         """Handle category selection from dropdown menu"""
-        print(f"Filtering by category: {category}")
-        # TODO: Implement actual filtering logic here
-        # This will be connected to your CRUD system later
+        self._selected_category = category
+        self.populate_app_cards()
+    
+    def show_all_apps(self):
+        """Show all apps by clearing category filter"""
+        self._selected_category = None
+        self.populate_app_cards()
     
     def resizeEvent(self, event):
         """Handle window resize to update grid layout"""

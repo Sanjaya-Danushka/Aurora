@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QGridLayout, QSizePolicy, QMenu
 from PyQt6.QtCore import pyqtSignal, Qt, QTimer, QPoint
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QAction
-from .plugins_data import get_plugins_data
+from .plugins_data import get_plugins_data, get_all_plugins_data
 import os
 import shutil
 import re
@@ -248,6 +248,13 @@ class PluginsView(QWidget):
         self._selected_category = None  # Track selected category
         self._current_cols = 2  # Track current column count
         self._all_cards = []  # Store all created cards for performance
+        
+        # Pagination variables for infinite scrolling
+        self._all_plugins = []  # All available plugins
+        self._loaded_count = 0  # Number of plugins currently loaded
+        self._batch_size = 10  # Load 10 plugins at a time
+        self._is_loading = False  # Prevent multiple simultaneous loads
+        self._loading_indicator = None  # Loading indicator widget
         
         # Debounce timer for resize events
         self._resize_timer = QTimer()
@@ -700,6 +707,9 @@ class PluginsView(QWidget):
         scroll.horizontalScrollBar().setCursor(Qt.CursorShape.PointingHandCursor)
         scroll.setStyleSheet(self._get_scrollbar_stylesheet())
         
+        # Connect scroll event to detect when user reaches bottom
+        scroll.verticalScrollBar().valueChanged.connect(self._on_scroll)
+        
         scroll_widget = QWidget()
         scroll_layout = QVBoxLayout(scroll_widget)
         scroll_layout.setContentsMargins(0, 0, 0, 0)
@@ -712,47 +722,74 @@ class PluginsView(QWidget):
         self.grid_layout.setContentsMargins(0, 0, 0, 0)
         # Dynamic column stretching will be set in populate_app_cards
         
-        # Add sample app cards
-        self.populate_app_cards()
+        # Add loading indicator container at the bottom
+        self._loading_container = QWidget()
+        self._loading_container.setVisible(False)
+        loading_layout = QVBoxLayout(self._loading_container)
+        loading_layout.setContentsMargins(20, 10, 20, 10)
+        loading_layout.setSpacing(8)
         
+        loading_text = QLabel("Loading more plugins...")
+        loading_text.setStyleSheet("""
+            QLabel {
+                color: #00BFAE;
+                font-size: 12px;
+                font-weight: 600;
+                text-align: center;
+            }
+        """)
+        loading_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        loading_layout.addWidget(loading_text)
+        
+        # Add grid and loading indicator to scroll layout
         scroll_layout.addWidget(grid_container)
+        scroll_layout.addWidget(self._loading_container)
         scroll_layout.addStretch()
         
         scroll.setWidget(scroll_widget)
+        self._scroll_area = scroll  # Store reference for scroll handling
         parent_layout.addWidget(scroll)
 
     def populate_app_cards(self):
         """Populate the grid with real plugin cards filtered by category"""
-        # Create cards only once if not already created
-        if not self._all_cards:
-            self._create_all_cards()
-        
-        # Clear existing layout items (but don't delete widgets)
-        while self.grid_layout.count():
-            child = self.grid_layout.takeAt(0)
-        
-        # Hide all cards first
-        for card_data in self._all_cards:
-            card_data['widget'].hide()
-        
-        # Use tracked column count
-        cols = self._current_cols
-        
-        # Set column stretching dynamically
-        for i in range(cols):
-            self.grid_layout.setColumnStretch(i, 1)
-        
-        # Filter plugins based on selected category
-        filtered_cards = self._all_cards
+        # For category filtering, show all cards that match the category
         if self._selected_category:
+            # Create cards only once if not already created
+            if not self._all_cards:
+                self._create_all_cards()
+            
+            # Clear existing layout items (but don't delete widgets)
+            while self.grid_layout.count():
+                child = self.grid_layout.takeAt(0)
+            
+            # Hide all cards first
+            for card_data in self._all_cards:
+                card_data['widget'].hide()
+            
+            # Use tracked column count
+            cols = self._current_cols
+            
+            # Set column stretching dynamically
+            for i in range(cols):
+                self.grid_layout.setColumnStretch(i, 1)
+            
+            # Filter plugins based on selected category
             filtered_cards = [c for c in self._all_cards if c['plugin'].get('category') == self._selected_category]
-        
-        # Add filtered cards to layout and show them
-        for i, card_data in enumerate(filtered_cards):
-            row = i // cols
-            col = i % cols
-            card_data['widget'].show()
-            self.grid_layout.addWidget(card_data['widget'], row, col)
+            
+            # Add filtered cards to layout and show them
+            for i, card_data in enumerate(filtered_cards):
+                row = i // cols
+                col = i % cols
+                card_data['widget'].show()
+                self.grid_layout.addWidget(card_data['widget'], row, col)
+        else:
+            # For "All" tab, use pagination system
+            if not self._all_plugins:
+                # Initialize pagination if not already done
+                self.show_all_apps()
+            else:
+                # Just refresh the current view
+                self._update_grid_layout()
     
     def _create_all_cards(self):
         """Create all plugin cards once for better performance"""
@@ -1193,9 +1230,63 @@ class PluginsView(QWidget):
         self.populate_app_cards()
     
     def show_all_apps(self):
-        """Show all apps by clearing category filter"""
+        """Show all apps by clearing category filter and initializing pagination"""
         self._selected_category = None
-        self.populate_app_cards()
+        
+        # Initialize pagination for "All" tab
+        if not self._all_plugins:
+            self._all_plugins = get_all_plugins_data()
+            self._loaded_count = 0
+            self._all_cards = []
+            
+            # Clear existing grid
+            while self.grid_layout.count():
+                child = self.grid_layout.takeAt(0)
+            
+            # Load first batch of plugins (20 instead of 10 for initial load)
+            initial_batch = min(20, len(self._all_plugins))
+            self._load_initial_batch(initial_batch)
+        else:
+            # Just refresh the current view
+            self._update_grid_layout()
+    
+    def _load_initial_batch(self, batch_size):
+        """Load the initial batch of plugins for the All tab"""
+        self._is_loading = True
+        self._loading_container.setVisible(True)
+        
+        # Get initial batch
+        new_plugins = self._all_plugins[:batch_size]
+        
+        # Create cards for initial plugins
+        new_cards = []
+        for plugin in new_plugins:
+            installed = self.is_installed(plugin)
+            icon = self._icon_for(plugin)
+            card = self.create_app_card(plugin, icon, installed)
+            card_data = {
+                'plugin': plugin,
+                'widget': card,
+                'installed': installed
+            }
+            new_cards.append(card_data)
+        
+        # Add cards to grid
+        cols = self._current_cols
+        for i in range(cols):
+            self.grid_layout.setColumnStretch(i, 1)
+        
+        for i, card_data in enumerate(new_cards):
+            row = i // cols
+            col = i % cols
+            self.grid_layout.addWidget(card_data['widget'], row, col)
+        
+        self._all_cards.extend(new_cards)
+        self._loaded_count = batch_size
+        
+        # Hide loading indicator
+        QTimer.singleShot(300, lambda: self._loading_container.setVisible(False))
+        self._is_loading = False
     
     def resizeEvent(self, event):
         """Handle window resize to update grid layout"""
@@ -1244,3 +1335,62 @@ class PluginsView(QWidget):
             row = i // cols
             col = i % cols
             self.grid_layout.addWidget(card_data['widget'], row, col)
+    
+    def _on_scroll(self, value):
+        """Handle scroll events to detect when user reaches bottom"""
+        if self._is_loading or not hasattr(self, '_scroll_area'):
+            return
+            
+        scrollbar = self._scroll_area.verticalScrollBar()
+        max_value = scrollbar.maximum()
+        
+        # Trigger loading when user scrolls within 100 pixels of bottom
+        if max_value - value <= 100 and self._loaded_count < len(self._all_plugins):
+            self._load_more_plugins()
+    
+    def _load_more_plugins(self):
+        """Load next batch of 10 plugins"""
+        if self._is_loading or self._loaded_count >= len(self._all_plugins):
+            return
+            
+        self._is_loading = True
+        self._loading_container.setVisible(True)
+        
+        # Calculate how many more plugins to load
+        remaining = len(self._all_plugins) - self._loaded_count
+        batch_size = min(self._batch_size, remaining)
+        
+        # Get next batch of plugins
+        start_idx = self._loaded_count
+        end_idx = start_idx + batch_size
+        new_plugins = self._all_plugins[start_idx:end_idx]
+        
+        # Create cards for new plugins
+        new_cards = []
+        for plugin in new_plugins:
+            installed = self.is_installed(plugin)
+            icon = self._icon_for(plugin)
+            card = self.create_app_card(plugin, icon, installed)
+            card_data = {
+                'plugin': plugin,
+                'widget': card,
+                'installed': installed
+            }
+            new_cards.append(card_data)
+        
+        # Add new cards to the grid
+        cols = self._current_cols
+        start_row = self._loaded_count // cols
+        
+        for i, card_data in enumerate(new_cards):
+            row = start_row + ((self._loaded_count + i) // cols)
+            col = (self._loaded_count + i) % cols
+            self.grid_layout.addWidget(card_data['widget'], row, col)
+        
+        # Add to all_cards list
+        self._all_cards.extend(new_cards)
+        self._loaded_count += batch_size
+        
+        # Hide loading indicator after a short delay
+        QTimer.singleShot(500, lambda: self._loading_container.setVisible(False))
+        self._is_loading = False

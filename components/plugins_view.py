@@ -1358,7 +1358,7 @@ class PluginsView(QWidget):
         
         # Clear the grid layout
         while self.grid_layout.count():
-            child = self.grid_layout.takeAt(0)
+            _ = self.grid_layout.takeAt(0)
         
         # Hide all cards first
         for card_data in self._all_cards:
@@ -1528,7 +1528,7 @@ class PluginsView(QWidget):
         
         # Clear layout items
         while self.grid_layout.count():
-            child = self.grid_layout.takeAt(0)
+            _ = self.grid_layout.takeAt(0)
         
         # Get filtered cards
         filtered_cards = self._all_cards
@@ -1653,7 +1653,7 @@ class PluginsView(QWidget):
         
         # Clear the grid layout
         while self.grid_layout.count():
-            child = self.grid_layout.takeAt(0)
+            _ = self.grid_layout.takeAt(0)
         
         # Hide all cards first
         for card_data in self._all_cards:

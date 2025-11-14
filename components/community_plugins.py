@@ -414,11 +414,19 @@ class CommunityPluginsTab(QWidget):
                 self.plugin_store = None
         if self.plugin_store is None:
             self.plugin_store = PluginStore()
+        # Plugin data
         self.community_plugins = []
-        self.details_dialog = None
-        self.creator_dialog = None
         self.my_plugins = []
         self._selected_my_id = None
+        
+        # UI components
+        self.details_dialog = None
+        self.creator_dialog = None
+        self.bundles_tab = None
+        self.bundles_content = None
+        self.bundles_grid = None
+        
+        # Status
         self._setup_status = None
 
         self._init_ui()

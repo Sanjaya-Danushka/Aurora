@@ -194,6 +194,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             btn.setChecked(btn_id == self.current_view)
         self.center_window()
         
+        # UI Components
+        self.filters_panel = None
+        self.source_card = None
+        self.settings_widgets = {}
+        self.settings_content_layout = None
+        self.settings_nav_buttons = {}
+        
         # Initialize the default view
         self.switch_view(self.current_view)
         

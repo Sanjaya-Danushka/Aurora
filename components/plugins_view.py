@@ -259,6 +259,12 @@ class PluginsView(QWidget):
         self._loading_indicator = None  # Loading indicator widget
         self._load_timer = None  # Timer for deferred loading
         
+        # UI components to be initialized later
+        self._scroll_area = None
+        self._loading_container = None
+        self.grid_layout = None
+        self.slider_layout = None
+        
         # Debounce timer for resize events
         self._resize_timer = QTimer()
         self._resize_timer.setSingleShot(True)

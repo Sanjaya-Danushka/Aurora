@@ -28,6 +28,11 @@ class LargeSearchBox(QWidget):
         self.highlight_widgets = []
         self.compact_mode = False
         self.is_maximized_layout = False
+        
+        # Initialize attributes that would otherwise be defined outside __init__
+        self.recent_updates_layout = None
+        self.updates_timer = None
+        self.recent_updates_container = None
         self.current_width = 0
         self.main_layout = None
         self.hero_card = None

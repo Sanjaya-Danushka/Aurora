@@ -773,13 +773,15 @@ class PluginsView(QWidget):
         card.setFixedSize(340, 140)
         card.setStyleSheet("""
             QFrame {
-                background-color: rgba(20, 25, 35, 0.8);
+                background-image: url('/home/dev/Desktop/New Folder1/Neoarch/assets/plugins/cardbackground.jpg');
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
                 border-radius: 16px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
             }
             QFrame:hover {
                 border: 1px solid rgba(0, 191, 174, 0.3);
-                background-color: rgba(25, 30, 40, 0.9);
             }
         """)
         

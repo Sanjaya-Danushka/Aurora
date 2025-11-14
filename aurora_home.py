@@ -1191,6 +1191,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         except Exception:
             pass
         self.log_signal.emit(f"Installing with sudo: {', '.join([f'{pkg} ({source})' for source, pkgs in to_install.items() for pkg in pkgs])}")
+        
+        # Store packages and show installation dialog
+        self.current_packages_by_source = to_install
+        
         install_service.install_packages(self, to_install)
     
     def create_filters_panel(self):
@@ -1256,7 +1260,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.packages_panel_layout.addWidget(self.large_search_box)
         
         # Loading spinner widget
-        self.loading_widget = LoadingSpinner(message="Checking for updates...")
+        from components.loading_spinner import LoadingSpinner
+        self.loading_widget = LoadingSpinner()
+        self.install_progress_dialog = None  # Will be created when installation starts
+        self.current_packages_by_source = {}  # Store packages for installation
         self.loading_widget.setVisible(False)  # Hidden by default
         
         # Cancel button for installation

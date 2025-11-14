@@ -5,6 +5,7 @@ import time
 from threading import Thread, Event
 from utils.workers import CommandWorker
 from utils import sys_utils
+from components.install_dialog_integration import show_installation_dialog, update_installation_progress, close_installation_dialog
 
 
 def install_packages(app, packages_by_source: dict):
@@ -18,6 +19,12 @@ def install_packages(app, packages_by_source: dict):
         app.install_cancel_event = Event()
         app.installation_progress.emit("start", True)
         app.log_signal.emit("Installation thread started")
+        
+        # Show the beautiful installation dialog
+        try:
+            show_installation_dialog(app, packages_by_source)
+        except Exception as e:
+            app.log_signal.emit(f"Could not show installation dialog: {e}")
 
         success = True
         current_download_info = ""
@@ -39,6 +46,12 @@ def install_packages(app, packages_by_source: dict):
                     app.ui_call.emit(lambda: app.loading_widget.set_message(f"{base_msg}\n{msg}"))
                 else:
                     app.ui_call.emit(lambda: app.loading_widget.set_message(base_msg))
+                
+                # Update the beautiful dialog
+                try:
+                    update_installation_progress(app, completed_packages, total_packages, msg or base_msg, current_download_info)
+                except Exception:
+                    pass
             except Exception:
                 pass
 

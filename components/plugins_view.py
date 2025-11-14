@@ -1271,11 +1271,20 @@ class PluginsView(QWidget):
             }
             new_cards.append(card_data)
         
-        # Add cards to grid
+        # Add cards to grid using optimized positioning
         cols = self._current_cols
         for i in range(cols):
             self.grid_layout.setColumnStretch(i, 1)
         
+        # Pre-calculate maximum row needed for initial batch
+        max_position = len(new_cards) - 1
+        max_row_needed = max_position // cols
+        
+        # Set row stretches efficiently
+        for r in range(max_row_needed + 1):
+            self.grid_layout.setRowStretch(r, 0)
+        
+        # Add cards to positions
         for i, card_data in enumerate(new_cards):
             row = i // cols
             col = i % cols
@@ -1285,8 +1294,13 @@ class PluginsView(QWidget):
         self._loaded_count = batch_size
         
         # Hide loading indicator
-        QTimer.singleShot(300, lambda: self._loading_container.setVisible(False))
+        QTimer.singleShot(300, self._hide_loading_indicator)
         self._is_loading = False
+    
+    def _hide_loading_indicator(self):
+        """Hide the loading indicator widget"""
+        if hasattr(self, '_loading_container'):
+            self._loading_container.setVisible(False)
     
     def resizeEvent(self, event):
         """Handle window resize to update grid layout"""
@@ -1378,13 +1392,24 @@ class PluginsView(QWidget):
             }
             new_cards.append(card_data)
         
-        # Add new cards to the grid
+        # Add new cards to the grid - optimized positioning
         cols = self._current_cols
-        start_row = self._loaded_count // cols
         
+        # Pre-calculate maximum row needed
+        max_position = self._loaded_count + len(new_cards) - 1
+        max_row_needed = max_position // cols
+        
+        # Ensure we have enough row stretch factors (batch operation)
+        current_row_count = self.grid_layout.rowCount()
+        if current_row_count <= max_row_needed:
+            for r in range(current_row_count, max_row_needed + 1):
+                self.grid_layout.setRowStretch(r, 0)
+        
+        # Add cards to grid positions
         for i, card_data in enumerate(new_cards):
-            row = start_row + ((self._loaded_count + i) // cols)
-            col = (self._loaded_count + i) % cols
+            total_position = self._loaded_count + i
+            row = total_position // cols
+            col = total_position % cols
             self.grid_layout.addWidget(card_data['widget'], row, col)
         
         # Add to all_cards list
@@ -1392,5 +1417,5 @@ class PluginsView(QWidget):
         self._loaded_count += batch_size
         
         # Hide loading indicator after a short delay
-        QTimer.singleShot(500, lambda: self._loading_container.setVisible(False))
+        QTimer.singleShot(200, self._hide_loading_indicator)
         self._is_loading = False

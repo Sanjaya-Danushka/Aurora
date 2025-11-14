@@ -136,7 +136,8 @@ class PluginsManager:
         except Exception:
             pass
 
-    def _get_terminal_command(self):
+    @staticmethod
+    def _get_terminal_command():
         terminals = ["kitty", "alacritty", "gnome-terminal", "konsole", "xterm"]
         for term in terminals:
             if shutil.which(term):

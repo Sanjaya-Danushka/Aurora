@@ -669,7 +669,8 @@ class PluginsView(QWidget):
         parent_layout.addWidget(filter_container)
 
 
-    def _get_scrollbar_stylesheet(self):
+    @staticmethod
+    def _get_scrollbar_stylesheet():
         """Return beautiful scrollbar stylesheet with dark rounded corners"""
         return """
             QScrollArea {
@@ -866,7 +867,8 @@ class PluginsView(QWidget):
                 'installed': installed
             })
 
-    def _get_package_source(self, plugin_spec):
+    @staticmethod
+    def _get_package_source(plugin_spec):
         """Determine package source from plugin spec"""
         pkg = plugin_spec.get('pkg', '').lower()
         if pkg.startswith('npm-') or 'npm' in pkg:
@@ -880,7 +882,8 @@ class PluginsView(QWidget):
         else:
             return 'pacman'
     
-    def _get_source_icon(self, source):
+    @staticmethod
+    def _get_source_icon(source):
         """Get icon path for package source"""
         base_path = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "discover")
         icons = {

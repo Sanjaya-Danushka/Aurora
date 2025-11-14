@@ -707,7 +707,7 @@ class PluginsView(QWidget):
 
     def populate_app_cards(self):
         """Populate the grid with real plugin cards"""
-        cols = 2
+        cols = 3
         for i, plugin in enumerate(self.plugins):
             row = i // cols
             col = i % cols
@@ -716,10 +716,24 @@ class PluginsView(QWidget):
             card = self.create_app_card(plugin, icon, installed)
             self.grid_layout.addWidget(card, row, col)
 
+    def _get_package_source(self, plugin_spec):
+        """Determine package source from plugin spec"""
+        pkg = plugin_spec.get('pkg', '').lower()
+        if pkg.startswith('npm-') or 'npm' in pkg:
+            return 'npm'
+        elif pkg.startswith('aur/') or 'aur' in pkg:
+            return 'aur'
+        elif pkg.endswith('.flatpak') or 'flatpak' in pkg:
+            return 'flatpak'
+        elif pkg.startswith('brew-') or 'brew' in pkg:
+            return 'brew'
+        else:
+            return 'pacman'
+
     def create_app_card(self, plugin_spec, icon, installed):
-        """Create an upgraded app card matching the design"""
+        """Create a medium-sized app card"""
         card = QFrame()
-        card.setFixedSize(520, 200)
+        card.setFixedSize(340, 140)
         card.setStyleSheet("""
             QFrame {
                 background-color: rgba(20, 25, 35, 0.8);
@@ -733,47 +747,48 @@ class PluginsView(QWidget):
         """)
         
         layout = QHBoxLayout(card)
-        layout.setContentsMargins(24, 20, 24, 20)
-        layout.setSpacing(20)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(10)
         
         # Left side: Icon and text
         left_layout = QVBoxLayout()
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(12)
+        left_layout.setSpacing(4)
         
         # Icon and name row
         icon_name_layout = QHBoxLayout()
         icon_name_layout.setContentsMargins(0, 0, 0, 0)
-        icon_name_layout.setSpacing(12)
+        icon_name_layout.setSpacing(8)
         
         # Icon
         icon_label = QLabel()
-        icon_label.setFixedSize(64, 64)
+        icon_label.setFixedSize(48, 48)
         if icon and not icon.isNull():
-            icon_label.setPixmap(icon.pixmap(64, 64))
+            icon_label.setPixmap(icon.pixmap(48, 48))
         else:
             icon_label.setText("🧩")
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            icon_label.setStyleSheet("font-size: 32px;")
+            icon_label.setStyleSheet("font-size: 24px;")
         icon_name_layout.addWidget(icon_label)
         
         # Name
         name_label = QLabel(plugin_spec.get('name', plugin_spec.get('id')))
-        name_label.setStyleSheet("color: #F0F0F0; font-weight: 600; font-size: 16px;")
+        name_label.setStyleSheet("color: #F0F0F0; font-weight: 600; font-size: 12px;")
         name_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         icon_name_layout.addWidget(name_label)
         left_layout.addLayout(icon_name_layout)
         
         # Description
         desc_label = QLabel(plugin_spec.get('desc', ''))
-        desc_label.setStyleSheet("color: #A0A0A0; font-size: 12px;")
+        desc_label.setStyleSheet("color: #A0A0A0; font-size: 9px;")
         desc_label.setWordWrap(True)
-        desc_label.setMaximumHeight(40)
+        desc_label.setMaximumHeight(24)
         left_layout.addWidget(desc_label)
         
-        # Source
-        source_label = QLabel(f"Source: {plugin_spec.get('category', 'System')}")
-        source_label.setStyleSheet("color: #808080; font-size: 11px;")
+        # Source (package manager)
+        source = self._get_package_source(plugin_spec)
+        source_label = QLabel(f"Source: {source}")
+        source_label.setStyleSheet("color: #808080; font-size: 8px;")
         left_layout.addWidget(source_label)
         
         left_layout.addStretch()
@@ -782,14 +797,14 @@ class PluginsView(QWidget):
         # Right side: Buttons
         btn_layout = QVBoxLayout()
         btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_layout.setSpacing(10)
+        btn_layout.setSpacing(6)
         btn_layout.addStretch()
         
         if installed:
             # Open button (filled white)
             open_btn = QPushButton("Open")
-            open_btn.setFixedHeight(40)
-            open_btn.setMinimumWidth(120)
+            open_btn.setFixedHeight(32)
+            open_btn.setMinimumWidth(90)
             open_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #FFFFFF;
@@ -811,8 +826,8 @@ class PluginsView(QWidget):
             
             # Uninstall button (outlined)
             uninstall_btn = QPushButton("Uninstall")
-            uninstall_btn.setFixedHeight(40)
-            uninstall_btn.setMinimumWidth(120)
+            uninstall_btn.setFixedHeight(32)
+            uninstall_btn.setMinimumWidth(90)
             uninstall_btn.setStyleSheet("""
                 QPushButton {
                     background-color: transparent;
@@ -835,8 +850,8 @@ class PluginsView(QWidget):
         else:
             # Install button (filled teal)
             install_btn = QPushButton("Install")
-            install_btn.setFixedHeight(40)
-            install_btn.setMinimumWidth(120)
+            install_btn.setFixedHeight(32)
+            install_btn.setMinimumWidth(90)
             install_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #00BFAE;

@@ -691,8 +691,10 @@ class PluginsView(QWidget):
         # Create grid container
         grid_container = QWidget()
         self.grid_layout = QGridLayout(grid_container)
-        self.grid_layout.setSpacing(16)
+        self.grid_layout.setSpacing(20)
         self.grid_layout.setContentsMargins(0, 0, 0, 0)
+        self.grid_layout.setColumnStretch(0, 1)
+        self.grid_layout.setColumnStretch(1, 1)
         
         # Add sample app cards
         self.populate_app_cards()
@@ -704,121 +706,159 @@ class PluginsView(QWidget):
         parent_layout.addWidget(scroll)
 
     def populate_app_cards(self):
-        """Populate the grid with app cards"""
-        apps = [
-            {"name": "System Monitor Pro", "desc": "Advanced system monitoring", "category": "System Tools", "rating": 4.5, "downloads": "10K+"},
-            {"name": "KDE Plasma Designer", "desc": "Desktop customization", "category": "Desktop", "rating": 4.3, "downloads": "5K+"},
-            {"name": "KDE Plasma", "desc": "Desktop environment", "category": "Desktop", "rating": 4.8, "downloads": "50K+"},
-            {"name": "KDE Plasma Framework", "desc": "Framework components", "category": "Development", "rating": 4.6, "downloads": "25K+"},
-            {"name": "Roxann Government", "desc": "Government tools", "category": "Office", "rating": 3.9, "downloads": "2K+"},
-            {"name": "Revival of Khwaja", "desc": "Cultural application", "category": "Education", "rating": 4.1, "downloads": "1K+"},
-            {"name": "Flatpak Manager", "desc": "Manage Flatpak apps", "category": "System Tools", "rating": 4.4, "downloads": "15K+"},
-            {"name": "Power Manager", "desc": "Advanced power management", "category": "System Tools", "rating": 4.2, "downloads": "8K+"}
-        ]
-        
-        cols = 4
-        for i, app in enumerate(apps):
+        """Populate the grid with real plugin cards"""
+        cols = 2
+        for i, plugin in enumerate(self.plugins):
             row = i // cols
             col = i % cols
-            card = self.create_app_card(app)
+            installed = self.is_installed(plugin)
+            icon = self._icon_for(plugin)
+            card = self.create_app_card(plugin, icon, installed)
             self.grid_layout.addWidget(card, row, col)
 
-    def create_app_card(self, app_data):
-        """Create a modern app card"""
+    def create_app_card(self, plugin_spec, icon, installed):
+        """Create an upgraded app card matching the design"""
         card = QFrame()
-        card.setFixedSize(160, 220)
+        card.setFixedSize(520, 200)
         card.setStyleSheet("""
             QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(25, 30, 40, 0.9),
-                    stop:1 rgba(20, 25, 35, 0.9));
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
+                background-color: rgba(20, 25, 35, 0.8);
+                border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
             }
             QFrame:hover {
-                border: 1px solid rgba(0, 191, 174, 0.4);
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(30, 35, 45, 0.9),
-                    stop:1 rgba(25, 30, 40, 0.9));
+                border: 1px solid rgba(0, 191, 174, 0.3);
+                background-color: rgba(25, 30, 40, 0.9);
             }
         """)
         
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(20)
         
-        # App icon
-        icon_container = QWidget()
-        icon_container.setFixedSize(48, 48)
-        icon_container.setStyleSheet("""
-            QWidget {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 rgba(0, 191, 174, 0.8),
-                    stop:1 rgba(0, 150, 140, 0.8));
-                border-radius: 12px;
-            }
-        """)
-        icon_layout = QVBoxLayout(icon_container)
-        icon_layout.setContentsMargins(0, 0, 0, 0)
-        icon_label = QLabel("📱")
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_label.setStyleSheet("font-size: 24px; color: white;")
-        icon_layout.addWidget(icon_label)
-        layout.addWidget(icon_container, 0, Qt.AlignmentFlag.AlignHCenter)
+        # Left side: Icon and text
+        left_layout = QVBoxLayout()
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(12)
         
-        # App name
-        name_label = QLabel(app_data["name"])
-        name_label.setStyleSheet("color: #F0F0F0; font-weight: 600; font-size: 13px;")
-        name_label.setWordWrap(True)
-        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(name_label)
+        # Icon and name row
+        icon_name_layout = QHBoxLayout()
+        icon_name_layout.setContentsMargins(0, 0, 0, 0)
+        icon_name_layout.setSpacing(12)
         
-        # App description
-        desc_label = QLabel(app_data["desc"])
-        desc_label.setStyleSheet("color: #A0A0A0; font-size: 10px;")
+        # Icon
+        icon_label = QLabel()
+        icon_label.setFixedSize(64, 64)
+        if icon and not icon.isNull():
+            icon_label.setPixmap(icon.pixmap(64, 64))
+        else:
+            icon_label.setText("🧩")
+            icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            icon_label.setStyleSheet("font-size: 32px;")
+        icon_name_layout.addWidget(icon_label)
+        
+        # Name
+        name_label = QLabel(plugin_spec.get('name', plugin_spec.get('id')))
+        name_label.setStyleSheet("color: #F0F0F0; font-weight: 600; font-size: 16px;")
+        name_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        icon_name_layout.addWidget(name_label)
+        left_layout.addLayout(icon_name_layout)
+        
+        # Description
+        desc_label = QLabel(plugin_spec.get('desc', ''))
+        desc_label.setStyleSheet("color: #A0A0A0; font-size: 12px;")
         desc_label.setWordWrap(True)
-        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(desc_label)
+        desc_label.setMaximumHeight(40)
+        left_layout.addWidget(desc_label)
         
-        # Rating and downloads
-        info_container = QWidget()
-        info_layout = QHBoxLayout(info_container)
-        info_layout.setContentsMargins(0, 0, 0, 0)
-        info_layout.setSpacing(4)
+        # Source
+        source_label = QLabel(f"Source: {plugin_spec.get('category', 'System')}")
+        source_label.setStyleSheet("color: #808080; font-size: 11px;")
+        left_layout.addWidget(source_label)
         
-        # Rating
-        rating_label = QLabel(f"⭐ {app_data['rating']}")
-        rating_label.setStyleSheet("color: #FFD700; font-size: 10px; font-weight: 500;")
-        info_layout.addWidget(rating_label)
+        left_layout.addStretch()
+        layout.addLayout(left_layout, 1)
         
-        info_layout.addStretch()
+        # Right side: Buttons
+        btn_layout = QVBoxLayout()
+        btn_layout.setContentsMargins(0, 0, 0, 0)
+        btn_layout.setSpacing(10)
+        btn_layout.addStretch()
         
-        # Downloads
-        downloads_label = QLabel(app_data['downloads'])
-        downloads_label.setStyleSheet("color: #A0A0A0; font-size: 10px;")
-        info_layout.addWidget(downloads_label)
+        if installed:
+            # Open button (filled white)
+            open_btn = QPushButton("Open")
+            open_btn.setFixedHeight(40)
+            open_btn.setMinimumWidth(120)
+            open_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #FFFFFF;
+                    color: #000000;
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    font-size: 13px;
+                }
+                QPushButton:hover {
+                    background-color: #E8E8E8;
+                }
+                QPushButton:pressed {
+                    background-color: #D0D0D0;
+                }
+            """)
+            open_btn.clicked.connect(lambda: self.launch_requested.emit(plugin_spec['id']))
+            btn_layout.addWidget(open_btn)
+            
+            # Uninstall button (outlined)
+            uninstall_btn = QPushButton("Uninstall")
+            uninstall_btn.setFixedHeight(40)
+            uninstall_btn.setMinimumWidth(120)
+            uninstall_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    color: #E0E0E0;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    border-radius: 8px;
+                    font-weight: 600;
+                    font-size: 13px;
+                }
+                QPushButton:hover {
+                    border: 1px solid rgba(0, 191, 174, 0.6);
+                    color: #00BFAE;
+                }
+                QPushButton:pressed {
+                    background-color: rgba(0, 191, 174, 0.1);
+                }
+            """)
+            uninstall_btn.clicked.connect(lambda: self.uninstall_requested.emit(plugin_spec['id']))
+            btn_layout.addWidget(uninstall_btn)
+        else:
+            # Install button (filled teal)
+            install_btn = QPushButton("Install")
+            install_btn.setFixedHeight(40)
+            install_btn.setMinimumWidth(120)
+            install_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #00BFAE;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    font-size: 13px;
+                }
+                QPushButton:hover {
+                    background-color: #00A89A;
+                }
+                QPushButton:pressed {
+                    background-color: #009080;
+                }
+            """)
+            install_btn.clicked.connect(lambda: self.install_requested.emit(plugin_spec['id']))
+            btn_layout.addWidget(install_btn)
         
-        layout.addWidget(info_container)
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
         
-        # Install button
-        install_btn = QPushButton("Install")
-        install_btn.setFixedHeight(32)
-        install_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #00BFAE;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-weight: 600;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #00A89A;
-            }
-        """)
-        layout.addWidget(install_btn)
-        
-        layout.addStretch()
         return card
 
     def _icon_for(self, spec):

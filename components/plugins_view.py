@@ -822,16 +822,16 @@ class PluginsView(QWidget):
     
     def _get_source_icon(self, source):
         """Get icon path for package source"""
-        base_path = '/home/dev/Desktop/New Folder1/Neoarch/assets/icons/discover/'
+        base_path = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "discover")
         icons = {
-            'pacman': f'{base_path}pacman.svg',
-            'aur': f'{base_path}aur.svg', 
-            'flatpak': f'{base_path}flatpack.svg',
-            'npm': f'{base_path}node.svg',
-            'brew': f'{base_path}pacman.svg',  # fallback to pacman
-            'pip': f'{base_path}pacman.svg'   # fallback to pacman
+            'pacman': os.path.join(base_path, 'pacman.svg'),
+            'aur': os.path.join(base_path, 'aur.svg'),
+            'flatpak': os.path.join(base_path, 'flatpack.svg'),
+            'npm': os.path.join(base_path, 'node.svg'),
+            'brew': os.path.join(base_path, 'pacman.svg'),
+            'pip': os.path.join(base_path, 'pacman.svg')
         }
-        return icons.get(source, f'{base_path}pacman.svg')
+        return icons.get(source, os.path.join(base_path, 'pacman.svg'))
 
     def create_app_card(self, plugin_spec, icon, installed):
         """Create a medium-sized app card with enhanced styling"""

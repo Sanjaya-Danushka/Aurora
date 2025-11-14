@@ -1999,6 +1999,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             try:
                 self.console_label.setVisible(False)
                 self.console.setVisible(False)
+                if hasattr(self, 'console_toggle_btn'):
+                    self.console_toggle_btn.setVisible(True)
+                    self.console_toggle_btn.setToolTip("Show Console")
             except Exception:
                 pass
         elif view_id == "settings":

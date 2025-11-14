@@ -822,7 +822,7 @@ class PluginsView(QWidget):
             
             # Clear existing layout items (but don't delete widgets)
             while self.grid_layout.count():
-                child = self.grid_layout.takeAt(0)
+                _ = self.grid_layout.takeAt(0)
             
             # Hide all cards first
             for card_data in self._all_cards:
@@ -1160,7 +1160,7 @@ class PluginsView(QWidget):
 
     def _icon_for(self, spec):
         try:
-            icons_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins"))
+            _ = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins"))
             path = spec.get('icon')
             if path and os.path.exists(path):
                 return self.get_icon_callback(os.path.normpath(path), 36)
@@ -1436,7 +1436,7 @@ class PluginsView(QWidget):
             
             # Clear existing grid
             while self.grid_layout.count():
-                child = self.grid_layout.takeAt(0)
+                _ = self.grid_layout.takeAt(0)
             
             # Load first batch of plugins (20 instead of 10 for initial load)
             initial_batch = min(20, len(self._all_plugins))

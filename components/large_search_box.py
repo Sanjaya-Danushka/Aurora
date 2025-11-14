@@ -406,7 +406,7 @@ class LargeSearchBox(QWidget):
             for update in updates[:4]:
                 self.create_update_item(update)
                 
-        except Exception as e:
+        except Exception:
             self.show_system_status()  # Show system status instead of error
 
     def get_pacman_updates(self):

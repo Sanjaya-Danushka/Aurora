@@ -1419,3 +1419,42 @@ class PluginsView(QWidget):
         # Hide loading indicator after a short delay
         QTimer.singleShot(200, self._hide_loading_indicator)
         self._is_loading = False
+    
+    def apply_filters(self, filter_states):
+        """Apply Available/Installed filters to the plugins view"""
+        # Create cards if not already created
+        if not self._all_cards:
+            self._create_all_cards()
+        
+        # Get filter states
+        show_available = filter_states.get('Available', True)
+        show_installed = filter_states.get('Installed', True)
+        
+        # Clear the grid layout
+        while self.grid_layout.count():
+            child = self.grid_layout.takeAt(0)
+        
+        # Hide all cards first
+        for card_data in self._all_cards:
+            card_data['widget'].hide()
+        
+        # Filter and display cards based on filter states
+        filtered_cards = []
+        for card_data in self._all_cards:
+            is_installed = card_data['installed']
+            if (is_installed and show_installed) or (not is_installed and show_available):
+                filtered_cards.append(card_data)
+        
+        # Use tracked column count
+        cols = self._current_cols
+        
+        # Set column stretching dynamically
+        for i in range(cols):
+            self.grid_layout.setColumnStretch(i, 1)
+        
+        # Add filtered cards to layout and show them
+        for i, card_data in enumerate(filtered_cards):
+            row = i // cols
+            col = i % cols
+            card_data['widget'].show()
+            self.grid_layout.addWidget(card_data['widget'], row, col)

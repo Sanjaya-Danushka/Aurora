@@ -2146,8 +2146,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         elif self.current_view == "updates":
             self.apply_update_filters()
         elif self.current_view == "plugins":
-            # For plugins, just refresh the view (since it's empty anyway)
-            pass
+            # Apply plugin status filters (Available/Installed)
+            if hasattr(self, 'plugins_view') and self.plugins_view:
+                self.plugins_view.apply_filters(filter_states)
     
     def update_discover_sources(self):
         """Update the discover sources using the new SourceCard component"""

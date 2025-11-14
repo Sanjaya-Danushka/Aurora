@@ -358,9 +358,9 @@ class PluginsView(QWidget):
         
         # Create content widget for the scroll area
         scroll_content = QWidget()
-        slider_layout = QHBoxLayout(scroll_content)
-        slider_layout.setContentsMargins(20, 20, 20, 20)
-        slider_layout.setSpacing(16)
+        self.slider_layout = QHBoxLayout(scroll_content)
+        self.slider_layout.setContentsMargins(20, 20, 20, 20)
+        self.slider_layout.setSpacing(16)
         
         # Popular apps data - curated selection with image filenames
         popular_apps = [
@@ -384,7 +384,7 @@ class PluginsView(QWidget):
         
         for app in shuffled_apps:
             card = self.create_slider_card(app)
-            slider_layout.addWidget(card)
+            self.slider_layout.addWidget(card)
         
         # Set the content widget to the scroll area
         scroll_area.setWidget(scroll_content)
@@ -401,6 +401,40 @@ class PluginsView(QWidget):
         """Create a card for the popular apps slider with background image"""
         card = QFrame()
         card.setFixedSize(240, 180)  # Larger size for better visibility
+        
+        # Find matching plugin for this app
+        matching_plugin = None
+        app_name = app_data.get('name', '').lower()
+        
+        # Try exact name match first
+        for plugin in self.plugins:
+            if plugin.get('name', '').lower() == app_name:
+                matching_plugin = plugin
+                break
+        
+        # If no exact match, try partial/fuzzy matching
+        if not matching_plugin:
+            for plugin in self.plugins:
+                plugin_name = plugin.get('name', '').lower()
+                # Check if app_name is contained in plugin name or vice versa
+                if app_name in plugin_name or plugin_name in app_name:
+                    # Prefer exact word matches
+                    if app_name.split()[0] in plugin_name.split():
+                        matching_plugin = plugin
+                        break
+        
+        # Last resort: try ID matching
+        if not matching_plugin:
+            app_id = app_data.get('name', '').lower().replace(' ', '-')
+            for plugin in self.plugins:
+                if plugin.get('id', '').lower() == app_id or app_id in plugin.get('id', '').lower():
+                    matching_plugin = plugin
+                    break
+        
+        # Check if app is installed
+        is_installed = False
+        if matching_plugin:
+            is_installed = self.is_installed(matching_plugin)
         
         # Get background image path
         image_filename = app_data.get("image", "")
@@ -499,10 +533,11 @@ class PluginsView(QWidget):
         
         bottom_layout.addStretch()
         
-        # Install button
-        install_btn = QPushButton("Install")
-        install_btn.setFixedSize(80, 32)
-        install_btn.setStyleSheet("""
+        # Install/Open button
+        button_text = "Open" if is_installed else "Install"
+        action_btn = QPushButton(button_text)
+        action_btn.setFixedSize(80, 32)
+        action_btn.setStyleSheet("""
             QPushButton {
                 background-color: rgba(30, 30, 30, 0.9);
                 color: white;
@@ -518,9 +553,33 @@ class PluginsView(QWidget):
                 background-color: rgba(20, 20, 20, 0.9);
             }
         """)
-        bottom_layout.addWidget(install_btn)
+        
+        # Connect button to appropriate action
+        if matching_plugin:
+            if is_installed:
+                action_btn.clicked.connect(lambda: self.launch_requested.emit(matching_plugin['id']))
+            else:
+                action_btn.clicked.connect(lambda: (card.set_installing(True), self.install_requested.emit(matching_plugin['id'])))
+        
+        bottom_layout.addWidget(action_btn)
         
         layout.addWidget(bottom_row)
+        
+        # Store reference for animation callbacks (similar to create_app_card)
+        card._is_installing = False
+        card._matching_plugin = matching_plugin  # Store plugin reference for refresh
+        def set_card_installing(installing):
+            card._is_installed_state = is_installed  # Store current state
+            card._is_installing = installing
+            if installing:
+                for widget in card.findChildren(QPushButton):
+                    widget.setEnabled(False)
+                    widget.setText("Installing…")
+            else:
+                for widget in card.findChildren(QPushButton):
+                    widget.setEnabled(True)
+                    widget.setText("Open" if card._is_installed_state else "Install")
+        card.set_installing = set_card_installing
         
         return card
 
@@ -1229,6 +1288,26 @@ class PluginsView(QWidget):
     def refresh_all(self):
         """Refresh all plugin cards to reflect current installation state"""
         try:
+            # Refresh slider cards to update Open/Install buttons
+            try:
+                if hasattr(self, 'slider_layout'):
+                    for i in range(self.slider_layout.count()):
+                        card = self.slider_layout.itemAt(i).widget()
+                        if card and hasattr(card, '_matching_plugin'):
+                            plugin = card._matching_plugin
+                            if plugin:
+                                # Re-check if app is installed
+                                is_now_installed = self.is_installed(plugin)
+                                # Update button text
+                                buttons = card.findChildren(QPushButton)
+                                if buttons:
+                                    btn = buttons[0]
+                                    btn.setText("Open" if is_now_installed else "Install")
+                                    # Update the stored state for animation
+                                    card._is_installed_state = is_now_installed
+            except Exception:
+                pass
+            
             # Clear grid layout
             while self.grid_layout.count():
                 item = self.grid_layout.takeAt(0)

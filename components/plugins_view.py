@@ -1017,7 +1017,8 @@ class PluginsView(QWidget):
             else:
                 source_icon_label.setText("📦")
                 source_icon_label.setStyleSheet("font-size: 10px;")
-        except:
+        except Exception as e:  # Catch specific exceptions that might occur during source detection
+            print(f"Error setting source icon: {e}")
             source_icon_label.setText("📦")
             source_icon_label.setStyleSheet("font-size: 10px;")
         

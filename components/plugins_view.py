@@ -222,10 +222,7 @@ class PluginsView(QWidget):
         self._init_ui()
 
     def _init_specs(self):
-        icons_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins"))
-        base_icon = os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins.svg")
-        bb_icon = os.path.join(icons_dir, "bleachbit.svg")
-        ts_icon = os.path.join(icons_dir, "timeshift.svg")
+        plugins_items_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "plugins", "plugins-items"))
         self.plugins = [
             {
                 'id': 'bleachbit',
@@ -233,7 +230,7 @@ class PluginsView(QWidget):
                 'desc': 'System cleaner to free disk space and guard your privacy.',
                 'pkg': 'bleachbit',
                 'cmd': 'bleachbit',
-                'icon': bb_icon,
+                'icon': os.path.join(plugins_items_dir, 'BleachBit.png'),
                 'category': 'Cleaner',
             },
             {
@@ -242,37 +239,34 @@ class PluginsView(QWidget):
                 'desc': 'System restore utility for Linux.',
                 'pkg': 'timeshift',
                 'cmd': 'timeshift-gtk',
-                'icon': ts_icon,
+                'icon': os.path.join(plugins_items_dir, 'timeshift.png'),
                 'category': 'Backup',
             },
-            # Cleaners / Storage
             {
                 'id': 'baobab',
                 'name': 'Disk Usage Analyzer',
                 'desc': 'Visualize disk usage and identify large folders/files.',
                 'pkg': 'baobab',
                 'cmd': 'baobab',
-                'icon': os.path.join(icons_dir, 'baobab.svg'),
+                'icon': os.path.join(plugins_items_dir, 'diskusageanalyzer.png'),
                 'category': 'Cleaner',
             },
-            # Backup
             {
                 'id': 'deja-dup',
                 'name': 'Déjà Dup (Backups)',
                 'desc': 'Simple backups for GNOME with cloud support.',
                 'pkg': 'deja-dup',
                 'cmd': 'deja-dup',
-                'icon': os.path.join(icons_dir, 'deja-dup.svg'),
+                'icon': os.path.join(plugins_items_dir, 'DejaDup.png'),
                 'category': 'Backup',
             },
-            # System tools
             {
                 'id': 'gparted',
                 'name': 'GParted',
                 'desc': 'Partition editor for graphically managing disk partitions.',
                 'pkg': 'gparted',
                 'cmd': 'gparted',
-                'icon': os.path.join(icons_dir, 'gparted.jpeg'),
+                'icon': os.path.join(plugins_items_dir, 'gparted.jpeg'),
                 'category': 'System',
             },
             {
@@ -281,7 +275,7 @@ class PluginsView(QWidget):
                 'desc': 'Manage disks and media — partition, format and benchmark.',
                 'pkg': 'gnome-disk-utility',
                 'cmd': 'gnome-disks',
-                'icon': os.path.join(icons_dir, 'gnomedisk.jpeg'),
+                'icon': os.path.join(plugins_items_dir, 'gnomedisk.jpeg'),
                 'category': 'System',
             },
             {
@@ -290,7 +284,7 @@ class PluginsView(QWidget):
                 'desc': 'Advanced audio mixer for PulseAudio.',
                 'pkg': 'pavucontrol',
                 'cmd': 'pavucontrol',
-                'icon': os.path.join(icons_dir, 'pavucontrol.svg'),
+                'icon': os.path.join(plugins_items_dir, 'pulseaudio.png'),
                 'category': 'System',
             },
             {
@@ -299,17 +293,16 @@ class PluginsView(QWidget):
                 'desc': 'Configure printers and manage print jobs.',
                 'pkg': 'system-config-printer',
                 'cmd': 'system-config-printer',
-                'icon': os.path.join(icons_dir, 'printer.svg'),
+                'icon': os.path.join(plugins_items_dir, 'printers.png'),
                 'category': 'System',
             },
-            # Monitors
             {
                 'id': 'btop',
                 'name': 'btop',
                 'desc': 'Modern resource monitor for CPU, memory, disks, network.',
                 'pkg': 'btop',
                 'cmd': 'btop',
-                'icon': os.path.join(icons_dir, 'btop.svg'),
+                'icon': os.path.join(plugins_items_dir, 'btop.png'),
                 'category': 'Monitor',
             },
             {
@@ -318,7 +311,7 @@ class PluginsView(QWidget):
                 'desc': 'Interactive process viewer and system monitor.',
                 'pkg': 'htop',
                 'cmd': 'htop',
-                'icon': os.path.join(icons_dir, 'htop.svg'),
+                'icon': os.path.join(plugins_items_dir, 'htop.png'),
                 'category': 'Monitor',
             },
             {
@@ -327,17 +320,16 @@ class PluginsView(QWidget):
                 'desc': 'Graphical system monitor for processes and resources.',
                 'pkg': 'gnome-system-monitor',
                 'cmd': 'gnome-system-monitor',
-                'icon': os.path.join(icons_dir, 'gnomesystem.jpeg'),
+                'icon': os.path.join(plugins_items_dir, 'gnomesystem.jpeg'),
                 'category': 'Monitor',
             },
-            # GPU
             {
                 'id': 'nvidia-settings',
                 'name': 'NVIDIA Settings',
                 'desc': 'Configure NVIDIA drivers and GPU options.',
                 'pkg': 'nvidia-settings',
                 'cmd': 'nvidia-settings',
-                'icon': os.path.join(icons_dir, 'nvidia.svg'),
+                'icon': os.path.join(plugins_items_dir, 'nvideasettings.jpeg'),
                 'category': 'GPU',
             },
             {
@@ -346,17 +338,16 @@ class PluginsView(QWidget):
                 'desc': 'NVIDIA/AMD Intel GPU process monitor (requires supported GPU).',
                 'pkg': 'nvtop',
                 'cmd': 'nvtop',
-                'icon': os.path.join(icons_dir, 'nvtop.svg'),
+                'icon': os.path.join(plugins_items_dir, 'nvtop.png'),
                 'category': 'GPU',
             },
-            # Utility
             {
                 'id': 'simple-scan',
                 'name': 'Document Scanner',
                 'desc': 'Scan documents and photos with a simple interface.',
                 'pkg': 'simple-scan',
                 'cmd': 'simple-scan',
-                'icon': os.path.join(icons_dir, 'simple-scan.svg'),
+                'icon': os.path.join(plugins_items_dir, 'documentscanner.png'),
                 'category': 'Utility',
             },
             {
@@ -365,7 +356,7 @@ class PluginsView(QWidget):
                 'desc': 'Create and extract archives (zip, tar, etc.).',
                 'pkg': 'file-roller',
                 'cmd': 'file-roller',
-                'icon': os.path.join(icons_dir, 'archive.svg'),
+                'icon': os.path.join(plugins_items_dir, 'achive.png'),
                 'category': 'Utility',
             },
         ]
@@ -707,7 +698,7 @@ class PluginsView(QWidget):
 
     def populate_app_cards(self):
         """Populate the grid with real plugin cards"""
-        cols = 3
+        cols = 2
         for i, plugin in enumerate(self.plugins):
             row = i // cols
             col = i % cols

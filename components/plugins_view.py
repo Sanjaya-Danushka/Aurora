@@ -254,9 +254,10 @@ class PluginsView(QWidget):
         # Pagination variables for infinite scrolling
         self._all_plugins = []  # All available plugins
         self._loaded_count = 0  # Number of plugins currently loaded
-        self._batch_size = 10  # Load 10 plugins at a time
+        self._batch_size = 4  # Load 4 plugins at a time for better performance
         self._is_loading = False  # Prevent multiple simultaneous loads
         self._loading_indicator = None  # Loading indicator widget
+        self._load_timer = None  # Timer for deferred loading
         
         # Debounce timer for resize events
         self._resize_timer = QTimer()
@@ -1362,12 +1363,18 @@ class PluginsView(QWidget):
         scrollbar = self._scroll_area.verticalScrollBar()
         max_value = scrollbar.maximum()
         
-        # Trigger loading when user scrolls within 100 pixels of bottom
-        if max_value - value <= 100 and self._loaded_count < len(self._all_plugins):
-            self._load_more_plugins()
+        # Trigger loading when user scrolls within 150 pixels of bottom
+        # Use deferred loading to avoid lag during scrolling
+        if max_value - value <= 150 and self._loaded_count < len(self._all_plugins):
+            if self._load_timer is not None:
+                self._load_timer.stop()
+            self._load_timer = QTimer()
+            self._load_timer.setSingleShot(True)
+            self._load_timer.timeout.connect(self._load_more_plugins)
+            self._load_timer.start(100)  # Defer loading by 100ms to batch scroll events
     
     def _load_more_plugins(self):
-        """Load next batch of 10 plugins"""
+        """Load next batch of plugins with optimized performance"""
         if self._is_loading or self._loaded_count >= len(self._all_plugins):
             return
             
@@ -1421,7 +1428,7 @@ class PluginsView(QWidget):
         self._loaded_count += batch_size
         
         # Hide loading indicator after a short delay
-        QTimer.singleShot(200, self._hide_loading_indicator)
+        QTimer.singleShot(100, self._hide_loading_indicator)
         self._is_loading = False
     
     def apply_filters(self, filter_states):

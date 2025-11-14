@@ -667,12 +667,58 @@ class PluginsView(QWidget):
         parent_layout.addWidget(filter_container)
 
 
+    def _get_scrollbar_stylesheet(self):
+        """Return beautiful scrollbar stylesheet with rounded corners"""
+        return """
+            QScrollArea {
+                background: transparent;
+                border: none;
+            }
+            QScrollBar:vertical {
+                border: none;
+                background: transparent;
+                width: 12px;
+                margin: 0px 0px 0px 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(0, 191, 174, 0.6);
+                border-radius: 6px;
+                min-height: 20px;
+                margin: 2px 2px 2px 2px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: rgba(0, 191, 174, 0.8);
+            }
+            QScrollBar::handle:vertical:pressed {
+                background: rgba(0, 191, 174, 1);
+            }
+            QScrollBar::add-line:vertical {
+                border: none;
+                background: none;
+                height: 0px;
+            }
+            QScrollBar::sub-line:vertical {
+                border: none;
+                background: none;
+                height: 0px;
+            }
+            QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+                border: none;
+                width: 0px;
+                height: 0px;
+                background: none;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: none;
+            }
+        """
+
     def create_apps_grid(self, parent_layout):
         """Create the apps grid section"""
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        scroll.setStyleSheet(self._get_scrollbar_stylesheet())
         
         scroll_widget = QWidget()
         scroll_layout = QVBoxLayout(scroll_widget)

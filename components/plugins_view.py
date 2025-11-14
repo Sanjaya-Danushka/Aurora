@@ -763,24 +763,25 @@ class PluginsView(QWidget):
         # Icon
         icon_label = QLabel()
         icon_label.setFixedSize(48, 48)
+        icon_label.setStyleSheet("border: none; background: transparent;")
         if icon and not icon.isNull():
             icon_label.setPixmap(icon.pixmap(48, 48))
         else:
             icon_label.setText("🧩")
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            icon_label.setStyleSheet("font-size: 24px;")
+            icon_label.setStyleSheet("font-size: 24px; border: none; background: transparent;")
         icon_name_layout.addWidget(icon_label)
         
         # Name
         name_label = QLabel(plugin_spec.get('name', plugin_spec.get('id')))
-        name_label.setStyleSheet("color: #F0F0F0; font-weight: 600; font-size: 12px;")
+        name_label.setStyleSheet("color: #F0F0F0; font-weight: 600; font-size: 12px; border: none; background: transparent;")
         name_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         icon_name_layout.addWidget(name_label)
         left_layout.addLayout(icon_name_layout)
         
         # Description
         desc_label = QLabel(plugin_spec.get('desc', ''))
-        desc_label.setStyleSheet("color: #A0A0A0; font-size: 9px;")
+        desc_label.setStyleSheet("color: #A0A0A0; font-size: 9px; border: none; background: transparent;")
         desc_label.setWordWrap(True)
         desc_label.setMaximumHeight(24)
         left_layout.addWidget(desc_label)
@@ -788,7 +789,7 @@ class PluginsView(QWidget):
         # Source (package manager)
         source = self._get_package_source(plugin_spec)
         source_label = QLabel(f"Source: {source}")
-        source_label.setStyleSheet("color: #808080; font-size: 8px;")
+        source_label.setStyleSheet("color: #808080; font-size: 8px; border: none; background: transparent;")
         left_layout.addWidget(source_label)
         
         left_layout.addStretch()

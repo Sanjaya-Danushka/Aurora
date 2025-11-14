@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QGridLayout, QSizePolicy, QMenu
-from PyQt6.QtCore import pyqtSignal, Qt, QTimer
+from PyQt6.QtCore import pyqtSignal, Qt, QTimer, QPoint
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QAction
 import os
 import shutil
@@ -206,6 +206,32 @@ class PluginCard(QFrame):
         """
 
 
+class DraggableScrollArea(QScrollArea):
+    """Custom scroll area that supports drag scrolling"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._drag_start_pos = None
+        self._drag_start_value = None
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.pos()
+            self._drag_start_value = self.horizontalScrollBar().value()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._drag_start_pos is not None:
+            delta = event.pos().x() - self._drag_start_pos.x()
+            new_value = self._drag_start_value - delta
+            self.horizontalScrollBar().setValue(new_value)
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_start_pos = None
+        self._drag_start_value = None
+        super().mouseReleaseEvent(event)
+
+
 class PluginsView(QWidget):
     install_requested = pyqtSignal(str)   # plugin id
     launch_requested = pyqtSignal(str)    # plugin id
@@ -396,13 +422,15 @@ class PluginsView(QWidget):
             }
         """)
         
-        # Create scroll area for horizontal scrolling
-        scroll_area = QScrollArea()
+        # Create draggable scroll area for horizontal scrolling
+        scroll_area = DraggableScrollArea()
         scroll_area.setFixedHeight(220)  # Increased height for larger cards
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        # Enable scroll bar interaction
+        scroll_area.horizontalScrollBar().setCursor(Qt.CursorShape.PointingHandCursor)
         scroll_area.setStyleSheet("""
             QScrollArea {
                 background: transparent;
@@ -483,6 +511,7 @@ class PluginsView(QWidget):
         
         # Set the content widget to the scroll area
         scroll_area.setWidget(scroll_content)
+        scroll_content.setCursor(Qt.CursorShape.OpenHandCursor)
         
         # Add scroll area to the main container
         container_layout = QVBoxLayout(slider_container)
@@ -796,6 +825,9 @@ class PluginsView(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
+        # Enable scroll bar interaction
+        scroll.verticalScrollBar().setCursor(Qt.CursorShape.PointingHandCursor)
+        scroll.horizontalScrollBar().setCursor(Qt.CursorShape.PointingHandCursor)
         scroll.setStyleSheet(self._get_scrollbar_stylesheet())
         
         scroll_widget = QWidget()

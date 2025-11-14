@@ -784,6 +784,19 @@ class PluginsView(QWidget):
             return 'brew'
         else:
             return 'pacman'
+    
+    def _get_source_icon(self, source):
+        """Get icon path for package source"""
+        base_path = '/home/dev/Desktop/New Folder1/Neoarch/assets/icons/discover/'
+        icons = {
+            'pacman': f'{base_path}pacman.svg',
+            'aur': f'{base_path}aur.svg', 
+            'flatpak': f'{base_path}flatpack.svg',
+            'npm': f'{base_path}node.svg',
+            'brew': f'{base_path}pacman.svg',  # fallback to pacman
+            'pip': f'{base_path}pacman.svg'   # fallback to pacman
+        }
+        return icons.get(source, f'{base_path}pacman.svg')
 
     def create_app_card(self, plugin_spec, icon, installed):
         """Create a medium-sized app card with enhanced styling"""
@@ -864,19 +877,55 @@ class PluginsView(QWidget):
         name_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         name_source_layout.addWidget(name_label)
         
-        # Source (package manager)
+        # Source (package manager) with icon
         source = self._get_package_source(plugin_spec)
-        source_label = QLabel(f"📦 {source}")
-        source_label.setStyleSheet("""
+        source_icon_path = self._get_source_icon(source)
+        
+        # Create source layout with icon and text
+        source_layout = QHBoxLayout()
+        source_layout.setContentsMargins(6, 2, 6, 2)
+        source_layout.setSpacing(4)
+        
+        # Source icon
+        source_icon_label = QLabel()
+        source_icon_label.setFixedSize(12, 12)
+        try:
+            source_pixmap = QPixmap(source_icon_path)
+            if not source_pixmap.isNull():
+                source_icon_label.setPixmap(source_pixmap.scaled(12, 12, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            else:
+                source_icon_label.setText("📦")
+                source_icon_label.setStyleSheet("font-size: 10px;")
+        except:
+            source_icon_label.setText("📦")
+            source_icon_label.setStyleSheet("font-size: 10px;")
+        
+        # Source text
+        source_text_label = QLabel(source)
+        source_text_label.setStyleSheet("""
             QLabel {
                 color: #00BFAE;
                 font-size: 9px;
-                font-weight: 500;
+                font-weight: 600;
                 border: none;
                 background: transparent;
             }
         """)
-        name_source_layout.addWidget(source_label)
+        
+        source_layout.addWidget(source_icon_label)
+        source_layout.addWidget(source_text_label)
+        source_layout.addStretch()
+        
+        # Source container with background
+        source_container = QWidget()
+        source_container.setLayout(source_layout)
+        source_container.setStyleSheet("""
+            QWidget {
+                background: rgba(0, 191, 174, 0.1);
+                border-radius: 6px;
+            }
+        """)
+        name_source_layout.addWidget(source_container)
         
         icon_name_layout.addLayout(name_source_layout, 1)
         left_layout.addLayout(icon_name_layout)
@@ -915,17 +964,17 @@ class PluginsView(QWidget):
                     background-color: #FFFFFF;
                     color: #1a1a1a;
                     border: none;
-                    border-radius: 8px;
+                    border-radius: 10px;
                     font-weight: 700;
                     font-size: 12px;
                     padding: 0px 12px;
                 }
                 QPushButton:hover {
-                    background-color: #F0F0F0;
+                    background-color: #F5F5F5;
                     color: #000000;
                 }
                 QPushButton:pressed {
-                    background-color: #E0E0E0;
+                    background-color: #E8E8E8;
                 }
             """)
             open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -940,19 +989,20 @@ class PluginsView(QWidget):
                 QPushButton {
                     background-color: transparent;
                     color: #E0E0E0;
-                    border: 1.5px solid rgba(255, 255, 255, 0.25);
-                    border-radius: 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    border-radius: 10px;
                     font-weight: 600;
                     font-size: 11px;
                     padding: 0px 12px;
                 }
                 QPushButton:hover {
-                    border: 1.5px solid rgba(0, 191, 174, 0.7);
+                    border: 1px solid rgba(0, 191, 174, 0.8);
                     color: #00BFAE;
-                    background-color: rgba(0, 191, 174, 0.08);
+                    background-color: rgba(0, 191, 174, 0.1);
                 }
                 QPushButton:pressed {
-                    background-color: rgba(0, 191, 174, 0.15);
+                    background-color: rgba(0, 191, 174, 0.2);
+                    border: 1px solid rgba(0, 191, 174, 1.0);
                 }
             """)
             uninstall_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -968,7 +1018,7 @@ class PluginsView(QWidget):
                     background-color: #00BFAE;
                     color: white;
                     border: none;
-                    border-radius: 8px;
+                    border-radius: 10px;
                     font-weight: 700;
                     font-size: 12px;
                     padding: 0px 12px;

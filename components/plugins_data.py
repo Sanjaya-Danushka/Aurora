@@ -1,4 +1,5 @@
 import os
+import random
 
 def get_plugins_data():
     """Return initial plugin specifications (fast loading)"""
@@ -84,7 +85,7 @@ def get_all_plugins_data():
     """Return all plugin specifications (lazy loading)"""
     plugins_items_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "plugins", "plugins-items"))
 
-    return [
+    plugins = [
         # System Tools
         {
             'id': 'bleachbit',
@@ -874,4 +875,298 @@ def get_all_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'kstars.png'),
             'category': 'Education',
         },
+
+        # AUR Packages
+        {
+            'id': 'yay',
+            'name': 'Yay',
+            'desc': 'AUR helper written in Go for easy AUR package management.',
+            'pkg': 'aur/yay',
+            'cmd': 'yay',
+            'icon': os.path.join(plugins_items_dir, 'yay.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'paru',
+            'name': 'Paru',
+            'desc': 'Feature-rich AUR helper with pacman-like interface.',
+            'pkg': 'aur/paru',
+            'cmd': 'paru',
+            'icon': os.path.join(plugins_items_dir, 'paru.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'visual-studio-code-bin',
+            'name': 'VS Code (Binary)',
+            'desc': 'Official VS Code binary from Microsoft via AUR.',
+            'pkg': 'aur/visual-studio-code-bin',
+            'cmd': 'code',
+            'icon': os.path.join(plugins_items_dir, 'vscode.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'discord-bin',
+            'name': 'Discord (Binary)',
+            'desc': 'Official Discord binary from AUR.',
+            'pkg': 'aur/discord-bin',
+            'cmd': 'discord',
+            'icon': os.path.join(plugins_items_dir, 'discord.png'),
+            'category': 'Communication',
+        },
+        {
+            'id': 'spotify-bin',
+            'name': 'Spotify (Binary)',
+            'desc': 'Official Spotify binary from AUR.',
+            'pkg': 'aur/spotify-bin',
+            'cmd': 'spotify',
+            'icon': os.path.join(plugins_items_dir, 'spotify.png'),
+            'category': 'Multimedia',
+        },
+
+        # Flatpak Packages
+        {
+            'id': 'org.gnome.Evolution',
+            'name': 'Evolution',
+            'desc': 'GNOME email and calendar application.',
+            'pkg': 'org.gnome.Evolution.flatpak',
+            'cmd': 'evolution',
+            'icon': os.path.join(plugins_items_dir, 'evolution.png'),
+            'category': 'Internet',
+        },
+        {
+            'id': 'org.gnome.Boxes',
+            'name': 'GNOME Boxes',
+            'desc': 'Simple GNOME application to access remote or virtual systems.',
+            'pkg': 'org.gnome.Boxes.flatpak',
+            'cmd': 'gnome-boxes',
+            'icon': os.path.join(plugins_items_dir, 'boxes.png'),
+            'category': 'System',
+        },
+        {
+            'id': 'com.github.tchx84.Flatseal',
+            'name': 'Flatseal',
+            'desc': 'Manage Flatpak permissions graphically.',
+            'pkg': 'com.github.tchx84.Flatseal.flatpak',
+            'cmd': 'flatseal',
+            'icon': os.path.join(plugins_items_dir, 'flatseal.png'),
+            'category': 'Utility',
+        },
+        {
+            'id': 'org.kde.kdenlive',
+            'name': 'Kdenlive (Flatpak)',
+            'desc': 'Free and open-source video editing software (Flatpak version).',
+            'pkg': 'org.kde.kdenlive.flatpak',
+            'cmd': 'kdenlive',
+            'icon': os.path.join(plugins_items_dir, 'kdenlive.png'),
+            'category': 'Multimedia',
+        },
+        {
+            'id': 'org.gimp.GIMP',
+            'name': 'GIMP (Flatpak)',
+            'desc': 'GNU Image Manipulation Program (Flatpak version).',
+            'pkg': 'org.gimp.GIMP.flatpak',
+            'cmd': 'gimp',
+            'icon': os.path.join(plugins_items_dir, 'gimp.png'),
+            'category': 'Graphics',
+        },
+
+        # NPM Packages
+        {
+            'id': 'npm-http-server',
+            'name': 'HTTP Server',
+            'desc': 'Simple zero-configuration command-line HTTP server.',
+            'pkg': 'npm-http-server',
+            'cmd': 'http-server',
+            'icon': os.path.join(plugins_items_dir, 'nodejs.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'npm-typescript',
+            'name': 'TypeScript',
+            'desc': 'TypeScript is a typed superset of JavaScript.',
+            'pkg': 'npm-typescript',
+            'cmd': 'tsc',
+            'icon': os.path.join(plugins_items_dir, 'typescript.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'npm-webpack',
+            'name': 'Webpack',
+            'desc': 'Module bundler for JavaScript applications.',
+            'pkg': 'npm-webpack',
+            'cmd': 'webpack',
+            'icon': os.path.join(plugins_items_dir, 'webpack.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'npm-eslint',
+            'name': 'ESLint',
+            'desc': 'Pluggable JavaScript linter for identifying and reporting patterns.',
+            'pkg': 'npm-eslint',
+            'cmd': 'eslint',
+            'icon': os.path.join(plugins_items_dir, 'eslint.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'npm-prettier',
+            'name': 'Prettier',
+            'desc': 'Code formatter for JavaScript, CSS, JSON and more.',
+            'pkg': 'npm-prettier',
+            'cmd': 'prettier',
+            'icon': os.path.join(plugins_items_dir, 'prettier.png'),
+            'category': 'Development',
+        },
+
+        # More AUR Packages
+        {
+            'id': 'google-chrome',
+            'name': 'Google Chrome',
+            'desc': 'Fast, secure web browser from Google.',
+            'pkg': 'aur/google-chrome',
+            'cmd': 'google-chrome',
+            'icon': os.path.join(plugins_items_dir, 'chrome.png'),
+            'category': 'Internet',
+        },
+        {
+            'id': 'slack-desktop',
+            'name': 'Slack',
+            'desc': 'Team messaging and collaboration platform.',
+            'pkg': 'aur/slack-desktop',
+            'cmd': 'slack',
+            'icon': os.path.join(plugins_items_dir, 'slack.png'),
+            'category': 'Communication',
+        },
+        {
+            'id': 'teams',
+            'name': 'Microsoft Teams',
+            'desc': 'Microsoft Teams for Linux.',
+            'pkg': 'aur/teams',
+            'cmd': 'teams',
+            'icon': os.path.join(plugins_items_dir, 'teams.png'),
+            'category': 'Communication',
+        },
+        {
+            'id': 'postman',
+            'name': 'Postman',
+            'desc': 'API development and testing platform.',
+            'pkg': 'aur/postman-bin',
+            'cmd': 'postman',
+            'icon': os.path.join(plugins_items_dir, 'postman.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'mongodb-compass',
+            'name': 'MongoDB Compass',
+            'desc': 'MongoDB GUI for exploring and manipulating data.',
+            'pkg': 'aur/mongodb-compass',
+            'cmd': 'mongodb-compass',
+            'icon': os.path.join(plugins_items_dir, 'mongodb.png'),
+            'category': 'Development',
+        },
+
+        # More Flatpak Packages
+        {
+            'id': 'org.mozilla.firefox',
+            'name': 'Firefox (Flatpak)',
+            'desc': 'Fast, private & safe web browser (Flatpak version).',
+            'pkg': 'org.mozilla.firefox.flatpak',
+            'cmd': 'firefox',
+            'icon': os.path.join(plugins_items_dir, 'firefox.png'),
+            'category': 'Internet',
+        },
+        {
+            'id': 'org.blender.Blender',
+            'name': 'Blender (Flatpak)',
+            'desc': '3D modeling and animation software (Flatpak version).',
+            'pkg': 'org.blender.Blender.flatpak',
+            'cmd': 'blender',
+            'icon': os.path.join(plugins_items_dir, 'blender.png'),
+            'category': 'Graphics',
+        },
+        {
+            'id': 'org.inkscape.Inkscape',
+            'name': 'Inkscape (Flatpak)',
+            'desc': 'Vector graphics editor (Flatpak version).',
+            'pkg': 'org.inkscape.Inkscape.flatpak',
+            'cmd': 'inkscape',
+            'icon': os.path.join(plugins_items_dir, 'inkscape.png'),
+            'category': 'Graphics',
+        },
+        {
+            'id': 'org.audacityteam.Audacity',
+            'name': 'Audacity (Flatpak)',
+            'desc': 'Audio editor and recorder (Flatpak version).',
+            'pkg': 'org.audacityteam.Audacity.flatpak',
+            'cmd': 'audacity',
+            'icon': os.path.join(plugins_items_dir, 'audacity.png'),
+            'category': 'Multimedia',
+        },
+        {
+            'id': 'org.libreoffice.LibreOffice',
+            'name': 'LibreOffice (Flatpak)',
+            'desc': 'Office suite (Flatpak version).',
+            'pkg': 'org.libreoffice.LibreOffice.flatpak',
+            'cmd': 'libreoffice',
+            'icon': os.path.join(plugins_items_dir, 'libreoffice.png'),
+            'category': 'Office',
+        },
+
+        # More NPM Packages
+        {
+            'id': 'npm-react',
+            'name': 'React',
+            'desc': 'JavaScript library for building user interfaces.',
+            'pkg': 'npm-react',
+            'cmd': 'react',
+            'icon': os.path.join(plugins_items_dir, 'react.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'npm-vue',
+            'name': 'Vue.js',
+            'desc': 'Progressive JavaScript framework for building UIs.',
+            'pkg': 'npm-vue',
+            'cmd': 'vue',
+            'icon': os.path.join(plugins_items_dir, 'vue.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'npm-angular',
+            'name': 'Angular',
+            'desc': 'Platform for building mobile and desktop web applications.',
+            'pkg': 'npm-angular',
+            'cmd': 'ng',
+            'icon': os.path.join(plugins_items_dir, 'angular.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'npm-express',
+            'name': 'Express.js',
+            'desc': 'Fast, unopinionated web framework for Node.js.',
+            'pkg': 'npm-express',
+            'cmd': 'express',
+            'icon': os.path.join(plugins_items_dir, 'express.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'npm-jest',
+            'name': 'Jest',
+            'desc': 'JavaScript testing framework with focus on simplicity.',
+            'pkg': 'npm-jest',
+            'cmd': 'jest',
+            'icon': os.path.join(plugins_items_dir, 'jest.png'),
+            'category': 'Development',
+        },
     ]
+    return _shuffle_plugins(plugins)
+
+
+def _shuffle_plugins(plugins):
+    """Shuffle plugins while keeping initial popular items at the top"""
+    if len(plugins) <= 8:
+        return plugins
+    # Keep first 8 items (popular), shuffle the rest
+    popular = plugins[:8]
+    rest = plugins[8:]
+    random.shuffle(rest)
+    return popular + rest

@@ -1,6 +1,7 @@
+import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
                              QHeaderView, QPushButton, QLabel, QTabWidget, QCheckBox, QDialog, 
-                             QLineEdit, QTextEdit, QComboBox, QFileDialog, QFormLayout)
+                             QLineEdit, QTextEdit, QComboBox, QFileDialog, QFormLayout, QMessageBox)
 from PyQt6.QtCore import Qt
 
 class PluginsSettingsWidget(QWidget):

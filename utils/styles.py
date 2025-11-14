@@ -534,6 +534,102 @@ QLabel#filterCardTitle {
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+/* Scroll Bar Styling - Dark Rounded */
+QScrollBar:vertical {
+    border: none;
+    background: transparent;
+    width: 12px;
+    margin: 0px 0px 0px 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: rgba(60, 60, 60, 0.7);
+    border-radius: 6px;
+    min-height: 20px;
+    margin: 0px 0px 0px 0px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: rgba(80, 80, 80, 0.9);
+}
+
+QScrollBar::handle:vertical:pressed {
+    background: rgba(100, 100, 100, 1);
+}
+
+QScrollBar::add-line:vertical {
+    border: none;
+    background: transparent;
+    height: 0px;
+}
+
+QScrollBar::sub-line:vertical {
+    border: none;
+    background: transparent;
+    height: 0px;
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+    border: none;
+    width: 0px;
+    height: 0px;
+    background: transparent;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: transparent;
+}
+
+QScrollBar:horizontal {
+    border: none;
+    background: transparent;
+    height: 12px;
+    margin: 0px 0px 0px 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background: rgba(60, 60, 60, 0.7);
+    border-radius: 6px;
+    min-width: 20px;
+    margin: 0px 0px 0px 0px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: rgba(80, 80, 80, 0.9);
+}
+
+QScrollBar::handle:horizontal:pressed {
+    background: rgba(100, 100, 100, 1);
+}
+
+QScrollBar::add-line:horizontal {
+    border: none;
+    background: transparent;
+    width: 0px;
+}
+
+QScrollBar::sub-line:horizontal {
+    border: none;
+    background: transparent;
+    width: 0px;
+}
+
+QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
+    border: none;
+    width: 0px;
+    height: 0px;
+    background: transparent;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background: transparent;
+}
+
+QScrollArea::corner {
+    background: transparent;
+    border: none;
+}
 """
 
 

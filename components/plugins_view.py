@@ -768,7 +768,7 @@ class PluginsView(QWidget):
             return 'pacman'
 
     def create_app_card(self, plugin_spec, icon, installed):
-        """Create a medium-sized app card"""
+        """Create a medium-sized app card with enhanced styling"""
         card = QFrame()
         card.setFixedSize(340, 140)
         card.setStyleSheet("""
@@ -777,59 +777,106 @@ class PluginsView(QWidget):
                 background-position: center;
                 background-repeat: no-repeat;
                 background-attachment: fixed;
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                background-color: rgba(15, 20, 30, 0.85);
+                border-radius: 14px;
+                border: 1px solid rgba(0, 191, 174, 0.15);
             }
             QFrame:hover {
-                border: 1px solid rgba(0, 191, 174, 0.3);
+                border: 1px solid rgba(0, 191, 174, 0.4);
+                background-color: rgba(20, 25, 35, 0.9);
             }
         """)
         
         layout = QHBoxLayout(card)
-        layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(10)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(12)
         
         # Left side: Icon and text
         left_layout = QVBoxLayout()
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(4)
+        left_layout.setSpacing(6)
         
         # Icon and name row
         icon_name_layout = QHBoxLayout()
         icon_name_layout.setContentsMargins(0, 0, 0, 0)
-        icon_name_layout.setSpacing(8)
+        icon_name_layout.setSpacing(10)
         
-        # Icon
+        # Icon with shadow effect
         icon_label = QLabel()
-        icon_label.setFixedSize(48, 48)
-        icon_label.setStyleSheet("border: none; background: transparent;")
+        icon_label.setFixedSize(52, 52)
+        icon_label.setStyleSheet("""
+            QLabel {
+                border: none;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+                padding: 2px;
+            }
+        """)
         if icon and not icon.isNull():
             icon_label.setPixmap(icon.pixmap(48, 48))
         else:
             icon_label.setText("🧩")
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            icon_label.setStyleSheet("font-size: 24px; border: none; background: transparent;")
+            icon_label.setStyleSheet("""
+                QLabel {
+                    font-size: 28px;
+                    border: none;
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 10px;
+                }
+            """)
         icon_name_layout.addWidget(icon_label)
+        
+        # Name and source column
+        name_source_layout = QVBoxLayout()
+        name_source_layout.setContentsMargins(0, 0, 0, 0)
+        name_source_layout.setSpacing(2)
         
         # Name
         name_label = QLabel(plugin_spec.get('name', plugin_spec.get('id')))
-        name_label.setStyleSheet("color: #F0F0F0; font-weight: 600; font-size: 12px; border: none; background: transparent;")
+        name_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font-weight: 700;
+                font-size: 13px;
+                border: none;
+                background: transparent;
+            }
+        """)
         name_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        icon_name_layout.addWidget(name_label)
+        name_source_layout.addWidget(name_label)
+        
+        # Source (package manager)
+        source = self._get_package_source(plugin_spec)
+        source_label = QLabel(f"📦 {source}")
+        source_label.setStyleSheet("""
+            QLabel {
+                color: #00BFAE;
+                font-size: 9px;
+                font-weight: 500;
+                border: none;
+                background: transparent;
+            }
+        """)
+        name_source_layout.addWidget(source_label)
+        
+        icon_name_layout.addLayout(name_source_layout, 1)
         left_layout.addLayout(icon_name_layout)
         
         # Description
         desc_label = QLabel(plugin_spec.get('desc', ''))
-        desc_label.setStyleSheet("color: #A0A0A0; font-size: 9px; border: none; background: transparent;")
+        desc_label.setStyleSheet("""
+            QLabel {
+                color: #B0B0B0;
+                font-size: 10px;
+                border: none;
+                background: transparent;
+                line-height: 1.3;
+            }
+        """)
         desc_label.setWordWrap(True)
-        desc_label.setMaximumHeight(24)
+        desc_label.setMaximumHeight(28)
         left_layout.addWidget(desc_label)
-        
-        # Source (package manager)
-        source = self._get_package_source(plugin_spec)
-        source_label = QLabel(f"Source: {source}")
-        source_label.setStyleSheet("color: #808080; font-size: 8px; border: none; background: transparent;")
-        left_layout.addWidget(source_label)
         
         left_layout.addStretch()
         layout.addLayout(left_layout, 1)
@@ -837,77 +884,86 @@ class PluginsView(QWidget):
         # Right side: Buttons
         btn_layout = QVBoxLayout()
         btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_layout.setSpacing(6)
+        btn_layout.setSpacing(8)
         btn_layout.addStretch()
         
         if installed:
             # Open button (filled white)
             open_btn = QPushButton("Open")
-            open_btn.setFixedHeight(32)
-            open_btn.setMinimumWidth(90)
+            open_btn.setFixedHeight(34)
+            open_btn.setMinimumWidth(85)
             open_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #FFFFFF;
-                    color: #000000;
+                    color: #1a1a1a;
                     border: none;
                     border-radius: 8px;
-                    font-weight: 600;
-                    font-size: 13px;
+                    font-weight: 700;
+                    font-size: 12px;
+                    padding: 0px 12px;
                 }
                 QPushButton:hover {
-                    background-color: #E8E8E8;
+                    background-color: #F0F0F0;
+                    color: #000000;
                 }
                 QPushButton:pressed {
-                    background-color: #D0D0D0;
+                    background-color: #E0E0E0;
                 }
             """)
+            open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             open_btn.clicked.connect(lambda: self.launch_requested.emit(plugin_spec['id']))
             btn_layout.addWidget(open_btn)
             
             # Uninstall button (outlined)
             uninstall_btn = QPushButton("Uninstall")
             uninstall_btn.setFixedHeight(32)
-            uninstall_btn.setMinimumWidth(90)
+            uninstall_btn.setMinimumWidth(85)
             uninstall_btn.setStyleSheet("""
                 QPushButton {
                     background-color: transparent;
                     color: #E0E0E0;
-                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    border: 1.5px solid rgba(255, 255, 255, 0.25);
                     border-radius: 8px;
                     font-weight: 600;
-                    font-size: 13px;
+                    font-size: 11px;
+                    padding: 0px 12px;
                 }
                 QPushButton:hover {
-                    border: 1px solid rgba(0, 191, 174, 0.6);
+                    border: 1.5px solid rgba(0, 191, 174, 0.7);
                     color: #00BFAE;
+                    background-color: rgba(0, 191, 174, 0.08);
                 }
                 QPushButton:pressed {
-                    background-color: rgba(0, 191, 174, 0.1);
+                    background-color: rgba(0, 191, 174, 0.15);
                 }
             """)
+            uninstall_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             uninstall_btn.clicked.connect(lambda: self.uninstall_requested.emit(plugin_spec['id']))
             btn_layout.addWidget(uninstall_btn)
         else:
             # Install button (filled teal)
             install_btn = QPushButton("Install")
-            install_btn.setFixedHeight(32)
-            install_btn.setMinimumWidth(90)
+            install_btn.setFixedHeight(34)
+            install_btn.setMinimumWidth(85)
             install_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #00BFAE;
                     color: white;
                     border: none;
                     border-radius: 8px;
-                    font-weight: 600;
-                    font-size: 13px;
+                    font-weight: 700;
+                    font-size: 12px;
+                    padding: 0px 12px;
                 }
                 QPushButton:hover {
-                    background-color: #00A89A;
+                    background-color: #00D4C4;
+                    color: white;
                 }
                 QPushButton:pressed {
                     background-color: #009080;
                 }
             """)
+            install_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             install_btn.clicked.connect(lambda: self.install_requested.emit(plugin_spec['id']))
             btn_layout.addWidget(install_btn)
         

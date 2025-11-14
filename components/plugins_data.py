@@ -1,9 +1,89 @@
 import os
 
 def get_plugins_data():
-    """Return all plugin specifications"""
+    """Return initial plugin specifications (fast loading)"""
     plugins_items_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "plugins", "plugins-items"))
-    
+
+    return [
+        # Popular/System Tools (Load First - 8 items)
+        {
+            'id': 'bleachbit',
+            'name': 'BleachBit',
+            'desc': 'System cleaner to free disk space and guard your privacy.',
+            'pkg': 'bleachbit',
+            'cmd': 'bleachbit',
+            'icon': os.path.join(plugins_items_dir, 'BleachBit.png'),
+            'category': 'System',
+        },
+        {
+            'id': 'gparted',
+            'name': 'GParted',
+            'desc': 'Partition editor for graphically managing disk partitions.',
+            'pkg': 'gparted',
+            'cmd': 'gparted',
+            'icon': os.path.join(plugins_items_dir, 'gparted.jpeg'),
+            'category': 'System',
+        },
+        {
+            'id': 'btop',
+            'name': 'btop',
+            'desc': 'Modern resource monitor for CPU, memory, disks, network.',
+            'pkg': 'btop',
+            'cmd': 'btop',
+            'icon': os.path.join(plugins_items_dir, 'btop.png'),
+            'category': 'Monitor',
+        },
+        {
+            'id': 'code',
+            'name': 'Visual Studio Code',
+            'desc': 'Powerful source code editor with IntelliSense and debugging.',
+            'pkg': 'code',
+            'cmd': 'code',
+            'icon': os.path.join(plugins_items_dir, 'vscode.png'),
+            'category': 'Development',
+        },
+        {
+            'id': 'firefox',
+            'name': 'Firefox',
+            'desc': 'Fast, private & safe web browser from Mozilla.',
+            'pkg': 'firefox',
+            'cmd': 'firefox',
+            'icon': os.path.join(plugins_items_dir, 'firefox.png'),
+            'category': 'Internet',
+        },
+        {
+            'id': 'vlc',
+            'name': 'VLC Media Player',
+            'desc': 'Universal multimedia player for all formats.',
+            'pkg': 'vlc',
+            'cmd': 'vlc',
+            'icon': os.path.join(plugins_items_dir, 'vlc.png'),
+            'category': 'Multimedia',
+        },
+        {
+            'id': 'steam',
+            'name': 'Steam',
+            'desc': 'Digital distribution platform for PC gaming.',
+            'pkg': 'steam',
+            'cmd': 'steam',
+            'icon': os.path.join(plugins_items_dir, 'steam.png'),
+            'category': 'Games',
+        },
+        {
+            'id': 'libreoffice',
+            'name': 'LibreOffice',
+            'desc': 'Free and open-source office productivity software suite.',
+            'pkg': 'libreoffice-fresh',
+            'cmd': 'libreoffice',
+            'icon': os.path.join(plugins_items_dir, 'libreoffice.png'),
+            'category': 'Office',
+        },
+    ]
+
+def get_all_plugins_data():
+    """Return all plugin specifications (lazy loading)"""
+    plugins_items_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "plugins", "plugins-items"))
+
     return [
         # System Tools
         {
@@ -13,7 +93,7 @@ def get_plugins_data():
             'pkg': 'bleachbit',
             'cmd': 'bleachbit',
             'icon': os.path.join(plugins_items_dir, 'BleachBit.png'),
-            'category': 'Cleaner',
+            'category': 'System',
         },
         {
             'id': 'timeshift',
@@ -31,7 +111,7 @@ def get_plugins_data():
             'pkg': 'baobab',
             'cmd': 'baobab',
             'icon': os.path.join(plugins_items_dir, 'diskusageanalyzer.png'),
-            'category': 'Cleaner',
+            'category': 'System',
         },
         {
             'id': 'deja-dup',
@@ -78,7 +158,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'printers.png'),
             'category': 'System',
         },
-        
+
         # System Monitoring
         {
             'id': 'btop',
@@ -107,7 +187,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'gnomesystem.jpeg'),
             'category': 'Monitor',
         },
-        
+
         # GPU Tools
         {
             'id': 'nvidia-settings',
@@ -127,7 +207,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'nvtop.png'),
             'category': 'GPU',
         },
-        
+
         # Utilities
         {
             'id': 'simple-scan',
@@ -156,7 +236,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'calibre.png'),
             'category': 'Utility',
         },
-        
+
         # Multimedia
         {
             'id': 'vlc',
@@ -185,7 +265,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'obs.png'),
             'category': 'Multimedia',
         },
-        
+
         # Graphics
         {
             'id': 'gimp',
@@ -205,7 +285,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'blender.png'),
             'category': 'Graphics',
         },
-        
+
         # Internet & Communication
         {
             'id': 'thunderbird',
@@ -234,7 +314,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'qbittorrent.png'),
             'category': 'Internet',
         },
-        
+
         # Development Tools
         {
             'id': 'code',
@@ -272,7 +352,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'python.png'),
             'category': 'Development',
         },
-        
+
         # Office & Productivity
         {
             'id': 'libreoffice',
@@ -301,7 +381,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'notion.png'),
             'category': 'Office',
         },
-        
+
         # Games
         {
             'id': 'steam',
@@ -330,7 +410,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'heroic.png'),
             'category': 'Games',
         },
-        
+
         # Security & Privacy
         {
             'id': 'keepassxc',
@@ -359,7 +439,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'tor.png'),
             'category': 'Security',
         },
-        
+
         # Communication
         {
             'id': 'discord',
@@ -397,7 +477,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'zoom.png'),
             'category': 'Communication',
         },
-        
+
         # Education & Learning
         {
             'id': 'anki',
@@ -417,7 +497,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'geogebra.png'),
             'category': 'Education',
         },
-        
+
         # Customization
         {
             'id': 'latte-dock',
@@ -455,7 +535,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'polybar.png'),
             'category': 'Customization',
         },
-        
+
         # Web Browsers
         {
             'id': 'firefox',
@@ -493,7 +573,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'opera.png'),
             'category': 'Internet',
         },
-        
+
         # Text Editors & IDEs
         {
             'id': 'vim',
@@ -540,7 +620,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'intellij.png'),
             'category': 'Development',
         },
-        
+
         # Media & Entertainment
         {
             'id': 'spotify',
@@ -578,7 +658,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'handbrake.png'),
             'category': 'Multimedia',
         },
-        
+
         # Graphics & Design
         {
             'id': 'inkscape',
@@ -616,7 +696,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'rawtherapee.png'),
             'category': 'Graphics',
         },
-        
+
         # File Management
         {
             'id': 'nautilus',
@@ -645,7 +725,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'ranger.png'),
             'category': 'Utility',
         },
-        
+
         # Terminal Emulators
         {
             'id': 'kitty',
@@ -674,7 +754,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'terminator.png'),
             'category': 'System',
         },
-        
+
         # Productivity & Notes
         {
             'id': 'obsidian',
@@ -703,7 +783,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'typora.png'),
             'category': 'Office',
         },
-        
+
         # Virtualization
         {
             'id': 'virtualbox',
@@ -723,7 +803,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'qemu.png'),
             'category': 'System',
         },
-        
+
         # Network Tools
         {
             'id': 'wireshark',
@@ -743,7 +823,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'nmap.png'),
             'category': 'Security',
         },
-        
+
         # More Games
         {
             'id': 'minecraft',
@@ -763,7 +843,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'retroarch.png'),
             'category': 'Games',
         },
-        
+
         # Database Tools
         {
             'id': 'dbeaver',
@@ -774,7 +854,7 @@ def get_plugins_data():
             'icon': os.path.join(plugins_items_dir, 'dbeaver.png'),
             'category': 'Development',
         },
-        
+
         # More Education
         {
             'id': 'stellarium',

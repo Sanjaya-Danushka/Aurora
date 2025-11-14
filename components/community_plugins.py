@@ -452,6 +452,24 @@ class CommunityPluginsTab(QWidget):
 
         layout.addLayout(header)
 
+        # Create tab widget
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs)
+
+        # Core Plugins Tab
+        self.core_tab = QWidget()
+        core_layout = QVBoxLayout(self.core_tab)
+        core_layout.setContentsMargins(12, 12, 12, 12)
+        core_layout.setSpacing(8)
+        self.tabs.addTab(self.core_tab, "Core Plugins")
+
+        # Community Hub Tab
+        self.community_tab = QWidget()
+        community_layout = QVBoxLayout(self.community_tab)
+        community_layout.setContentsMargins(12, 12, 12, 12)
+        community_layout.setSpacing(8)
+        self.tabs.addTab(self.community_tab, "Community Hub")
+
         if self._is_supabase:
             self.onboarding_group = QGroupBox("Supabase Setup Required")
             ob_layout = QVBoxLayout(self.onboarding_group)
@@ -776,8 +794,8 @@ class CommunityPluginsTab(QWidget):
             QMessageBox.critical(self, "Login", str(res.get("error")))
             return
         # Community Bundles Tab
-        bundles_tab = QWidget()
-        bundles_layout = QVBoxLayout(bundles_tab)
+        self.bundles_tab = QWidget()
+        bundles_layout = QVBoxLayout(self.bundles_tab)
         bundles_layout.setContentsMargins(12, 12, 12, 12)
         bundles_layout.setSpacing(8)
         
@@ -807,12 +825,8 @@ class CommunityPluginsTab(QWidget):
         bundles_scroll.setWidget(self.bundles_content)
         bundles_layout.addWidget(bundles_scroll)
         
-        # Add tabs to tab widget
-        self.tabs.addTab(core_tab, "Core Plugins")
-        self.tabs.addTab(community_tab, "Community Hub")
-        self.tabs.addTab(bundles_tab, "Community Bundles")
-        self._update_auth_ui()
-        self._load_my_plugins()
+        # Add bundles tab to tab widget
+        self.tabs.addTab(self.bundles_tab, "Community Bundles")
 
     def sign_up(self):
         if not self._is_supabase:

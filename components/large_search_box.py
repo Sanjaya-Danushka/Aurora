@@ -3,8 +3,8 @@ LargeSearchBox Component - Large search box for package discovery
 """
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel, QPushButton, QFrame, QGridLayout, QProgressBar, QGraphicsDropShadowEffect
-from PyQt6.QtCore import Qt, pyqtSignal, QSize, QRectF, QTimer, QPropertyAnimation, QEasingCurve, pyqtProperty
-from PyQt6.QtGui import QPixmap, QPainter, QIcon, QColor, QResizeEvent, QLinearGradient, QBrush, QPen, QFont
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QPixmap, QIcon, QColor
 from PyQt6.QtSvg import QSvgRenderer
 import os
 import psutil
@@ -341,7 +341,8 @@ class LargeSearchBox(QWidget):
 
         return section
 
-    def get_package_icon(self, package_name):
+    @staticmethod
+    def get_package_icon(package_name):
         """Get appropriate icon for package type"""
         package_name = package_name.lower()
         
@@ -366,7 +367,8 @@ class LargeSearchBox(QWidget):
         else:
             return "📦"  # Package for general packages
 
-    def format_time_ago(self, timestamp):
+    @staticmethod
+    def format_time_ago(timestamp):
         """Format timestamp to human-readable time ago"""
         try:
             now = datetime.datetime.now()
@@ -409,7 +411,8 @@ class LargeSearchBox(QWidget):
         except Exception:
             self.show_system_status()  # Show system status instead of error
 
-    def get_pacman_updates(self):
+    @staticmethod
+    def get_pacman_updates():
         """Get recent pacman updates from system log"""
         updates = []
         try:

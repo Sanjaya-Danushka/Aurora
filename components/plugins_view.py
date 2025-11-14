@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QGridLayout, QSizePolicy, QMenu
-from PyQt6.QtCore import pyqtSignal, Qt, QTimer, QPoint
-from PyQt6.QtGui import QIcon, QPixmap, QPainter, QAction
+from PyQt6.QtCore import pyqtSignal, Qt, QTimer
+from PyQt6.QtGui import QIcon, QPixmap, QAction
 from .plugins_data import get_plugins_data, get_all_plugins_data
 import os
 import shutil

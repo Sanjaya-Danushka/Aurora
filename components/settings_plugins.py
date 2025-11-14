@@ -1,10 +1,7 @@
-import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-                             QHeaderView, QPushButton, QLabel, QTabWidget, QScrollArea, QFrame, 
-                             QMessageBox, QGridLayout, QCheckBox, QDialog, QLineEdit, QTextEdit,
-                             QComboBox, QFileDialog, QFormLayout, QDialogButtonBox)
+                             QHeaderView, QPushButton, QLabel, QTabWidget, QCheckBox, QDialog, 
+                             QLineEdit, QTextEdit, QComboBox, QFileDialog, QFormLayout)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
 
 class PluginsSettingsWidget(QWidget):
     def __init__(self, parent=None):

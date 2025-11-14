@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QGridLayout, QSizePolicy, QMenu
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, Qt, QTimer
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QAction
 import os
 import shutil
@@ -218,6 +218,13 @@ class PluginsView(QWidget):
         self._filter_text = ""
         self._installed_only = False
         self._categories = set()
+        self._current_cols = 2  # Track current column count
+        
+        # Debounce timer for resize events
+        self._resize_timer = QTimer()
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.timeout.connect(self._handle_resize)
+        
         self._init_specs()
         self._init_ui()
 
@@ -730,8 +737,7 @@ class PluginsView(QWidget):
         self.grid_layout = QGridLayout(grid_container)
         self.grid_layout.setSpacing(20)
         self.grid_layout.setContentsMargins(0, 0, 0, 0)
-        self.grid_layout.setColumnStretch(0, 1)
-        self.grid_layout.setColumnStretch(1, 1)
+        # Dynamic column stretching will be set in populate_app_cards
         
         # Add sample app cards
         self.populate_app_cards()
@@ -744,7 +750,19 @@ class PluginsView(QWidget):
 
     def populate_app_cards(self):
         """Populate the grid with real plugin cards"""
-        cols = 2
+        # Clear existing items
+        while self.grid_layout.count():
+            child = self.grid_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+        
+        # Use tracked column count
+        cols = self._current_cols
+        
+        # Set column stretching dynamically
+        for i in range(cols):
+            self.grid_layout.setColumnStretch(i, 1)
+        
         for i, plugin in enumerate(self.plugins):
             row = i // cols
             col = i % cols
@@ -1128,3 +1146,25 @@ class PluginsView(QWidget):
         print(f"Filtering by category: {category}")
         # TODO: Implement actual filtering logic here
         # This will be connected to your CRUD system later
+    
+    def resizeEvent(self, event):
+        """Handle window resize to update grid layout"""
+        super().resizeEvent(event)
+        # Debounce resize events to prevent performance issues
+        if hasattr(self, '_resize_timer'):
+            self._resize_timer.stop()
+            self._resize_timer.start(150)  # Wait 150ms after resize stops
+    
+    def _handle_resize(self):
+        """Handle debounced resize event"""
+        if not hasattr(self, 'grid_layout') or not self.plugins:
+            return
+            
+        # Determine new column count
+        window_width = self.window().width() if self.window() else 1200
+        new_cols = 3 if window_width > 1000 else 2
+        
+        # Only rebuild if column count changed
+        if new_cols != self._current_cols:
+            self._current_cols = new_cols
+            self.populate_app_cards()

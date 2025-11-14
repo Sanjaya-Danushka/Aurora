@@ -837,20 +837,22 @@ class PluginsView(QWidget):
         """Create a medium-sized app card with enhanced styling"""
         card = QFrame()
         card.setFixedSize(340, 140)
-        card.setStyleSheet("""
-            QFrame {
-                background-image: url('/home/dev/Desktop/New Folder1/Neoarch/assets/plugins/cardbackground.jpg');
+        bg_image_path = os.path.join(os.path.dirname(__file__), "..", "assets", "plugins", "cardbackground.jpg")
+        bg_image_url = bg_image_path.replace("\\", "/")
+        card.setStyleSheet(f"""
+            QFrame {{
+                background-image: url('{bg_image_url}');
                 background-position: center;
                 background-repeat: no-repeat;
                 background-attachment: fixed;
                 background-color: rgba(15, 20, 30, 0.85);
                 border-radius: 14px;
                 border: 1px solid rgba(0, 191, 174, 0.15);
-            }
-            QFrame:hover {
+            }}
+            QFrame:hover {{
                 border: 1px solid rgba(0, 191, 174, 0.4);
                 background-color: rgba(20, 25, 35, 0.9);
-            }
+            }}
         """)
         
         layout = QHBoxLayout(card)

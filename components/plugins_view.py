@@ -838,6 +838,27 @@ class PluginsView(QWidget):
         """Create a medium-sized app card with enhanced styling"""
         card = QFrame()
         card.setFixedSize(340, 140)
+        
+        # Store reference for animation callbacks
+        card._is_installing = False
+        def set_card_installing(installing):
+            card._is_installing = installing
+            if installing:
+                for widget in card.findChildren(QPushButton):
+                    widget.setEnabled(False)
+                    if widget.text() in ("Install", "Open"):
+                        widget.setText("Installing…")
+                    elif widget.text() == "Uninstall":
+                        widget.setText("Uninstalling…")
+            else:
+                for widget in card.findChildren(QPushButton):
+                    widget.setEnabled(True)
+                    if "Installing" in widget.text() or "Uninstalling" in widget.text():
+                        if "Uninstalling" in widget.text():
+                            widget.setText("Uninstall")
+                        else:
+                            widget.setText("Install" if not installed else "Open")
+        card.set_installing = set_card_installing
         bg_image_path = os.path.join(os.path.dirname(__file__), "..", "assets", "plugins", "cardbackground.jpg")
         bg_image_url = bg_image_path.replace("\\", "/")
         card.setStyleSheet(f"""
@@ -1044,7 +1065,7 @@ class PluginsView(QWidget):
                 }
             """)
             uninstall_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            uninstall_btn.clicked.connect(lambda: self.uninstall_requested.emit(plugin_spec['id']))
+            uninstall_btn.clicked.connect(lambda: (card.set_installing(True), self.uninstall_requested.emit(plugin_spec['id'])))
             btn_layout.addWidget(uninstall_btn)
         else:
             # Install button (filled teal)
@@ -1070,7 +1091,7 @@ class PluginsView(QWidget):
                 }
             """)
             install_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            install_btn.clicked.connect(lambda: self.install_requested.emit(plugin_spec['id']))
+            install_btn.clicked.connect(lambda: (card.set_installing(True), self.install_requested.emit(plugin_spec['id'])))
             btn_layout.addWidget(install_btn)
         
         btn_layout.addStretch()
@@ -1206,8 +1227,37 @@ class PluginsView(QWidget):
             return False
 
     def refresh_all(self):
-        # No plugin cards to refresh in empty view
-        pass
+        """Refresh all plugin cards to reflect current installation state"""
+        try:
+            # Clear grid layout
+            while self.grid_layout.count():
+                item = self.grid_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # Clear and rebuild all cards with updated installation status
+            self._all_cards = []
+            for plugin in self.plugins:
+                installed = self.is_installed(plugin)
+                icon = self._icon_for(plugin)
+                card = self.create_app_card(plugin, icon, installed)
+                self._all_cards.append({
+                    'plugin': plugin,
+                    'widget': card,
+                    'installed': installed
+                })
+            
+            # Rebuild grid with updated cards
+            cols = self._current_cols
+            for i in range(cols):
+                self.grid_layout.setColumnStretch(i, 1)
+            
+            for i, card_data in enumerate(self._all_cards):
+                row = i // cols
+                col = i % cols
+                self.grid_layout.addWidget(card_data['widget'], row, col)
+        except Exception:
+            pass
 
     def get_plugin(self, plugin_id):
         for spec in self.plugins:
@@ -1226,8 +1276,17 @@ class PluginsView(QWidget):
         pass
 
     def set_installing(self, plugin_id: str, installing: bool):
-        # No plugin cards to update in empty view
-        pass
+        """Update installing state for a plugin card"""
+        try:
+            # Find the card with this plugin_id
+            for card_data in self._all_cards:
+                if card_data['plugin'].get('id') == plugin_id:
+                    card = card_data['widget']
+                    if hasattr(card, 'set_installing'):
+                        card.set_installing(installing)
+                    break
+        except Exception:
+            pass
     
     def filter_by_category(self, category):
         """Handle category selection from dropdown menu"""

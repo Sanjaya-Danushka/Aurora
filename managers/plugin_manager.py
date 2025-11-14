@@ -44,7 +44,7 @@ class PluginsManager:
                     self._message("Plugins", f"Install failed: {e}")
                 finally:
                     QTimer.singleShot(0, lambda: plugins_view.set_installing(plugin_id, False))
-                    QTimer.singleShot(0, plugins_view.refresh_all)
+                    QTimer.singleShot(200, plugins_view.refresh_all)
 
             Thread(target=_run, daemon=True).start()
         except Exception as e:
@@ -113,7 +113,7 @@ class PluginsManager:
                     self._message("Plugins", f"Uninstall failed: {e}")
                 finally:
                     QTimer.singleShot(0, lambda: plugins_view.set_installing(plugin_id, False))
-                    QTimer.singleShot(0, plugins_view.refresh_all)
+                    QTimer.singleShot(200, plugins_view.refresh_all)
 
             Thread(target=_run, daemon=True).start()
         except Exception as e:

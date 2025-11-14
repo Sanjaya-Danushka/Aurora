@@ -61,22 +61,24 @@ class AutoUpdateSettingsWidget(QWidget):
                 width: 18px;
                 height: 18px;
                 border-radius: 4px;
-                border: 2px solid #555;
-                background-color: #2a2a2a;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.05);
             }
             QCheckBox::indicator:hover {
-                border-color: #0d7377;
+                border-color: rgba(13, 115, 119, 0.6);
+                background-color: rgba(255, 255, 255, 0.08);
             }
             QCheckBox::indicator:checked {
                 background-color: #0d7377;
                 border-color: #0d7377;
             }
             QSpinBox {
-                background-color: #333;
-                border: 1px solid #555;
+                background-color: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
                 border-radius: 6px;
-                padding: 6px 12px;
+                padding: 8px 12px;
                 color: #e0e0e0;
+                font-size: 13px;
             }
             QSpinBox:focus {
                 border-color: #0d7377;
@@ -131,27 +133,30 @@ class AutoUpdateSettingsWidget(QWidget):
                 width: 18px;
                 height: 18px;
                 border-radius: 4px;
-                border: 2px solid #555;
-                background-color: #2a2a2a;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.05);
             }
             QCheckBox::indicator:hover {
-                border-color: #0d7377;
+                border-color: rgba(13, 115, 119, 0.6);
+                background-color: rgba(255, 255, 255, 0.08);
             }
             QCheckBox::indicator:checked {
                 background-color: #0d7377;
                 border-color: #0d7377;
             }
             QPushButton {
-                background-color: rgba(13, 115, 119, 0.15);
+                background-color: transparent;
                 color: #0d7377;
-                border: 1px solid #0d7377;
-                border-radius: 8px;
-                padding: 10px 16px;
-                font-weight: 600;
-                font-size: 13px;
+                border: 1px solid rgba(13, 115, 119, 0.4);
+                border-radius: 6px;
+                padding: 12px 20px;
+                font-weight: 500;
+                font-size: 14px;
+                min-height: 20px;
             }
             QPushButton:hover {
-                background-color: rgba(13, 115, 119, 0.25);
+                background-color: rgba(13, 115, 119, 0.15);
+                border-color: #0d7377;
             }
         """)
         snap_grid = QGridLayout(snapshot_box)

@@ -40,28 +40,29 @@ class PluginsSettingsWidget(QWidget):
         self.tabs = QTabWidget()
         self.tabs.setStyleSheet("""
             QTabWidget::pane {
-                border: 1px solid rgba(255, 255, 255, 0.06);
-                border-radius: 8px;
-                background-color: rgba(255, 255, 255, 0.02);
-                margin-top: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                background-color: rgba(255, 255, 255, 0.03);
+                margin-top: 12px;
             }
             QTabBar::tab {
                 background-color: transparent;
-                color: #a0a0a0;
-                padding: 12px 24px;
-                margin-right: 4px;
-                border-radius: 6px 6px 0 0;
+                color: #888;
+                padding: 14px 28px;
+                margin-right: 6px;
+                border-radius: 8px 8px 0 0;
                 font-weight: 500;
-                font-size: 13px;
+                font-size: 14px;
+                min-width: 120px;
             }
             QTabBar::tab:selected {
-                background-color: rgba(13, 115, 119, 0.15);
-                color: #0d7377;
+                background-color: #0d7377;
+                color: #ffffff;
                 font-weight: 600;
             }
             QTabBar::tab:hover:!selected {
-                background-color: rgba(255, 255, 255, 0.05);
-                color: #d0d0d0;
+                background-color: rgba(255, 255, 255, 0.08);
+                color: #ffffff;
             }
         """)
         
@@ -76,16 +77,17 @@ class PluginsSettingsWidget(QWidget):
         btn_reload = QPushButton("Reload Plugins")
         btn_reload.setStyleSheet("""
             QPushButton {
-                padding: 10px 20px;
+                padding: 12px 24px;
                 background-color: transparent;
                 color: #0d7377;
-                border: 1px solid rgba(13, 115, 119, 0.3);
-                border-radius: 4px;
+                border: 1px solid rgba(13, 115, 119, 0.4);
+                border-radius: 6px;
                 font-weight: 500;
-                font-size: 13px;
+                font-size: 14px;
+                min-height: 20px;
             }
             QPushButton:hover {
-                background-color: rgba(13, 115, 119, 0.1);
+                background-color: rgba(13, 115, 119, 0.15);
                 border-color: #0d7377;
             }
         """)
@@ -103,25 +105,32 @@ class PluginsSettingsWidget(QWidget):
         self.core_plugins_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self.core_plugins_table.setStyleSheet("""
             QTableWidget {
-                background-color: #2a2a2a;
-                border: 1px solid #4a4a4a;
-                border-radius: 6px;
-                gridline-color: #3a3a3a;
-                color: #d0d0d0;
+                background-color: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                gridline-color: rgba(255, 255, 255, 0.08);
+                color: #e0e0e0;
+                selection-background-color: rgba(13, 115, 119, 0.3);
             }
             QTableWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #3a3a3a;
+                padding: 12px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             }
             QTableWidget::item:selected {
-                background-color: rgba(13, 115, 119, 0.2);
+                background-color: rgba(13, 115, 119, 0.25);
+                color: #ffffff;
+            }
+            QTableWidget::item:hover {
+                background-color: rgba(255, 255, 255, 0.05);
             }
             QHeaderView::section {
-                background-color: #333;
-                color: #fff;
-                padding: 8px;
+                background-color: rgba(255, 255, 255, 0.05);
+                color: #ffffff;
+                padding: 14px 12px;
                 border: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
                 font-weight: 600;
+                font-size: 13px;
             }
         """)
         core_layout.addWidget(self.core_plugins_table)
@@ -137,13 +146,14 @@ class PluginsSettingsWidget(QWidget):
         btn_add = QPushButton("Upload Plugin")
         btn_add.setStyleSheet("""
             QPushButton {
-                padding: 10px 20px;
+                padding: 12px 24px;
                 background-color: #0d7377;
                 color: white;
                 border: none;
-                border-radius: 4px;
+                border-radius: 6px;
                 font-weight: 500;
-                font-size: 13px;
+                font-size: 14px;
+                min-height: 20px;
             }
             QPushButton:hover {
                 background-color: #0a5c5f;
@@ -153,16 +163,17 @@ class PluginsSettingsWidget(QWidget):
         btn_remove = QPushButton("Remove Selected")
         btn_remove.setStyleSheet("""
             QPushButton {
-                padding: 10px 20px;
+                padding: 12px 24px;
                 background-color: transparent;
                 color: #d9534f;
-                border: 1px solid rgba(217, 83, 79, 0.3);
-                border-radius: 4px;
+                border: 1px solid rgba(217, 83, 79, 0.4);
+                border-radius: 6px;
                 font-weight: 500;
-                font-size: 13px;
+                font-size: 14px;
+                min-height: 20px;
             }
             QPushButton:hover {
-                background-color: rgba(217, 83, 79, 0.1);
+                background-color: rgba(217, 83, 79, 0.15);
                 border-color: #d9534f;
             }
         """)
@@ -170,16 +181,17 @@ class PluginsSettingsWidget(QWidget):
         btn_go_plugins = QPushButton("Browse Community")
         btn_go_plugins.setStyleSheet("""
             QPushButton {
-                padding: 10px 20px;
+                padding: 12px 24px;
                 background-color: transparent;
                 color: #0d7377;
-                border: 1px solid rgba(13, 115, 119, 0.3);
-                border-radius: 4px;
+                border: 1px solid rgba(13, 115, 119, 0.4);
+                border-radius: 6px;
                 font-weight: 500;
-                font-size: 13px;
+                font-size: 14px;
+                min-height: 20px;
             }
             QPushButton:hover {
-                background-color: rgba(13, 115, 119, 0.1);
+                background-color: rgba(13, 115, 119, 0.15);
                 border-color: #0d7377;
             }
         """)
@@ -200,25 +212,32 @@ class PluginsSettingsWidget(QWidget):
         self.community_plugins_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self.community_plugins_table.setStyleSheet("""
             QTableWidget {
-                background-color: #2a2a2a;
-                border: 1px solid #4a4a4a;
-                border-radius: 6px;
-                gridline-color: #3a3a3a;
-                color: #d0d0d0;
+                background-color: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                gridline-color: rgba(255, 255, 255, 0.08);
+                color: #e0e0e0;
+                selection-background-color: rgba(13, 115, 119, 0.3);
             }
             QTableWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #3a3a3a;
+                padding: 12px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             }
             QTableWidget::item:selected {
-                background-color: rgba(13, 115, 119, 0.2);
+                background-color: rgba(13, 115, 119, 0.25);
+                color: #ffffff;
+            }
+            QTableWidget::item:hover {
+                background-color: rgba(255, 255, 255, 0.05);
             }
             QHeaderView::section {
-                background-color: #333;
-                color: #fff;
-                padding: 8px;
+                background-color: rgba(255, 255, 255, 0.05);
+                color: #ffffff;
+                padding: 14px 12px;
                 border: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
                 font-weight: 600;
+                font-size: 13px;
             }
         """)
         

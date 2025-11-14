@@ -3555,38 +3555,39 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Create left sidebar for navigation
         sidebar = QFrame()
         sidebar.setObjectName("settingsSidebar")
-        sidebar.setFixedWidth(280)
+        sidebar.setFixedWidth(300)
         sidebar.setStyleSheet("""
             QFrame#settingsSidebar {
-                background-color: #181818;
-                border-right: 1px solid #2a2a2a;
+                background-color: #1a1a1a;
+                border: none;
             }
             QPushButton {
                 text-align: left;
-                padding: 16px 24px;
+                padding: 18px 24px;
                 border: none;
                 background-color: transparent;
-                color: #9a9a9a;
-                font-size: 14px;
+                color: #a0a0a0;
+                font-size: 15px;
                 font-weight: 500;
-                border-radius: 6px;
-                margin: 2px 16px;
-                letter-spacing: 0.2px;
+                border-radius: 8px;
+                margin: 3px 20px;
+                letter-spacing: 0.3px;
             }
             QPushButton:hover {
-                background-color: rgba(255, 255, 255, 0.06);
+                background-color: rgba(255, 255, 255, 0.08);
                 color: #ffffff;
             }
             QPushButton:checked {
-                background-color: #0d7377;
-                color: #ffffff;
+                background-color: rgba(13, 115, 119, 0.2);
+                color: #0d7377;
                 font-weight: 600;
+                border: 1px solid rgba(13, 115, 119, 0.3);
             }
         """)
         
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(12, 16, 12, 16)
-        sidebar_layout.setSpacing(4)
+        sidebar_layout.setContentsMargins(16, 24, 16, 24)
+        sidebar_layout.setSpacing(6)
         
         # Create navigation buttons
         self.settings_nav_buttons = {}
@@ -3594,12 +3595,13 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Add a header label
         header_label = QLabel("SETTINGS")
         header_label.setStyleSheet("""
-            color: #666;
-            font-size: 11px;
+            color: #777;
+            font-size: 12px;
             font-weight: 700;
-            letter-spacing: 1px;
-            padding: 8px 20px;
-            margin-top: 8px;
+            letter-spacing: 1.2px;
+            padding: 12px 24px;
+            margin-top: 12px;
+            margin-bottom: 8px;
         """)
         sidebar_layout.addWidget(header_label)
         
@@ -3638,9 +3640,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         content_area.setObjectName("settingsContent")
         content_area.setStyleSheet("""
             QFrame#settingsContent {
-                background-color: #1f1f1f;
-                border-radius: 8px;
-                margin: 20px;
+                background-color: #1e1e1e;
+                border-radius: 12px;
+                margin: 24px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
             }
         """)
         

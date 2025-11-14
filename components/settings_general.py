@@ -56,30 +56,31 @@ class GeneralSettingsWidget(QWidget):
             QCheckBox {
                 color: #d0d0d0;
                 font-size: 13px;
-                spacing: 10px;
+                spacing: 12px;
             }
             QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
-                border-radius: 3px;
-                border: 1px solid #4a4a4a;
-                background-color: #2a2a2a;
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.05);
             }
             QCheckBox::indicator:hover {
-                border-color: #0d7377;
-                background-color: #333;
+                border-color: rgba(13, 115, 119, 0.6);
+                background-color: rgba(255, 255, 255, 0.08);
             }
             QCheckBox::indicator:checked {
                 background-color: #0d7377;
                 border-color: #0d7377;
             }
             QComboBox {
-                background-color: #2a2a2a;
-                border: 1px solid #4a4a4a;
-                border-radius: 4px;
-                padding: 8px 12px;
-                color: #d0d0d0;
+                background-color: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                padding: 10px 14px;
+                color: #e0e0e0;
                 min-width: 150px;
+                font-size: 13px;
             }
             QComboBox:hover {
                 border-color: #0d7377;
@@ -175,29 +176,29 @@ class GeneralSettingsWidget(QWidget):
             QCheckBox {
                 color: #d0d0d0;
                 font-size: 13px;
-                spacing: 10px;
+                spacing: 12px;
             }
             QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
-                border-radius: 3px;
-                border: 1px solid #4a4a4a;
-                background-color: #2a2a2a;
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.05);
             }
             QCheckBox::indicator:hover {
-                border-color: #0d7377;
-                background-color: #333;
+                border-color: rgba(13, 115, 119, 0.6);
+                background-color: rgba(255, 255, 255, 0.08);
             }
             QCheckBox::indicator:checked {
                 background-color: #0d7377;
                 border-color: #0d7377;
             }
             QLineEdit {
-                background-color: #2a2a2a;
-                border: 1px solid #4a4a4a;
-                border-radius: 4px;
-                padding: 10px 12px;
-                color: #d0d0d0;
+                background-color: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                padding: 12px 14px;
+                color: #e0e0e0;
                 font-size: 13px;
             }
             QLineEdit:focus {
@@ -207,10 +208,11 @@ class GeneralSettingsWidget(QWidget):
                 background-color: #0d7377;
                 color: white;
                 border: none;
-                border-radius: 4px;
-                padding: 10px 16px;
+                border-radius: 6px;
+                padding: 12px 20px;
                 font-weight: 500;
-                font-size: 13px;
+                font-size: 14px;
+                min-height: 20px;
             }
             QPushButton:hover {
                 background-color: #0a5c5f;
@@ -251,14 +253,15 @@ class GeneralSettingsWidget(QWidget):
             QPushButton {
                 background-color: transparent;
                 color: #0d7377;
-                border: 1px solid rgba(13, 115, 119, 0.3);
+                border: 1px solid rgba(13, 115, 119, 0.4);
                 border-radius: 6px;
                 padding: 12px 24px;
                 font-weight: 500;
-                font-size: 13px;
+                font-size: 14px;
+                min-height: 20px;
             }
             QPushButton:hover {
-                background-color: rgba(13, 115, 119, 0.1);
+                background-color: rgba(13, 115, 119, 0.15);
                 border-color: #0d7377;
             }
         """)
@@ -268,14 +271,15 @@ class GeneralSettingsWidget(QWidget):
             QPushButton {
                 background-color: transparent;
                 color: #0d7377;
-                border: 1px solid rgba(13, 115, 119, 0.3);
+                border: 1px solid rgba(13, 115, 119, 0.4);
                 border-radius: 6px;
                 padding: 12px 24px;
                 font-weight: 500;
-                font-size: 13px;
+                font-size: 14px;
+                min-height: 20px;
             }
             QPushButton:hover {
-                background-color: rgba(13, 115, 119, 0.1);
+                background-color: rgba(13, 115, 119, 0.15);
                 border-color: #0d7377;
             }
         """)

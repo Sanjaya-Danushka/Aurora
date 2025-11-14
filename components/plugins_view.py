@@ -1351,8 +1351,60 @@ class PluginsView(QWidget):
         self.apply_filter()
 
     def apply_filter(self):
-        # No plugin cards to filter in empty view
-        pass
+        """Apply text, installed, and category filters to the plugins view"""
+        # Create cards if not already created
+        if not self._all_cards:
+            self._create_all_cards()
+        
+        # Clear the grid layout
+        while self.grid_layout.count():
+            child = self.grid_layout.takeAt(0)
+        
+        # Hide all cards first
+        for card_data in self._all_cards:
+            card_data['widget'].hide()
+        
+        # Filter and display cards based on search text, installed status, and categories
+        filtered_cards = []
+        for card_data in self._all_cards:
+            plugin = card_data['plugin']
+            is_installed = card_data['installed']
+            
+            # Check installed filter
+            if self._installed_only and not is_installed:
+                continue
+            
+            # Check category filter
+            if self._categories:
+                plugin_category = plugin.get('category', '')
+                if plugin_category not in self._categories:
+                    continue
+            
+            # Check search text filter
+            if self._filter_text:
+                name = (plugin.get('name', '') or '').lower()
+                desc = (plugin.get('desc', '') or '').lower()
+                plugin_id = (plugin.get('id', '') or '').lower()
+                
+                # Match if search text is in name, description, or id
+                if not (self._filter_text in name or self._filter_text in desc or self._filter_text in plugin_id):
+                    continue
+            
+            filtered_cards.append(card_data)
+        
+        # Use tracked column count
+        cols = self._current_cols
+        
+        # Set column stretching dynamically
+        for i in range(cols):
+            self.grid_layout.setColumnStretch(i, 1)
+        
+        # Add filtered cards to layout and show them
+        for i, card_data in enumerate(filtered_cards):
+            row = i // cols
+            col = i % cols
+            card_data['widget'].show()
+            self.grid_layout.addWidget(card_data['widget'], row, col)
 
     def set_installing(self, plugin_id: str, installing: bool):
         """Update installing state for a plugin card"""

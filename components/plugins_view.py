@@ -246,6 +246,7 @@ class PluginsView(QWidget):
         self._categories = set()
         self._selected_category = None  # Track selected category
         self._current_cols = 2  # Track current column count
+        self._all_cards = []  # Store all created cards for performance
         
         # Debounce timer for resize events
         self._resize_timer = QTimer()
@@ -938,11 +939,17 @@ class PluginsView(QWidget):
 
     def populate_app_cards(self):
         """Populate the grid with real plugin cards filtered by category"""
-        # Clear existing items
+        # Create cards only once if not already created
+        if not self._all_cards:
+            self._create_all_cards()
+        
+        # Clear existing layout items (but don't delete widgets)
         while self.grid_layout.count():
             child = self.grid_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        
+        # Hide all cards first
+        for card_data in self._all_cards:
+            card_data['widget'].hide()
         
         # Use tracked column count
         cols = self._current_cols
@@ -952,18 +959,29 @@ class PluginsView(QWidget):
             self.grid_layout.setColumnStretch(i, 1)
         
         # Filter plugins based on selected category
-        filtered_plugins = self.plugins
+        filtered_cards = self._all_cards
         if self._selected_category:
-            filtered_plugins = [p for p in self.plugins if p.get('category') == self._selected_category]
+            filtered_cards = [c for c in self._all_cards if c['plugin'].get('category') == self._selected_category]
         
-        # Populate grid with filtered plugins
-        for i, plugin in enumerate(filtered_plugins):
+        # Add filtered cards to layout and show them
+        for i, card_data in enumerate(filtered_cards):
             row = i // cols
             col = i % cols
+            card_data['widget'].show()
+            self.grid_layout.addWidget(card_data['widget'], row, col)
+    
+    def _create_all_cards(self):
+        """Create all plugin cards once for better performance"""
+        self._all_cards = []
+        for plugin in self.plugins:
             installed = self.is_installed(plugin)
             icon = self._icon_for(plugin)
             card = self.create_app_card(plugin, icon, installed)
-            self.grid_layout.addWidget(card, row, col)
+            self._all_cards.append({
+                'plugin': plugin,
+                'widget': card,
+                'installed': installed
+            })
 
     def _get_package_source(self, plugin_spec):
         """Determine package source from plugin spec"""
@@ -1415,4 +1433,30 @@ class PluginsView(QWidget):
         # Only rebuild if column count changed
         if new_cols != self._current_cols:
             self._current_cols = new_cols
+            # Use optimized layout update instead of full rebuild
+            self._update_grid_layout()
+    
+    def _update_grid_layout(self):
+        """Update grid layout without recreating cards"""
+        if not self._all_cards:
             self.populate_app_cards()
+            return
+        
+        # Clear layout items
+        while self.grid_layout.count():
+            child = self.grid_layout.takeAt(0)
+        
+        # Get filtered cards
+        filtered_cards = self._all_cards
+        if self._selected_category:
+            filtered_cards = [c for c in self._all_cards if c['plugin'].get('category') == self._selected_category]
+        
+        # Re-layout with new column count
+        cols = self._current_cols
+        for i in range(cols):
+            self.grid_layout.setColumnStretch(i, 1)
+        
+        for i, card_data in enumerate(filtered_cards):
+            row = i // cols
+            col = i % cols
+            self.grid_layout.addWidget(card_data['widget'], row, col)

@@ -408,19 +408,46 @@ class PluginsView(QWidget):
                 background: transparent;
                 border: none;
             }
+            QScrollArea::corner {
+                background: transparent;
+                border: none;
+            }
             QScrollBar:horizontal {
                 border: none;
-                background: rgba(255, 255, 255, 0.1);
-                height: 8px;
-                border-radius: 4px;
+                background: transparent;
+                height: 12px;
+                margin: 0px 0px 0px 0px;
             }
             QScrollBar::handle:horizontal {
-                background: rgba(0, 191, 174, 0.6);
-                border-radius: 4px;
+                background: rgba(60, 60, 60, 0.7);
+                border-radius: 6px;
                 min-width: 20px;
+                margin: 0px 0px 0px 0px;
             }
             QScrollBar::handle:horizontal:hover {
-                background: rgba(0, 191, 174, 0.8);
+                background: rgba(80, 80, 80, 0.9);
+            }
+            QScrollBar::handle:horizontal:pressed {
+                background: rgba(100, 100, 100, 1);
+            }
+            QScrollBar::add-line:horizontal {
+                border: none;
+                background: transparent;
+                width: 0px;
+            }
+            QScrollBar::sub-line:horizontal {
+                border: none;
+                background: transparent;
+                width: 0px;
+            }
+            QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
+                border: none;
+                width: 0px;
+                height: 0px;
+                background: transparent;
+            }
+            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+                background: transparent;
             }
         """)
         
@@ -675,7 +702,7 @@ class PluginsView(QWidget):
 
 
     def _get_scrollbar_stylesheet(self):
-        """Return beautiful scrollbar stylesheet with rounded corners and no corner box"""
+        """Return beautiful scrollbar stylesheet with dark rounded corners"""
         return """
             QScrollArea {
                 background: transparent;
@@ -689,22 +716,20 @@ class PluginsView(QWidget):
             QScrollBar:vertical {
                 border: none;
                 background: transparent;
-                width: 14px;
+                width: 12px;
                 margin: 0px 0px 0px 0px;
             }
             QScrollBar::handle:vertical {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 rgba(0, 191, 174, 0.6), stop:1 rgba(0, 191, 174, 0.8));
-                border-radius: 50px;
+                background: rgba(60, 60, 60, 0.7);
+                border-radius: 6px;
                 min-height: 20px;
-                margin: 2px 2px 2px 2px;
+                margin: 0px 0px 0px 0px;
             }
             QScrollBar::handle:vertical:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 rgba(0, 191, 174, 0.8), stop:1 rgba(0, 191, 174, 1.0));
+                background: rgba(80, 80, 80, 0.9);
             }
             QScrollBar::handle:vertical:pressed {
-                background: rgba(0, 191, 174, 1);
+                background: rgba(100, 100, 100, 1);
             }
             QScrollBar::add-line:vertical {
                 border: none;
@@ -730,22 +755,20 @@ class PluginsView(QWidget):
             QScrollBar:horizontal {
                 border: none;
                 background: transparent;
-                height: 14px;
+                height: 12px;
                 margin: 0px 0px 0px 0px;
             }
             QScrollBar::handle:horizontal {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(0, 191, 174, 0.6), stop:1 rgba(0, 191, 174, 0.8));
-                border-radius: 50px;
+                background: rgba(60, 60, 60, 0.7);
+                border-radius: 6px;
                 min-width: 20px;
-                margin: 2px 2px 2px 2px;
+                margin: 0px 0px 0px 0px;
             }
             QScrollBar::handle:horizontal:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(0, 191, 174, 0.8), stop:1 rgba(0, 191, 174, 1.0));
+                background: rgba(80, 80, 80, 0.9);
             }
             QScrollBar::handle:horizontal:pressed {
-                background: rgba(0, 191, 174, 1);
+                background: rgba(100, 100, 100, 1);
             }
             QScrollBar::add-line:horizontal {
                 border: none;

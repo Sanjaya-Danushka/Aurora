@@ -849,6 +849,7 @@ class PluginsView(QWidget):
         
         # Create grid container
         grid_container = QWidget()
+        # Use Minimum vertical policy so content grows naturally and scrollbars appear when needed
         grid_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.grid_layout = QGridLayout(grid_container)
         self.grid_layout.setSpacing(20)
@@ -899,11 +900,8 @@ class PluginsView(QWidget):
             except Exception:
                 viewport_w = self.width()
                 viewport_h = self.height()
-            spacing = self.grid_layout.spacing() if self.grid_layout else 20
-            unit_w = 340 + spacing
-            cols = max(1, min(6, (max(0, viewport_w) + spacing) // unit_w))
-            row_h = 140 + spacing
-            visible_rows = max(1, (viewport_h + spacing) // row_h)
+            cols = self._calc_cols(viewport_w)
+            visible_rows = self._calc_visible_rows(viewport_h)
             initial_rows = visible_rows + 2
             self._current_cols = cols
             # Ensure full dataset is available for categories
@@ -913,6 +911,10 @@ class PluginsView(QWidget):
             self._category_filtered_plugins = [p for p in self._all_plugins if self._category_for(p) == self._selected_category]
             for i in range(cols):
                 self.grid_layout.setColumnStretch(i, 1)
+                try:
+                    self.grid_layout.setColumnMinimumWidth(i, 340)
+                except Exception:
+                    pass
             initial_batch = min(len(self._category_filtered_plugins), cols * initial_rows)
             self._category_loaded_count = 0
             self._load_initial_category_batch(initial_batch)
@@ -1022,6 +1024,33 @@ class PluginsView(QWidget):
             'pip': os.path.join(base_path, 'pacman.svg')
         }
         return icons.get(source, os.path.join(base_path, 'pacman.svg'))
+
+    # --- Layout helpers to keep calculations consistent ---
+    def _layout_spacing(self):
+        try:
+            return self.grid_layout.spacing() if self.grid_layout else 20
+        except Exception:
+            return 20
+
+    def _calc_cols(self, viewport_width):
+        spacing = self._layout_spacing()
+        unit_w = 340 + spacing
+        # Cap columns to 5 to avoid tight packing on very wide screens
+        return max(1, min(5, (max(0, viewport_width) + spacing) // unit_w))
+
+    def _calc_visible_rows(self, viewport_height):
+        spacing = self._layout_spacing()
+        row_h = 140 + spacing
+        return max(1, (max(0, viewport_height) + spacing) // row_h)
+
+    def _enforce_row_min_heights(self, upto_row):
+        if not hasattr(self, 'grid_layout'):
+            return
+        try:
+            for r in range(0, max(0, int(upto_row)) + 1):
+                self.grid_layout.setRowMinimumHeight(r, 140)
+        except Exception:
+            pass
 
     def create_app_card(self, plugin_spec, icon, installed):
         """Create a medium-sized app card with enhanced styling"""
@@ -1594,11 +1623,8 @@ class PluginsView(QWidget):
             except Exception:
                 viewport_w = self.width()
                 viewport_h = self.height()
-            spacing = self.grid_layout.spacing() if self.grid_layout else 20
-            unit_w = 340 + spacing
-            cols = max(1, min(6, (max(0, viewport_w) + spacing) // unit_w))
-            row_h = 140 + spacing
-            visible_rows = max(1, (viewport_h + spacing) // row_h)
+            cols = self._calc_cols(viewport_w)
+            visible_rows = self._calc_visible_rows(viewport_h)
             initial_rows = visible_rows + 2  # fill screen + buffer
             initial_batch = min(len(self._all_plugins), cols * initial_rows)
             self._load_initial_batch(initial_batch)
@@ -1639,6 +1665,10 @@ class PluginsView(QWidget):
         cols = self._current_cols
         for i in range(cols):
             self.grid_layout.setColumnStretch(i, 1)
+            try:
+                self.grid_layout.setColumnMinimumWidth(i, 340)
+            except Exception:
+                pass
         
         # Pre-calculate maximum row needed for initial batch
         max_position = len(new_cards) - 1
@@ -1650,6 +1680,7 @@ class PluginsView(QWidget):
             col = i % cols
             self.grid_layout.addWidget(card_data['widget'], row, col)
         self.grid_layout.setRowStretch(max_row_needed + 1, 1)
+        self._enforce_row_min_heights(max_row_needed)
         
         self._all_cards.extend(new_cards)
         self._loaded_count = batch_size
@@ -1679,6 +1710,7 @@ class PluginsView(QWidget):
         self.grid_layout.setRowStretch(max_row_needed + 1, 1)
         QTimer.singleShot(10, self._adjust_bottom_stretch)
         self._category_loaded_count = batch_size
+        self._enforce_row_min_heights(max_row_needed)
         QTimer.singleShot(300, self._hide_loading_indicator)
         self._is_loading = False
     
@@ -1698,12 +1730,22 @@ class PluginsView(QWidget):
             pass
     
     def _adjust_bottom_stretch(self):
-        """Always clear stretched bottom row to prevent visible empty space."""
+        """Keep a stretch row only when no scrollbar; remove it when scrolling is available."""
         if not hasattr(self, 'grid_layout'):
             return
         try:
             last_row = max(0, self.grid_layout.rowCount() - 1)
-            self.grid_layout.setRowStretch(last_row, 0)
+            sb = None
+            try:
+                sb = self._scroll_area.verticalScrollBar() if hasattr(self, '_scroll_area') else None
+            except Exception:
+                sb = None
+            if sb and sb.maximum() > 0:
+                # Scrolling available, remove artificial stretch row
+                self.grid_layout.setRowStretch(last_row, 0)
+            else:
+                # No scrolling; keep stretch so content fills viewport cleanly
+                self.grid_layout.setRowStretch(last_row, 1)
         except Exception:
             pass
     
@@ -1725,9 +1767,8 @@ class PluginsView(QWidget):
             if (sb.maximum() > 0) or (self._loaded_count >= len(self._all_plugins)):
                 # If last row is not full, top it off to avoid a one-time gap
                 try:
-                    spacing = self.grid_layout.spacing() if self.grid_layout else 20
                     viewport_w = self._scroll_area.viewport().width()
-                    cols = max(1, min(6, (max(0, viewport_w) + spacing) // (340 + spacing)))
+                    cols = self._calc_cols(viewport_w)
                 except Exception:
                     cols = max(1, int(self._current_cols) if hasattr(self, '_current_cols') else 1)
                 remaining = len(self._all_plugins) - self._loaded_count
@@ -1764,9 +1805,8 @@ class PluginsView(QWidget):
             sb = self._scroll_area.verticalScrollBar()
             if (sb.maximum() > 0) or (self._category_loaded_count >= len(self._category_filtered_plugins)):
                 try:
-                    spacing = self.grid_layout.spacing() if self.grid_layout else 20
                     viewport_w = self._scroll_area.viewport().width()
-                    cols = max(1, min(6, (max(0, viewport_w) + spacing) // (340 + spacing)))
+                    cols = self._calc_cols(viewport_w)
                 except Exception:
                     cols = max(1, int(self._current_cols) if hasattr(self, '_current_cols') else 1)
                 remaining = len(self._category_filtered_plugins) - self._category_loaded_count
@@ -1807,10 +1847,7 @@ class PluginsView(QWidget):
             viewport_width = self._scroll_area.viewport().width() if self._scroll_area else self.width()
         except Exception:
             viewport_width = self.width()
-        card_width = 340
-        spacing = self.grid_layout.spacing() if self.grid_layout else 20
-        total_unit = card_width + spacing
-        new_cols = max(1, min(5, (max(0, viewport_width) + spacing) // total_unit))
+        new_cols = self._calc_cols(viewport_width)
         
         # Only rebuild if column count changed
         if new_cols != self._current_cols:
@@ -1846,6 +1883,10 @@ class PluginsView(QWidget):
         cols = self._current_cols
         for i in range(cols):
             self.grid_layout.setColumnStretch(i, 1)
+            try:
+                self.grid_layout.setColumnMinimumWidth(i, 340)
+            except Exception:
+                pass
         
         for i, card_data in enumerate(filtered_cards):
             row = i // cols
@@ -1853,6 +1894,7 @@ class PluginsView(QWidget):
             self.grid_layout.addWidget(card_data['widget'], row, col)
         max_row = ((len(filtered_cards) - 1) // cols) if filtered_cards else 0
         self.grid_layout.setRowStretch(max_row + 1, 1)
+        self._enforce_row_min_heights(max_row)
         # Adjust the bottom stretch so we don't keep a big empty row once scrolling is available
         QTimer.singleShot(10, self._adjust_bottom_stretch)
         if self._selected_category:
@@ -1899,9 +1941,7 @@ class PluginsView(QWidget):
             viewport_w = self._scroll_area.viewport().width()
         except Exception:
             viewport_w = self.width()
-        spacing = self.grid_layout.spacing() if self.grid_layout else 20
-        unit_w = 340 + spacing
-        cols = max(1, min(6, (max(0, viewport_w) + spacing) // unit_w))
+        cols = self._calc_cols(viewport_w)
         target_total = ((self._loaded_count + self._batch_size + cols - 1) // cols) * cols
         min_needed = max(cols, target_total - self._loaded_count)
         batch_size = min(remaining, min_needed)
@@ -1944,6 +1984,7 @@ class PluginsView(QWidget):
         # Add a final stretch row to enable scrolling
         self.grid_layout.setRowStretch(max_row_needed + 1, 1)
         QTimer.singleShot(10, self._adjust_bottom_stretch)
+        self._enforce_row_min_heights(max_row_needed)
         
         # Add to all_cards list
         self._all_cards.extend(new_cards)
@@ -1963,9 +2004,7 @@ class PluginsView(QWidget):
             viewport_w = self._scroll_area.viewport().width()
         except Exception:
             viewport_w = self.width()
-        spacing = self.grid_layout.spacing() if self.grid_layout else 20
-        unit_w = 340 + spacing
-        cols = max(1, min(6, (max(0, viewport_w) + spacing) // unit_w))
+        cols = self._calc_cols(viewport_w)
         target_total = ((self._category_loaded_count + self._batch_size + cols - 1) // cols) * cols
         min_needed = max(cols, target_total - self._category_loaded_count)
         batch_size = min(remaining, min_needed)
@@ -1983,6 +2022,7 @@ class PluginsView(QWidget):
         self.grid_layout.setRowStretch(max_row_needed + 1, 1)
         QTimer.singleShot(10, self._adjust_bottom_stretch)
         self._category_loaded_count += batch_size
+        self._enforce_row_min_heights(max_row_needed)
         QTimer.singleShot(100, self._hide_loading_indicator)
         self._is_loading = False
     

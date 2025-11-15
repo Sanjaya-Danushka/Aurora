@@ -1548,12 +1548,41 @@ class PluginsView(QWidget):
         
         # Hide loading indicator
         QTimer.singleShot(300, self._hide_loading_indicator)
+        QTimer.singleShot(350, self._ensure_scrollbar_visible)
         self._is_loading = False
     
     def _hide_loading_indicator(self):
         """Hide the loading indicator widget"""
         if hasattr(self, '_loading_container'):
             self._loading_container.setVisible(False)
+    
+    def _ensure_scrollbar_visible(self):
+        """Auto-load more batches on 'All' tab until a scrollbar appears or all items are loaded"""
+        # Only applies for the infinite-scroll 'All' view
+        if getattr(self, '_selected_category', None):
+            return
+        if not hasattr(self, '_scroll_area'):
+            return
+        
+        def _step(attempts=[0]):
+            # Safety: avoid endless loops
+            if attempts[0] >= 8:
+                return
+            sb = self._scroll_area.verticalScrollBar()
+            # Stop if we already have room to scroll or we loaded everything
+            if (sb.maximum() > 0) or (self._loaded_count >= len(self._all_plugins)):
+                return
+            # Wait if a batch is currently loading
+            if self._is_loading:
+                QTimer.singleShot(120, _step)
+                return
+            # Request another batch and check again shortly
+            attempts[0] += 1
+            self._load_more_plugins()
+            QTimer.singleShot(150, _step)
+        
+        # Give the layout a tick to settle before we start
+        QTimer.singleShot(50, _step)
     
     def resizeEvent(self, event):
         """Handle window resize to update grid layout"""
@@ -1610,6 +1639,8 @@ class PluginsView(QWidget):
             self.grid_layout.addWidget(card_data['widget'], row, col)
         max_row = ((len(filtered_cards) - 1) // cols) if filtered_cards else 0
         self.grid_layout.setRowStretch(max_row + 1, 1)
+        if not self._selected_category:
+            QTimer.singleShot(50, self._ensure_scrollbar_visible)
     
     def _on_scroll(self, value):
         """Handle scroll events to detect when user reaches bottom"""

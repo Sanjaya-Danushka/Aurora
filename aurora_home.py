@@ -4213,6 +4213,10 @@ def on_tick(app):
     def _show_message(self, title, text):
         self.log(f"{title}: {text}")
     
+    def display_message(self, title, text):
+        """Public method to show a message in the console"""
+        self.log(f"{title}: {text}")
+    
     def log(self, message):
         self.console.append(message)
     

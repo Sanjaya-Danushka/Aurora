@@ -8,6 +8,38 @@ import re
 import random
 
 
+class CardState:
+    """Encapsulates the state of a plugin card"""
+    def __init__(self):
+        self.is_installing = False
+        self.is_installed_state = False
+        self.matching_plugin = None
+    
+    def set_installing(self, installing):
+        """Set the installing state"""
+        self.is_installing = installing
+    
+    def get_installing(self):
+        """Get the installing state"""
+        return self.is_installing
+    
+    def set_installed_state(self, installed):
+        """Set the installed state"""
+        self.is_installed_state = installed
+    
+    def get_installed_state(self):
+        """Get the installed state"""
+        return self.is_installed_state
+    
+    def set_matching_plugin(self, plugin):
+        """Set the matching plugin reference"""
+        self.matching_plugin = plugin
+    
+    def get_matching_plugin(self):
+        """Get the matching plugin reference"""
+        return self.matching_plugin
+
+
 class ElideLabel(QLabel):
     def __init__(self, text="", parent=None, max_lines=2):
         super().__init__(text, parent)
@@ -898,10 +930,13 @@ class PluginsView(QWidget):
         card = QFrame()
         card.setFixedSize(340, 140)
         
-        # Store reference for animation callbacks
-        card._is_installing = False
+        # Store state using CardState class for proper encapsulation
+        card_state = CardState()
+        card_state.set_installed_state(installed)
+        card.card_state = card_state
+        
         def set_card_installing(installing):
-            card._is_installing = installing
+            card_state.set_installing(installing)
             if installing:
                 for widget in card.findChildren(QPushButton):
                     widget.setEnabled(False)
@@ -916,7 +951,7 @@ class PluginsView(QWidget):
                         if "Uninstalling" in widget.text():
                             widget.setText("Uninstall")
                         else:
-                            widget.setText("Install" if not installed else "Open")
+                            widget.setText("Install" if not card_state.get_installed_state() else "Open")
         card.set_installing = set_card_installing
         bg_image_path = os.path.join(os.path.dirname(__file__), "..", "assets", "plugins", "cardbackground.jpg")
         bg_image_url = bg_image_path.replace("\\", "/")
@@ -1293,8 +1328,8 @@ class PluginsView(QWidget):
                 if hasattr(self, 'slider_layout'):
                     for i in range(self.slider_layout.count()):
                         card = self.slider_layout.itemAt(i).widget()
-                        if card and hasattr(card, '_matching_plugin'):
-                            plugin = card._matching_plugin
+                        if card and hasattr(card, 'card_state'):
+                            plugin = card.card_state.get_matching_plugin()
                             if plugin:
                                 # Re-check if app is installed
                                 is_now_installed = self.is_installed(plugin)
@@ -1304,7 +1339,7 @@ class PluginsView(QWidget):
                                     btn = buttons[0]
                                     btn.setText("Open" if is_now_installed else "Install")
                                     # Update the stored state for animation
-                                    card._is_installed_state = is_now_installed
+                                    card.card_state.set_installed_state(is_now_installed)
             except Exception:
                 pass
             

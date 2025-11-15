@@ -58,7 +58,7 @@ def refresh_bundles_table(app):
 
 def export_bundle(app):
     if not app.bundle_items:
-        app._show_message("Export Bundle", "Bundle is empty")
+        app.display_message("Export Bundle", "Bundle is empty")
         return
     path, _ = QFileDialog.getSaveFileName(app, "Export Bundle", os.path.expanduser("~"), "Bundle JSON (*.json)")
     if not path:
@@ -67,9 +67,9 @@ def export_bundle(app):
     try:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
-        app._show_message("Export Bundle", f"Saved {len(app.bundle_items)} items to {path}")
+        app.display_message("Export Bundle", f"Saved {len(app.bundle_items)} items to {path}")
     except Exception as e:
-        app._show_message("Export Bundle", f"Failed: {e}")
+        app.display_message("Export Bundle", f"Failed: {e}")
 
 
 def import_bundle(app):
@@ -81,7 +81,7 @@ def import_bundle(app):
             data = json.load(f)
         items = data.get('items') if isinstance(data, dict) else None
         if not isinstance(items, list):
-            app._show_message("Import Bundle", "Invalid bundle file")
+            app.display_message("Import Bundle", "Invalid bundle file")
             return
         existing = {(i.get('source'), i.get('id') or i.get('name')) for i in app.bundle_items}
         added = 0
@@ -103,11 +103,11 @@ def import_bundle(app):
                 })
                 existing.add(key)
                 added += 1
-        app._show_message("Import Bundle", f"Added {added} items")
+        app.display_message("Import Bundle", f"Added {added} items")
         if app.current_view == "bundles":
             refresh_bundles_table(app)
     except Exception as e:
-        app._show_message("Import Bundle", f"Failed: {e}")
+        app.display_message("Import Bundle", f"Failed: {e}")
 
 
 def remove_selected_from_bundle(app):
@@ -138,7 +138,7 @@ def clear_bundle(app):
 
 def install_bundle(app):
     if not app.bundle_items:
-        app._show_message("Install Bundle", "Bundle is empty")
+        app.display_message("Install Bundle", "Bundle is empty")
         return
     by_src = {}
     for it in list(app.bundle_items):
@@ -150,7 +150,7 @@ def install_bundle(app):
         token = pkg_id if src == 'Flatpak' else name
         by_src.setdefault(src, []).append(token)
     if not by_src:
-        app._show_message("Install Bundle", "No valid items to install")
+        app.display_message("Install Bundle", "No valid items to install")
         return
     install_service.install_packages(app, by_src)
 
@@ -158,7 +158,7 @@ def install_bundle(app):
 def add_selected_to_community(app):
     """Add selected bundle items to community hub"""
     if app.current_view != "bundles":
-        app._show_message("Add to Community", "This feature is only available in bundles view")
+        app.display_message("Add to Community", "This feature is only available in bundles view")
         return
     
     # Get selected items
@@ -171,7 +171,7 @@ def add_selected_to_community(app):
                 selected_items.append(info)
     
     if not selected_items:
-        app._show_message("Add to Community", "No items selected. Please select items to share with the community.")
+        app.display_message("Add to Community", "No items selected. Please select items to share with the community.")
         return
     
     # Get bundle name from user
@@ -251,7 +251,7 @@ def add_selected_to_community(app):
         app.log(f"Successfully shared bundle '{bundle_name}' with {len(selected_items)} items to community")
         
     except Exception as e:
-        app._show_message("Add to Community", f"Failed to share bundle: {str(e)}")
+        app.display_message("Add to Community", f"Failed to share bundle: {str(e)}")
         app.log(f"Error sharing bundle to community: {e}")
 
 
@@ -284,12 +284,12 @@ def list_community_bundles():
 def import_community_bundle(app, bundle_data):
     """Import a community bundle into the current bundle"""
     if not isinstance(bundle_data, dict) or 'items' not in bundle_data:
-        app._show_message("Import Community Bundle", "Invalid bundle data")
+        app.display_message("Import Community Bundle", "Invalid bundle data")
         return
     
     items = bundle_data.get('items', [])
     if not items:
-        app._show_message("Import Community Bundle", "Bundle contains no items")
+        app.display_message("Import Community Bundle", "Bundle contains no items")
         return
     
     # Add items to current bundle
@@ -319,7 +319,7 @@ def import_community_bundle(app, bundle_data):
             added += 1
     
     bundle_name = bundle_data.get('name', 'Community Bundle')
-    app._show_message("Import Community Bundle", f"Added {added} items from '{bundle_name}' to your bundle")
+    app.display_message("Import Community Bundle", f"Added {added} items from '{bundle_name}' to your bundle")
     
     if app.current_view == "bundles":
         refresh_bundles_table(app)

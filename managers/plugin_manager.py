@@ -44,7 +44,7 @@ class PluginsManager:
                     self._message("Plugins", f"Install failed: {e}")
                 finally:
                     QTimer.singleShot(0, lambda: plugins_view.set_installing(plugin_id, False))
-                    QTimer.singleShot(0, plugins_view.refresh_all)
+                    QTimer.singleShot(200, plugins_view.refresh_all)
 
             Thread(target=_run, daemon=True).start()
         except Exception as e:
@@ -60,11 +60,17 @@ class PluginsManager:
                 self._message("Plugins", "No launch command defined")
                 return
             use_pkexec = plugin_id in ("timeshift",)
+            terminal_apps = ["htop", "btop", "nvtop"]
+            use_terminal = cmd in terminal_apps
             argv = [cmd]
             if use_pkexec:
                 from utils.workers import get_auth_command
                 auth_cmd = get_auth_command()
                 argv = auth_cmd + argv
+            if use_terminal:
+                terminal_cmd = self._get_terminal_command()
+                if terminal_cmd:
+                    argv = terminal_cmd + argv
             self._log(f"Launching: {' '.join(argv)}")
             try:
                 subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True)
@@ -107,7 +113,7 @@ class PluginsManager:
                     self._message("Plugins", f"Uninstall failed: {e}")
                 finally:
                     QTimer.singleShot(0, lambda: plugins_view.set_installing(plugin_id, False))
-                    QTimer.singleShot(0, plugins_view.refresh_all)
+                    QTimer.singleShot(200, plugins_view.refresh_all)
 
             Thread(target=_run, daemon=True).start()
         except Exception as e:
@@ -129,6 +135,23 @@ class PluginsManager:
             self.app.log_signal.emit(msg)
         except Exception:
             pass
+
+    @staticmethod
+    def _get_terminal_command():
+        terminals = ["kitty", "alacritty", "gnome-terminal", "konsole", "xterm"]
+        for term in terminals:
+            if shutil.which(term):
+                if term == "kitty":
+                    return [term, "-e"]
+                elif term == "alacritty":
+                    return [term, "-e"]
+                elif term == "gnome-terminal":
+                    return [term, "--", "bash", "-c"]
+                elif term == "konsole":
+                    return [term, "-e"]
+                elif term == "xterm":
+                    return [term, "-e"]
+        return None
 
     def _message(self, title, text):
         try:

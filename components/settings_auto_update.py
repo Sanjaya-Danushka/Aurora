@@ -14,11 +14,82 @@ class AutoUpdateSettingsWidget(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
+        # Add title with subtitle
+        title = QLabel("Auto Update")
+        title.setStyleSheet("""
+            font-size: 28px; 
+            font-weight: 700; 
+            color: #ffffff; 
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        """)
+        self.layout.addWidget(title)
+        
+        subtitle = QLabel("Manage automatic updates and system snapshots")
+        subtitle.setStyleSheet("""
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 20px;
+        """)
+        self.layout.addWidget(subtitle)
+        
         # Auto Update Settings
         update_box = QGroupBox("Auto Update")
+        update_box.setStyleSheet("""
+            QGroupBox {
+                font-size: 15px;
+                font-weight: 600;
+                color: #ffffff;
+                background-color: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 10px;
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 16px;
+                padding: 0 8px;
+                background-color: transparent;
+            }
+            QCheckBox {
+                color: #e0e0e0;
+                font-size: 14px;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+            QCheckBox::indicator:hover {
+                border-color: rgba(13, 115, 119, 0.6);
+                background-color: rgba(255, 255, 255, 0.08);
+            }
+            QCheckBox::indicator:checked {
+                background-color: #0d7377;
+                border-color: #0d7377;
+            }
+            QSpinBox {
+                background-color: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                padding: 8px 12px;
+                color: #e0e0e0;
+                font-size: 13px;
+            }
+            QSpinBox:focus {
+                border-color: #0d7377;
+            }
+            QLabel {
+                color: #b0b0b0;
+            }
+        """)
         auto_grid = QGridLayout(update_box)
-        auto_grid.setContentsMargins(12, 12, 12, 12)
-        auto_grid.setSpacing(8)
+        auto_grid.setContentsMargins(16, 20, 16, 16)
+        auto_grid.setSpacing(12)
 
         self.cb_auto_update = QCheckBox("Enable automatic updates")
         self.cb_auto_update.setChecked(bool(self.app.settings.get('auto_update_enabled', False)))
@@ -36,9 +107,61 @@ class AutoUpdateSettingsWidget(QWidget):
 
         # Snapshot Settings
         snapshot_box = QGroupBox("Snapshots")
+        snapshot_box.setStyleSheet("""
+            QGroupBox {
+                font-size: 15px;
+                font-weight: 600;
+                color: #ffffff;
+                background-color: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 10px;
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 16px;
+                padding: 0 8px;
+                background-color: transparent;
+            }
+            QCheckBox {
+                color: #e0e0e0;
+                font-size: 14px;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+            QCheckBox::indicator:hover {
+                border-color: rgba(13, 115, 119, 0.6);
+                background-color: rgba(255, 255, 255, 0.08);
+            }
+            QCheckBox::indicator:checked {
+                background-color: #0d7377;
+                border-color: #0d7377;
+            }
+            QPushButton {
+                background-color: transparent;
+                color: #0d7377;
+                border: 1px solid rgba(13, 115, 119, 0.4);
+                border-radius: 6px;
+                padding: 12px 20px;
+                font-weight: 500;
+                font-size: 14px;
+                min-height: 20px;
+            }
+            QPushButton:hover {
+                background-color: rgba(13, 115, 119, 0.15);
+                border-color: #0d7377;
+            }
+        """)
         snap_grid = QGridLayout(snapshot_box)
-        snap_grid.setContentsMargins(12, 12, 12, 12)
-        snap_grid.setSpacing(8)
+        snap_grid.setContentsMargins(16, 20, 16, 16)
+        snap_grid.setSpacing(12)
 
         self.cb_snapshot = QCheckBox("Create snapshot before updates")
         self.cb_snapshot.setChecked(bool(self.app.settings.get('snapshot_before_update', False)))

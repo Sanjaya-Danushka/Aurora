@@ -188,6 +188,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.cancel_discover_search = False
         # Nav badges (e.g., updates count)
         self.nav_badges = {}
+        # Attributes initialized in other methods
+        self.settings_widgets = {}
+        self.settings_content_layout = None
+        self.settings_nav_buttons = {}
+        self.source_card = None
+        self.filters_panel = None
         self.setup_ui()
         # Set initial nav button state
         for btn_id, btn in self.nav_buttons.items():
@@ -433,7 +439,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover.svg"), "Discover", "discover"),
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "updates.svg"), "Updates", "updates"), 
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "installed.svg"), "Installed", "installed"),
-            (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins", "plugins.svg"), "Plugins", "plugins"),
+            (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins.svg"), "Plugins", "plugins"),
             (os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"), "Bundles", "bundles")
         ]
         
@@ -1043,6 +1049,29 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         
         self.docker_manager.install_from_docker()
     
+    def show_community_hub(self):
+        """Show Community Hub for plugins and extensions"""
+        try:
+            # Switch to plugins view and show community tab
+            self.switch_view("settings")
+            # Wait a moment for the settings UI to load
+            QTimer.singleShot(100, self.switch_to_community_tab)
+        except Exception as e:
+            self._show_message("Community Hub", f"Error opening community hub: {e}")
+    
+    def switch_to_community_tab(self):
+        """Switch to the community tab in plugins settings"""
+        try:
+            if hasattr(self, 'settings_widgets') and 'plugins' in self.settings_widgets:
+                # Switch to plugins category in settings
+                self.switch_settings_category("plugins")
+                # Switch to community tab in plugins widget
+                plugins_widget = self.settings_widgets['plugins']
+                if hasattr(plugins_widget, 'tabs'):
+                    plugins_widget.tabs.setCurrentIndex(1)  # Community Hub is index 1
+        except Exception as e:
+            self._show_message("Community Hub", f"Error switching to community tab: {e}")
+    
     def on_plugin_install_requested(self, plugin_id):
         try:
             if hasattr(self, 'plugins_view') and self.plugins_view:
@@ -1171,10 +1200,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         install_service.install_packages(self, to_install)
     
     def create_filters_panel(self):
-        panel = QFrame()
-        panel.setStyleSheet(Styles.get_filters_panel_stylesheet())
+        self.filters_panel = QFrame()
+        self.filters_panel.setStyleSheet(Styles.get_filters_panel_stylesheet())
         
-        layout = QVBoxLayout(panel)
+        layout = QVBoxLayout(self.filters_panel)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(12)
         
@@ -1208,7 +1237,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         layout.addWidget(self.filters_section)
         layout.addStretch()
         
-        return panel
+        return self.filters_panel
     
     def create_packages_panel(self):
         panel = QWidget()
@@ -1291,17 +1320,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             pass
         self.plugins_view.setVisible(False)
         
-        # Create plugins tab widget
-        self.plugins_tab_widget = QTabWidget()
-        self.plugins_tab_widget.setVisible(False)
-        
-        # Built-in plugins tab
-        builtin_tab = QWidget()
-        builtin_layout = QVBoxLayout(builtin_tab)
-        builtin_layout.addWidget(self.plugins_view)
-        self.plugins_tab_widget.addTab(builtin_tab, "Built-in Plugins")
-        
-        self.packages_panel_layout.addWidget(self.plugins_tab_widget)
+        # Add plugins view directly (no tabs needed)
+        self.plugins_view.setVisible(False)
+        self.packages_panel_layout.addWidget(self.plugins_view)
         
         # Packages Table
         self.package_table = QTableWidget()
@@ -1601,16 +1622,28 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         elif self.current_view == "plugins":
             layout = QHBoxLayout()
             layout.setSpacing(12)
-            refresh_btn = QPushButton("Refresh")
-            refresh_btn.setMinimumHeight(36)
-            refresh_btn.clicked.connect(lambda: self.plugins_view.refresh_all())
-            layout.addWidget(refresh_btn)
+            
+            # Add stretch to push icon buttons to the right
             layout.addStretch()
+            
+            icon_dir = os.path.join(os.path.dirname(__file__), "assets", "icons", "discover")
+            bundles_btn = self.create_toolbar_button(
+                os.path.join(os.path.dirname(__file__), "assets", "icons", "local-builds.svg"),
+                "Add selected to Bundle",
+                lambda: None  # Empty handler for now
+            )
+            layout.addWidget(bundles_btn)
+            tools_btn = self.create_toolbar_button(
+                os.path.join(icon_dir, "download.svg"),
+                "Onclick Update",
+                lambda: None  # Empty handler for now
+            )
             help_btn = self.create_toolbar_button(
                 os.path.join(os.path.dirname(__file__), "assets", "icons", "about.svg"),
                 "Help & Documentation",
                 self.show_help
             )
+            layout.addWidget(tools_btn)
             layout.addWidget(help_btn)
             self.toolbar_layout.addLayout(layout)
         elif self.current_view == "bundles":
@@ -1653,6 +1686,32 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             remove_sel_btn.setStyleSheet(install_bundle_btn.styleSheet())
             remove_sel_btn.clicked.connect(self.remove_selected_from_bundle)
             layout.addWidget(remove_sel_btn)
+
+            # Add to Community button
+            add_to_community_btn = QPushButton("Add to Community")
+            add_to_community_btn.setMinimumHeight(36)
+            add_to_community_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    color: #00BFAE;
+                    border: 1px solid rgba(0, 191, 174, 0.4);
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                QPushButton:hover { 
+                    background-color: rgba(0, 191, 174, 0.15); 
+                    border-color: rgba(0, 191, 174, 0.6); 
+                    color: #00D4C4;
+                }
+                QPushButton:pressed { 
+                    background-color: rgba(0, 191, 174, 0.25); 
+                }
+                """)
+            add_to_community_btn.clicked.connect(self.add_selected_to_community)
+            add_to_community_btn.setToolTip("Share selected bundle items with the community")
+            layout.addWidget(add_to_community_btn)
 
             clear_btn = QPushButton("Clear Bundle")
             clear_btn.setMinimumHeight(36)
@@ -1722,8 +1781,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.settings_container.setVisible(False)
             if hasattr(self, 'plugins_view') and self.plugins_view:
                 self.plugins_view.setVisible(False)
-            if hasattr(self, 'plugins_tab_widget') and self.plugins_tab_widget:
-                self.plugins_tab_widget.setVisible(False)
+            # plugins_tab_widget removed - plugins_view is handled above
             if hasattr(self, 'no_results_widget'):
                 self.no_results_widget.setVisible(False)
             if hasattr(self, 'console_toggle_btn'):
@@ -1746,7 +1804,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             "installed": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "installed.svg"), "Installed Packages", ""),
             "discover": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "search.svg"), "Discover Packages", "Search and discover new packages to install"),
             "bundles": (os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "bundle.svg"), "Package Bundles", "Manage package bundles"),
-            "plugins": (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins", "plugins.svg"), "Plugins", "Extensions and system tools"),
+            "plugins": (os.path.join(os.path.dirname(__file__), "assets", "icons", "plugins.svg"), "Plugins", "Extensions and system tools"),
             "settings": (os.path.join(os.path.dirname(__file__), "assets", "icons", "settings.svg"), "Settings", "Configure NeoArch settings and plugins"),
         }
         
@@ -1774,6 +1832,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.search_input.clear()
         if view_id != "discover":
             self.large_search_box.setVisible(False)
+        
+        # Show filters panel for all views except settings and bundles
+        if hasattr(self, 'filters_panel'):
+            self.filters_panel.setVisible(view_id not in ("settings", "bundles"))
         
         # Load data for view
         if view_id == "updates":
@@ -1887,7 +1949,6 @@ class ArchPkgManagerUniGetUI(QMainWindow):
                 pass
             QTimer.singleShot(0, self.refresh_bundles_table)
         elif view_id == "plugins":
-            # Show plugins view with tabs, hide others
             try:
                 self.loading_widget.setVisible(False)
                 self.loading_widget.stop_animation()
@@ -1902,57 +1963,51 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.setVisible(False)
             self.load_more_btn.setVisible(False)
             
-            # Clear and add PluginsSidebar
+            # Clear any existing source cards from sources_layout
+            while self.sources_layout.count() > 1:
+                item = self.sources_layout.takeAt(1)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # Clear filters layout
             while self.filters_layout.count():
                 item = self.filters_layout.takeAt(0)
                 if item.widget():
                     item.widget().deleteLater()
-            try:
-                self.plugins_sidebar = PluginsSidebar(self)
-                self.plugins_sidebar.filter_changed.connect(self.on_plugins_filter_changed)
-                # Populate sidebar with the same list as cards
-                try:
-                    if hasattr(self, 'plugins_view') and self.plugins_view:
-                        self.plugins_sidebar.set_plugins(self.plugins_view.plugins)
-                        cats = sorted({(p.get('category') or '') for p in self.plugins_view.plugins if p.get('category')})
-                        try:
-                            self.plugins_sidebar.set_categories(cats)
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-                # Allow install from sidebar
-                try:
-                    self.plugins_sidebar.install_requested.connect(self.on_plugin_install_requested)
-                    self.plugins_sidebar.uninstall_requested.connect(self.on_plugin_uninstall_requested)
-                except Exception:
-                    pass
-                self.filters_layout.addWidget(self.plugins_sidebar)
-            except Exception:
-                pass
-            self.plugins_tab_widget.setVisible(True)
-            # Ensure built-in plugins grid is visible
+            
+            # For plugins view, create filter by plugin status (like installed view)
+            self.filter_card = FilterCard(self)
+            self.filter_card.filter_changed.connect(self.on_filter_selection_changed)
+            
+            # Add plugin status filters
+            self.filter_card.add_filter("Available")
+            self.filter_card.add_filter("Installed")
+            
+            self.filters_layout.addWidget(self.filter_card)
+            
+            # Update visibility like installed view
+            self.sources_section.setVisible(True)
+            self.filters_section.setVisible(True)
+            if hasattr(self, 'sources_title_label'):
+                self.sources_title_label.setVisible(False)
+            
+            # Add source cards like installed section
+            self.update_plugins_sources()
+            
+            # Show plugins view directly (no tab widget)
             try:
                 self.plugins_view.setVisible(True)
             except Exception:
                 pass
             self.plugins_view.refresh_all()
-            # Sync sidebar search box with global search text (visual consistency)
-            try:
-                if hasattr(self, 'plugins_sidebar') and self.plugins_sidebar:
-                    q = self.search_input.text() if hasattr(self, 'search_input') else ""
-                    try:
-                        self.plugins_sidebar.search.blockSignals(True)
-                        self.plugins_sidebar.search.setText(q)
-                    finally:
-                        self.plugins_sidebar.search.blockSignals(False)
-            except Exception:
-                pass
 
             self.header_info.setText("Install and launch extensions like BleachBit and Timeshift")
             try:
                 self.console_label.setVisible(False)
                 self.console.setVisible(False)
+                if hasattr(self, 'console_toggle_btn'):
+                    self.console_toggle_btn.setVisible(True)
+                    self.console_toggle_btn.setToolTip("Show Console")
             except Exception:
                 pass
         elif view_id == "settings":
@@ -1966,6 +2021,19 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.package_table.setVisible(False)
             self.load_more_btn.setVisible(False)
             self.settings_container.setVisible(True)
+            
+            # Retain source checkboxes; no clearing needed
+            
+            # Clear filters layout
+            while self.filters_layout.count():
+                item = self.filters_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # Hide sources and filters sections in settings view
+            self.sources_section.setVisible(False)
+            self.filters_section.setVisible(False)
+            
             # Hide console in Settings view
             try:
                 self.console_label.setVisible(False)
@@ -2086,6 +2154,10 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             self.apply_filters()
         elif self.current_view == "updates":
             self.apply_update_filters()
+        elif self.current_view == "plugins":
+            # Apply plugin status filters (Available/Installed)
+            if hasattr(self, 'plugins_view') and self.plugins_view:
+                self.plugins_view.apply_filters(filter_states)
     
     def update_discover_sources(self):
         """Update the discover sources using the new SourceCard component"""
@@ -2108,8 +2180,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg")),
         ]
         
-        for source_name, icon_path in sources:
-            self.source_card.add_source(source_name, icon_path)
+        for source_name, source_icon_path in sources:
+            self.source_card.add_source(source_name, source_icon_path)
         
         self.sources_layout.addWidget(self.source_card)
         if not hasattr(self, 'git_manager') or self.git_manager is None:
@@ -2151,8 +2223,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg")),
             ("Local", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "local.svg"))
         ]
-        for source_name, icon_path in sources:
-            self.source_card.add_source(source_name, icon_path)
+        for source_name, source_icon_path in sources:
+            self.source_card.add_source(source_name, source_icon_path)
         self.sources_layout.addWidget(self.source_card)
         if not hasattr(self, 'git_manager') or self.git_manager is None:
             from managers.git_manager import GitManager
@@ -2182,8 +2254,38 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
             ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg"))
         ]
-        for source_name, icon_path in sources:
-            self.source_card.add_source(source_name, icon_path)
+        for source_name, source_icon_path in sources:
+            self.source_card.add_source(source_name, source_icon_path)
+        try:
+            for obj_name in ("searchModeTitle",):
+                w = self.source_card.findChild(QLabel, obj_name)
+                if w:
+                    w.setVisible(False)
+            for rb in self.source_card.findChildren(QRadioButton, "searchModeRadio"):
+                rb.setVisible(False)
+        except Exception:
+            pass
+        self.sources_layout.addWidget(self.source_card)
+
+    def update_plugins_sources(self):
+        """Update plugins sources using the same SourceCard component as installed section"""
+        # Clear existing sources layout (except the title label)
+        while self.sources_layout.count() > 1:
+            item = self.sources_layout.takeAt(1)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # Create source card for plugins (same as installed section)
+        self.source_card = SourceCard(self)
+        self.source_card.source_changed.connect(self.on_plugins_source_changed)
+        sources = [
+            ("pacman", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "pacman.svg")),
+            ("AUR", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "aur.svg")),
+            ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
+            ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg"))
+        ]
+        for source_name, source_icon_path in sources:
+            self.source_card.add_source(source_name, source_icon_path)
         try:
             for obj_name in ("searchModeTitle",):
                 w = self.source_card.findChild(QLabel, obj_name)
@@ -2198,6 +2300,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
     def on_installed_source_changed(self, source_states):
         # Re-apply combined filters (source + status)
         self.apply_filters()
+
+    def on_plugins_source_changed(self, source_states):
+        # Apply source filters to plugins view
+        if hasattr(self, 'plugins_view') and self.plugins_view:
+            self.plugins_view.apply_source_filters(source_states)
 
     def on_updates_source_changed(self, source_states):
         base = getattr(self, 'updates_all', self.all_packages)
@@ -3243,6 +3350,9 @@ class ArchPkgManagerUniGetUI(QMainWindow):
 
     def install_bundle(self):
         return bundle_service.install_bundle(self)
+
+    def add_selected_to_community(self):
+        return bundle_service.add_selected_to_community(self)
     
     def install_selected(self):
         packages_by_source = {}
@@ -3442,19 +3552,148 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         return plugs
     
     def build_settings_ui(self):
+        # Clear existing layout
         while self.settings_layout.count():
             item = self.settings_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        tabs = QTabWidget()
-        gen = GeneralSettingsWidget(self)
-        auto_update = AutoUpdateSettingsWidget(self)
-        plugs = PluginsSettingsWidget(self)
-        tabs.addTab(gen, "General")
-        tabs.addTab(auto_update, "Auto Update")
-        tabs.addTab(plugs, "Plugins")
-        self.settings_layout.addWidget(tabs)
-        self.settings_layout.addStretch()
+        
+        # Create main horizontal layout for sidebar + content
+        main_layout = QHBoxLayout()
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        
+        # Create left sidebar for navigation
+        sidebar = QFrame()
+        sidebar.setObjectName("settingsSidebar")
+        sidebar.setFixedWidth(300)
+        sidebar.setStyleSheet("""
+            QFrame#settingsSidebar {
+                background-color: #1a1a1a;
+                border: none;
+            }
+            QPushButton {
+                text-align: left;
+                padding: 18px 24px;
+                border: none;
+                background-color: transparent;
+                color: #a0a0a0;
+                font-size: 15px;
+                font-weight: 500;
+                border-radius: 8px;
+                margin: 3px 20px;
+                letter-spacing: 0.3px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 0.08);
+                color: #ffffff;
+            }
+            QPushButton:checked {
+                background-color: rgba(13, 115, 119, 0.2);
+                color: #0d7377;
+                font-weight: 600;
+                border: 1px solid rgba(13, 115, 119, 0.3);
+            }
+        """)
+        
+        sidebar_layout = QVBoxLayout(sidebar)
+        sidebar_layout.setContentsMargins(16, 24, 16, 24)
+        sidebar_layout.setSpacing(6)
+        
+        # Create navigation buttons
+        self.settings_nav_buttons = {}
+        
+        # Add a header label
+        header_label = QLabel("SETTINGS")
+        header_label.setStyleSheet("""
+            color: #777;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            padding: 12px 24px;
+            margin-top: 12px;
+            margin-bottom: 8px;
+        """)
+        sidebar_layout.addWidget(header_label)
+        
+        btn_general = QPushButton("General")
+        btn_general.setCheckable(True)
+        btn_general.setChecked(True)
+        btn_general.clicked.connect(lambda: self.switch_settings_category("general"))
+        self.settings_nav_buttons["general"] = btn_general
+        sidebar_layout.addWidget(btn_general)
+        
+        btn_auto_update = QPushButton("Auto Update")
+        btn_auto_update.setCheckable(True)
+        btn_auto_update.clicked.connect(lambda: self.switch_settings_category("auto_update"))
+        self.settings_nav_buttons["auto_update"] = btn_auto_update
+        sidebar_layout.addWidget(btn_auto_update)
+        
+        btn_plugins = QPushButton("Plugins")
+        btn_plugins.setCheckable(True)
+        btn_plugins.clicked.connect(lambda: self.switch_settings_category("plugins"))
+        self.settings_nav_buttons["plugins"] = btn_plugins
+        sidebar_layout.addWidget(btn_plugins)
+        
+        sidebar_layout.addStretch()
+        
+        # Add version info at bottom
+        version_label = QLabel("NeoArch v1.0")
+        version_label.setStyleSheet("""
+            color: #555;
+            font-size: 11px;
+            padding: 12px 20px;
+        """)
+        sidebar_layout.addWidget(version_label)
+        
+        # Create right content area
+        content_area = QFrame()
+        content_area.setObjectName("settingsContent")
+        content_area.setStyleSheet("""
+            QFrame#settingsContent {
+                background-color: #1e1e1e;
+                border-radius: 12px;
+                margin: 24px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+            }
+        """)
+        
+        self.settings_content_layout = QVBoxLayout(content_area)
+        self.settings_content_layout.setContentsMargins(24, 24, 24, 24)
+        self.settings_content_layout.setSpacing(16)
+        
+        # Create and store settings widgets
+        self.settings_widgets = {
+            "general": GeneralSettingsWidget(self),
+            "auto_update": AutoUpdateSettingsWidget(self),
+            "plugins": PluginsSettingsWidget(self)
+        }
+        
+        # Add widgets to content area (initially show general)
+        for key, widget in self.settings_widgets.items():
+            widget.setVisible(key == "general")
+            self.settings_content_layout.addWidget(widget)
+        
+        self.settings_content_layout.addStretch()
+        
+        # Add sidebar and content to main layout
+        main_layout.addWidget(sidebar)
+        main_layout.addWidget(content_area, 1)
+        
+        # Add main layout to settings layout
+        container_widget = QWidget()
+        container_widget.setLayout(main_layout)
+        self.settings_layout.addWidget(container_widget)
+    
+    def switch_settings_category(self, category):
+        """Switch between settings categories"""
+        # Update button states
+        for key, btn in self.settings_nav_buttons.items():
+            btn.setChecked(key == category)
+        
+        # Show/hide appropriate widget
+        for key, widget in self.settings_widgets.items():
+            widget.setVisible(key == category)
     
     def build_general_settings(self, layout):
         box = QGroupBox("General Settings")
@@ -3978,6 +4217,10 @@ def on_tick(app):
             pass
     
     def _show_message(self, title, text):
+        self.log(f"{title}: {text}")
+    
+    def display_message(self, title, text):
+        """Public method to show a message in the console"""
         self.log(f"{title}: {text}")
     
     def log(self, message):

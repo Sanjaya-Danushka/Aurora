@@ -957,7 +957,8 @@ class PluginsView(QWidget):
         else:
             return 'pacman'
     
-    def _category_for(self, plugin):
+    @staticmethod
+    def _category_for(plugin):
         cat = (plugin.get('category') or '').strip()
         if cat:
             c = cat.lower()

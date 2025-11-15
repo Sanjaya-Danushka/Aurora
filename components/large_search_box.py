@@ -343,7 +343,8 @@ class LargeSearchBox(QWidget):
 
         return section
 
-    def get_package_icon(self, package_name):
+    @staticmethod
+    def get_package_icon(package_name):
         """Get appropriate icon for package type"""
         package_name = package_name.lower()
         
@@ -368,7 +369,8 @@ class LargeSearchBox(QWidget):
         else:
             return "📦"  # Package for general packages
 
-    def format_time_ago(self, timestamp):
+    @staticmethod
+    def format_time_ago(timestamp):
         """Format timestamp to human-readable time ago"""
         try:
             now = datetime.datetime.now()
@@ -411,7 +413,8 @@ class LargeSearchBox(QWidget):
         except Exception as e:
             self.show_system_status()  # Show system status instead of error
 
-    def get_pacman_updates(self):
+    @staticmethod
+    def get_pacman_updates():
         """Get recent pacman updates from system log"""
         updates = []
         try:

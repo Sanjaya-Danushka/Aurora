@@ -188,6 +188,12 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         self.cancel_discover_search = False
         # Nav badges (e.g., updates count)
         self.nav_badges = {}
+        # Attributes initialized in other methods
+        self.settings_widgets = {}
+        self.settings_content_layout = None
+        self.settings_nav_buttons = {}
+        self.source_card = None
+        self.filters_panel = None
         self.setup_ui()
         # Set initial nav button state
         for btn_id, btn in self.nav_buttons.items():

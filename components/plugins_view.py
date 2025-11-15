@@ -296,6 +296,12 @@ class PluginsView(QWidget):
         self._resize_timer.setSingleShot(True)
         self._resize_timer.timeout.connect(self._handle_resize)
         
+        # UI components initialized in _init_ui
+        self.slider_layout = None
+        self.grid_layout = None
+        self._loading_container = None
+        self._scroll_area = None
+        
         self._init_specs()
         self._init_ui()
 

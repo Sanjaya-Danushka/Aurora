@@ -2180,8 +2180,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg")),
         ]
         
-        for source_name, icon_path in sources:
-            self.source_card.add_source(source_name, icon_path)
+        for source_name, source_icon_path in sources:
+            self.source_card.add_source(source_name, source_icon_path)
         
         self.sources_layout.addWidget(self.source_card)
         if not hasattr(self, 'git_manager') or self.git_manager is None:
@@ -2223,8 +2223,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg")),
             ("Local", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "local.svg"))
         ]
-        for source_name, icon_path in sources:
-            self.source_card.add_source(source_name, icon_path)
+        for source_name, source_icon_path in sources:
+            self.source_card.add_source(source_name, source_icon_path)
         self.sources_layout.addWidget(self.source_card)
         if not hasattr(self, 'git_manager') or self.git_manager is None:
             from managers.git_manager import GitManager
@@ -2254,8 +2254,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
             ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg"))
         ]
-        for source_name, icon_path in sources:
-            self.source_card.add_source(source_name, icon_path)
+        for source_name, source_icon_path in sources:
+            self.source_card.add_source(source_name, source_icon_path)
         try:
             for obj_name in ("searchModeTitle",):
                 w = self.source_card.findChild(QLabel, obj_name)
@@ -2284,8 +2284,8 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             ("Flatpak", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "flatpack.svg")),
             ("npm", os.path.join(os.path.dirname(__file__), "assets", "icons", "discover", "node.svg"))
         ]
-        for source_name, icon_path in sources:
-            self.source_card.add_source(source_name, icon_path)
+        for source_name, source_icon_path in sources:
+            self.source_card.add_source(source_name, source_icon_path)
         try:
             for obj_name in ("searchModeTitle",):
                 w = self.source_card.findChild(QLabel, obj_name)

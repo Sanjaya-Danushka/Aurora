@@ -603,12 +603,14 @@ class PluginsView(QWidget):
         
         layout.addWidget(bottom_row)
         
-        # Store reference for animation callbacks (similar to create_app_card)
-        card._is_installing = False
-        card._matching_plugin = matching_plugin  # Store plugin reference for refresh
+        # Store state using CardState class for proper encapsulation
+        card_state = CardState()
+        card_state.set_installed_state(is_installed)
+        card_state.set_matching_plugin(matching_plugin)
+        card.card_state = card_state
+        
         def set_card_installing(installing):
-            card._is_installed_state = is_installed  # Store current state
-            card._is_installing = installing
+            card_state.set_installing(installing)
             if installing:
                 for widget in card.findChildren(QPushButton):
                     widget.setEnabled(False)
@@ -616,7 +618,7 @@ class PluginsView(QWidget):
             else:
                 for widget in card.findChildren(QPushButton):
                     widget.setEnabled(True)
-                    widget.setText("Open" if card._is_installed_state else "Install")
+                    widget.setText("Open" if card_state.get_installed_state() else "Install")
         card.set_installing = set_card_installing
         
         return card

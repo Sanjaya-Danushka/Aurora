@@ -41,11 +41,13 @@ class LargeSearchBox(QWidget):
         self.system_update_timer = QTimer()
         self.progress_animations = []
         self.recent_updates_container = None
+        self.recent_updates_layout = None
         self.recent_updates = []
         self.system_data_cache = {}
         self.cache_timestamp = 0
         self.cache_duration = 30  # Cache for 30 seconds
         self.layout_switching = False
+        self.updates_timer = None
         self.system_update_timer.setInterval(2000)  # Update every 2 seconds
         self.system_update_timer.timeout.connect(self.update_system_health)
         self.init_ui()

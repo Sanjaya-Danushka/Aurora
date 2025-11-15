@@ -806,6 +806,8 @@ class PluginsView(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         # Enable scroll bar interaction
         scroll.verticalScrollBar().setCursor(Qt.CursorShape.PointingHandCursor)
         scroll.horizontalScrollBar().setCursor(Qt.CursorShape.PointingHandCursor)

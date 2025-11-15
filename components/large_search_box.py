@@ -421,7 +421,7 @@ class LargeSearchBox(QWidget):
             # Try to read pacman log
             result = subprocess.run(
                 ['/usr/bin/tail', '-n', '50', '/var/log/pacman.log'],
-                capture_output=True, text=True, timeout=5
+                capture_output=True, text=True, timeout=5, check=False
             )
             
             if result.returncode == 0:
@@ -572,7 +572,7 @@ class LargeSearchBox(QWidget):
         def fetch_package_count():
             result = subprocess.run(
                 ['/usr/bin/pacman', '-Q'], 
-                capture_output=True, text=True, timeout=3
+                capture_output=True, text=True, timeout=3, check=False
             )
             if result.returncode == 0:
                 return len(result.stdout.strip().split('\n'))
@@ -605,7 +605,7 @@ class LargeSearchBox(QWidget):
             # Use faster timeout for better responsiveness
             result = subprocess.run(
                 ['/usr/bin/checkupdates'], 
-                capture_output=True, text=True, timeout=5
+                capture_output=True, text=True, timeout=5, check=False
             )
             if result.returncode == 0 and result.stdout.strip():
                 count = len(result.stdout.strip().split('\n'))

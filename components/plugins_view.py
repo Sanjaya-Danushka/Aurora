@@ -1686,6 +1686,10 @@ class PluginsView(QWidget):
         if not self._all_cards:
             self._create_all_cards()
         
+        # Clear the grid layout
+        while self.grid_layout.count():
+            _ = self.grid_layout.takeAt(0)
+        
         # Get filter states
         show_available = self._current_filter_states.get('Available', True)
         show_installed = self._current_filter_states.get('Installed', True)
@@ -1693,14 +1697,20 @@ class PluginsView(QWidget):
         # Get source states
         show_pacman = self._current_source_states.get('pacman', True)
         show_aur = self._current_source_states.get('AUR', True)
+        show_flatpak = self._current_source_states.get('Flatpak', True)
+        show_npm = self._current_source_states.get('npm', True)
+        
+        # Filter cards based on both status and source
+        filtered_cards = []
+        for card_data in self._all_cards:
+            plugin = card_data['plugin']
+            is_installed = card_data['installed']
             
-        # Include card only if both filters match
-        if status_match and source_match:
-            filtered_cards.append(card_data)
             # Check status filter
             status_match = (is_installed and show_installed) or (not is_installed and show_available)
             
             # Check source filter
+            source = self._get_package_source(plugin).lower()
             source_match = False
             if source == 'pacman' and show_pacman:
                 source_match = True

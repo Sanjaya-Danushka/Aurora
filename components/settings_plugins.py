@@ -339,7 +339,6 @@ class PluginsSettingsWidget(QWidget):
         """Refresh the community packages display"""
         try:
             from services.bundle_service import list_community_bundles
-            from PyQt6.QtWidgets import QCheckBox
             
             # Clear existing packages
             self.community_plugins_table.setRowCount(0)

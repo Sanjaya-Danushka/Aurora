@@ -1602,9 +1602,11 @@ class PluginsView(QWidget):
             return
         if not hasattr(self, '_scroll_area'):
             return
-
-        def _step(attempts=[0]):
-            if attempts[0] >= 10:
+        
+        state = {'attempts': 0}
+        
+        def _step():
+            if state['attempts'] >= 10:
                 self._adjust_bottom_stretch()
                 return
             sb = self._scroll_area.verticalScrollBar()
@@ -1622,7 +1624,7 @@ class PluginsView(QWidget):
                     if self._is_loading:
                         QTimer.singleShot(120, _step)
                         return
-                    attempts[0] += 1
+                    state['attempts'] += 1
                     self._load_more_plugins()
                     QTimer.singleShot(120, _step)
                     return
@@ -1631,10 +1633,10 @@ class PluginsView(QWidget):
             if self._is_loading:
                 QTimer.singleShot(120, _step)
                 return
-            attempts[0] += 1
+            state['attempts'] += 1
             self._load_more_plugins()
             QTimer.singleShot(120, _step)
-
+        
         QTimer.singleShot(50, _step)
     
     def resizeEvent(self, event):

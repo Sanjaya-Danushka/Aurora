@@ -664,8 +664,8 @@ class PluginsView(QWidget):
                 categories_menu.addAction(all_action)
                 categories_menu.addSeparator()
                 
-                # Get unique categories from plugins
-                unique_categories = sorted({p.get('category', 'Utility') for p in self.plugins})
+                # Get unique categories from plugins using normalized mapping
+                unique_categories = sorted({self._category_for(p) for p in self.plugins})
                 
                 for category in unique_categories:
                     action = QAction(category, self)
@@ -880,8 +880,8 @@ class PluginsView(QWidget):
             for i in range(cols):
                 self.grid_layout.setColumnStretch(i, 1)
             
-            # Filter plugins based on selected category
-            filtered_cards = [c for c in self._all_cards if c['plugin'].get('category') == self._selected_category]
+            # Filter plugins based on selected category using normalized mapping
+            filtered_cards = [c for c in self._all_cards if self._category_for(c['plugin']) == self._selected_category]
             
             # Add filtered cards to layout and show them
             for i, card_data in enumerate(filtered_cards):
@@ -891,6 +891,7 @@ class PluginsView(QWidget):
                 self.grid_layout.addWidget(card_data['widget'], row, col)
             max_row = ((len(filtered_cards) - 1) // cols) if filtered_cards else 0
             self.grid_layout.setRowStretch(max_row + 1, 1)
+            QTimer.singleShot(10, self._adjust_bottom_stretch)
         else:
             # For "All" tab, use pagination system
             if not self._all_plugins:
@@ -927,6 +928,61 @@ class PluginsView(QWidget):
             return 'brew'
         else:
             return 'pacman'
+    
+    def _category_for(self, plugin):
+        cat = (plugin.get('category') or '').strip()
+        if cat:
+            c = cat.lower()
+            synonyms = {
+                'system': 'System Tools',
+                'system tool': 'System Tools',
+                'system tools': 'System Tools',
+                'utility': 'Utility',
+                'utilities': 'Utility',
+                'dev': 'Development',
+                'development': 'Development',
+                'internet': 'Internet',
+                'network': 'Internet',
+                'graphics': 'Graphics',
+                'multimedia': 'Multimedia',
+                'audio': 'Multimedia',
+                'video': 'Multimedia',
+                'office': 'Office',
+                'productivity': 'Office',
+                'education': 'Education',
+                'game': 'Games',
+                'games': 'Games',
+                'security': 'Security',
+                'communication': 'Communication',
+                'chat': 'Communication',
+            }
+            return synonyms.get(c, cat)
+        tags = plugin.get('tags') or []
+        tags_text = ' '.join(tags) if isinstance(tags, (list, tuple, set)) else str(tags)
+        text = ' '.join([
+            plugin.get('name', ''),
+            plugin.get('desc', ''),
+            plugin.get('id', ''),
+            plugin.get('pkg', ''),
+            tags_text,
+        ]).lower()
+        patterns = [
+            (('vscode','visual studio','code','editor','ide','developer','dev','git','node','npm','python','qt','gcc','make','electron','android studio'), 'Development'),
+            (('browser','firefox','chrome','web','network','mail','torrent','internet','ftp'), 'Internet'),
+            (('image','photo','graphic','draw','paint','gimp','krita','inkscape','blender'), 'Graphics'),
+            (('video','music','audio','player','vlc','mpv','spotify','media','ffmpeg'), 'Multimedia'),
+            (('chat','telegram','discord','slack','message','voip','call','communication'), 'Communication'),
+            (('system','monitor','btop','htop','terminal','shell','backup','timeshift','disk','partition','gparted','bleachbit'), 'System Tools'),
+            (('game','steam','lutris','retroarch','games'), 'Games'),
+            (('office','libreoffice','document','spreadsheet','writer','calc','pdf'), 'Office'),
+            (('learn','education','anki','study'), 'Education'),
+            (('password','privacy','guard','vpn','security','encrypt'), 'Security'),
+        ]
+        for kws, label in patterns:
+            for kw in kws:
+                if kw in text:
+                    return label
+        return 'Utility'
     
     @staticmethod
     def _get_source_icon(source):

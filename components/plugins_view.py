@@ -322,6 +322,7 @@ class PluginsView(QWidget):
         
         # Apps Grid
         self.create_apps_grid(layout)
+        QTimer.singleShot(100, self.populate_app_cards)
 
     def create_popular_slider(self, parent_layout):
         """Create the popular apps slider at the top"""
@@ -820,6 +821,7 @@ class PluginsView(QWidget):
         
         # Create grid container
         grid_container = QWidget()
+        grid_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.grid_layout = QGridLayout(grid_container)
         self.grid_layout.setSpacing(20)
         self.grid_layout.setContentsMargins(0, 0, 0, 0)
@@ -847,7 +849,6 @@ class PluginsView(QWidget):
         # Add grid and loading indicator to scroll layout
         scroll_layout.addWidget(grid_container)
         scroll_layout.addWidget(self._loading_container)
-        scroll_layout.addStretch()
         
         scroll.setWidget(scroll_widget)
         self._scroll_area = scroll  # Store reference for scroll handling
@@ -864,6 +865,9 @@ class PluginsView(QWidget):
             # Clear existing layout items (but don't delete widgets)
             while self.grid_layout.count():
                 _ = self.grid_layout.takeAt(0)
+            
+            # Reset row stretches before adding category cards
+            self._reset_row_stretches()
             
             # Hide all cards first
             for card_data in self._all_cards:
@@ -885,6 +889,8 @@ class PluginsView(QWidget):
                 col = i % cols
                 card_data['widget'].show()
                 self.grid_layout.addWidget(card_data['widget'], row, col)
+            max_row = ((len(filtered_cards) - 1) // cols) if filtered_cards else 0
+            self.grid_layout.setRowStretch(max_row + 1, 1)
         else:
             # For "All" tab, use pagination system
             if not self._all_plugins:
@@ -1405,6 +1411,9 @@ class PluginsView(QWidget):
         while self.grid_layout.count():
             _ = self.grid_layout.takeAt(0)
         
+        # Reset row stretches before re-adding cards
+        self._reset_row_stretches()
+        
         # Hide all cards first
         for card_data in self._all_cards:
             card_data['widget'].hide()
@@ -1450,6 +1459,12 @@ class PluginsView(QWidget):
             col = i % cols
             card_data['widget'].show()
             self.grid_layout.addWidget(card_data['widget'], row, col)
+        # Ensure the layout can scroll and does not keep a big empty bottom gap
+        max_row = ((len(filtered_cards) - 1) // cols) if filtered_cards else 0
+        self.grid_layout.setRowStretch(max_row + 1, 1)
+        if not self._selected_category:
+            QTimer.singleShot(50, self._ensure_scrollbar_visible)
+        QTimer.singleShot(10, self._adjust_bottom_stretch)
 
     def set_installing(self, plugin_id: str, installing: bool):
         """Update installing state for a plugin card"""
@@ -1483,8 +1498,20 @@ class PluginsView(QWidget):
             while self.grid_layout.count():
                 _ = self.grid_layout.takeAt(0)
             
-            # Load first batch of plugins (20 instead of 10 for initial load)
-            initial_batch = min(20, len(self._all_plugins))
+            # Load first batch sized to fill visible rows on current viewport
+            try:
+                viewport_w = self._scroll_area.viewport().width()
+                viewport_h = self._scroll_area.viewport().height()
+            except Exception:
+                viewport_w = self.width()
+                viewport_h = self.height()
+            spacing = self.grid_layout.spacing() if self.grid_layout else 20
+            unit_w = 340 + spacing
+            cols = max(1, min(6, (max(0, viewport_w) + spacing) // unit_w))
+            row_h = 140 + spacing
+            visible_rows = max(1, (viewport_h + spacing) // row_h)
+            initial_rows = visible_rows + 2  # fill screen + buffer
+            initial_batch = min(len(self._all_plugins), cols * initial_rows)
             self._load_initial_batch(initial_batch)
         else:
             # Just refresh the current view
@@ -1511,6 +1538,14 @@ class PluginsView(QWidget):
             }
             new_cards.append(card_data)
         
+        # Reset any previous row stretch factors
+        try:
+            rc = max(0, self.grid_layout.rowCount())
+            for r in range(rc + 4):
+                self.grid_layout.setRowStretch(r, 0)
+        except Exception:
+            pass
+
         # Add cards to grid using optimized positioning
         cols = self._current_cols
         for i in range(cols):
@@ -1520,27 +1555,89 @@ class PluginsView(QWidget):
         max_position = len(new_cards) - 1
         max_row_needed = max_position // cols
         
-        # Set row stretches efficiently
-        for r in range(max_row_needed + 1):
-            self.grid_layout.setRowStretch(r, 0)
-        
         # Add cards to positions
         for i, card_data in enumerate(new_cards):
             row = i // cols
             col = i % cols
             self.grid_layout.addWidget(card_data['widget'], row, col)
+        self.grid_layout.setRowStretch(max_row_needed + 1, 1)
         
         self._all_cards.extend(new_cards)
         self._loaded_count = batch_size
         
         # Hide loading indicator
         QTimer.singleShot(300, self._hide_loading_indicator)
+        QTimer.singleShot(20, self._ensure_scrollbar_visible)
         self._is_loading = False
     
     def _hide_loading_indicator(self):
         """Hide the loading indicator widget"""
         if hasattr(self, '_loading_container'):
             self._loading_container.setVisible(False)
+    
+    def _reset_row_stretches(self):
+        if not hasattr(self, 'grid_layout'):
+            return
+        try:
+            rc = max(0, self.grid_layout.rowCount())
+            for r in range(rc + 4):
+                self.grid_layout.setRowStretch(r, 0)
+        except Exception:
+            pass
+    
+    def _adjust_bottom_stretch(self):
+        """Always clear stretched bottom row to prevent visible empty space."""
+        if not hasattr(self, 'grid_layout'):
+            return
+        try:
+            last_row = max(0, self.grid_layout.rowCount() - 1)
+            self.grid_layout.setRowStretch(last_row, 0)
+        except Exception:
+            pass
+    
+    def _ensure_scrollbar_visible(self):
+        """Auto-load more batches until the scrollbar appears (or we run out of items)."""
+        # Only applies for the infinite-scroll 'All' view
+        if getattr(self, '_selected_category', None):
+            return
+        if not hasattr(self, '_scroll_area'):
+            return
+        
+        state = {'attempts': 0}
+        
+        def _step():
+            if state['attempts'] >= 10:
+                self._adjust_bottom_stretch()
+                return
+            sb = self._scroll_area.verticalScrollBar()
+            if (sb.maximum() > 0) or (self._loaded_count >= len(self._all_plugins)):
+                # If last row is not full, top it off to avoid a one-time gap
+                try:
+                    spacing = self.grid_layout.spacing() if self.grid_layout else 20
+                    viewport_w = self._scroll_area.viewport().width()
+                    cols = max(1, min(6, (max(0, viewport_w) + spacing) // (340 + spacing)))
+                except Exception:
+                    cols = max(1, int(self._current_cols) if hasattr(self, '_current_cols') else 1)
+                remaining = len(self._all_plugins) - self._loaded_count
+                need = (cols - (self._loaded_count % cols)) % cols
+                if need > 0 and remaining > 0:
+                    if self._is_loading:
+                        QTimer.singleShot(120, _step)
+                        return
+                    state['attempts'] += 1
+                    self._load_more_plugins()
+                    QTimer.singleShot(120, _step)
+                    return
+                self._adjust_bottom_stretch()
+                return
+            if self._is_loading:
+                QTimer.singleShot(120, _step)
+                return
+            state['attempts'] += 1
+            self._load_more_plugins()
+            QTimer.singleShot(120, _step)
+        
+        QTimer.singleShot(50, _step)
     
     def resizeEvent(self, event):
         """Handle window resize to update grid layout"""
@@ -1555,9 +1652,15 @@ class PluginsView(QWidget):
         if not hasattr(self, 'grid_layout') or not self.plugins:
             return
             
-        # Determine new column count
-        window_width = self.window().width() if self.window() else 1200
-        new_cols = 3 if window_width > 1000 else 2
+        # Determine new column count using actual viewport width
+        try:
+            viewport_width = self._scroll_area.viewport().width() if self._scroll_area else self.width()
+        except Exception:
+            viewport_width = self.width()
+        card_width = 340
+        spacing = self.grid_layout.spacing() if self.grid_layout else 20
+        total_unit = card_width + spacing
+        new_cols = max(1, min(5, (max(0, viewport_width) + spacing) // total_unit))
         
         # Only rebuild if column count changed
         if new_cols != self._current_cols:
@@ -1575,6 +1678,9 @@ class PluginsView(QWidget):
         while self.grid_layout.count():
             _ = self.grid_layout.takeAt(0)
         
+        # Reset row stretches before re-layout
+        self._reset_row_stretches()
+        
         # Get filtered cards
         filtered_cards = self._all_cards
         if self._selected_category:
@@ -1589,6 +1695,12 @@ class PluginsView(QWidget):
             row = i // cols
             col = i % cols
             self.grid_layout.addWidget(card_data['widget'], row, col)
+        max_row = ((len(filtered_cards) - 1) // cols) if filtered_cards else 0
+        self.grid_layout.setRowStretch(max_row + 1, 1)
+        # Adjust the bottom stretch so we don't keep a big empty row once scrolling is available
+        QTimer.singleShot(10, self._adjust_bottom_stretch)
+        if not self._selected_category:
+            QTimer.singleShot(50, self._ensure_scrollbar_visible)
     
     def _on_scroll(self, value):
         """Handle scroll events to detect when user reaches bottom"""
@@ -1616,9 +1728,18 @@ class PluginsView(QWidget):
         self._is_loading = True
         self._loading_container.setVisible(True)
         
-        # Calculate how many more plugins to load
+        # Calculate how many more plugins to load; align with row boundaries
         remaining = len(self._all_plugins) - self._loaded_count
-        batch_size = min(self._batch_size, remaining)
+        try:
+            viewport_w = self._scroll_area.viewport().width()
+        except Exception:
+            viewport_w = self.width()
+        spacing = self.grid_layout.spacing() if self.grid_layout else 20
+        unit_w = 340 + spacing
+        cols = max(1, min(6, (max(0, viewport_w) + spacing) // unit_w))
+        target_total = ((self._loaded_count + self._batch_size + cols - 1) // cols) * cols
+        min_needed = max(cols, target_total - self._loaded_count)
+        batch_size = min(remaining, min_needed)
         
         # Get next batch of plugins
         start_idx = self._loaded_count
@@ -1645,11 +1766,8 @@ class PluginsView(QWidget):
         max_position = self._loaded_count + len(new_cards) - 1
         max_row_needed = max_position // cols
         
-        # Ensure we have enough row stretch factors (batch operation)
-        current_row_count = self.grid_layout.rowCount()
-        if current_row_count <= max_row_needed:
-            for r in range(current_row_count, max_row_needed + 1):
-                self.grid_layout.setRowStretch(r, 0)
+        # Reset previous stretches so we don't leave a stretched empty row in the middle
+        self._reset_row_stretches()
         
         # Add cards to grid positions
         for i, card_data in enumerate(new_cards):
@@ -1657,6 +1775,10 @@ class PluginsView(QWidget):
             row = total_position // cols
             col = total_position % cols
             self.grid_layout.addWidget(card_data['widget'], row, col)
+        
+        # Add a final stretch row to enable scrolling
+        self.grid_layout.setRowStretch(max_row_needed + 1, 1)
+        QTimer.singleShot(10, self._adjust_bottom_stretch)
         
         # Add to all_cards list
         self._all_cards.extend(new_cards)

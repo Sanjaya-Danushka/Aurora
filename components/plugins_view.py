@@ -293,6 +293,7 @@ class PluginsView(QWidget):
         self._card_cache = {}
         self._category_filtered_plugins = []
         self._category_loaded_count = 0
+        self._is_layouting = False  # Guard to avoid loading during relayout
         
         # Debounce timer for resize events
         self._resize_timer = QTimer()
@@ -1051,6 +1052,45 @@ class PluginsView(QWidget):
                 self.grid_layout.setRowMinimumHeight(r, 140)
         except Exception:
             pass
+    
+    def _stop_deferred_loads(self):
+        try:
+            if self._load_timer is not None:
+                self._load_timer.stop()
+                self._load_timer = None
+        except Exception:
+            self._load_timer = None
+
+    def _begin_layout_update(self):
+        if self._is_layouting:
+            return False
+        self._is_layouting = True
+        self._stop_deferred_loads()
+        try:
+            self.setUpdatesEnabled(False)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, '_scroll_area') and self._scroll_area:
+                self._scroll_area.setUpdatesEnabled(False)
+                self._scroll_area.viewport().setUpdatesEnabled(False)
+        except Exception:
+            pass
+        return True
+
+    def _finish_layout_update(self):
+        try:
+            if hasattr(self, '_scroll_area') and self._scroll_area:
+                self._scroll_area.viewport().setUpdatesEnabled(True)
+                self._scroll_area.setUpdatesEnabled(True)
+                self._scroll_area.viewport().update()
+        except Exception:
+            pass
+        try:
+            self.setUpdatesEnabled(True)
+        except Exception:
+            pass
+        self._is_layouting = False
 
     def create_app_card(self, plugin_spec, icon, installed):
         """Create a medium-sized app card with enhanced styling"""
@@ -1635,6 +1675,7 @@ class PluginsView(QWidget):
     def _load_initial_batch(self, batch_size):
         """Load the initial batch of plugins for the All tab"""
         self._is_loading = True
+        self._begin_layout_update()
         self._loading_container.setVisible(True)
         
         # Get initial batch
@@ -1689,11 +1730,13 @@ class PluginsView(QWidget):
         QTimer.singleShot(300, self._hide_loading_indicator)
         QTimer.singleShot(20, self._ensure_scrollbar_visible)
         self._is_loading = False
+        self._finish_layout_update()
     
     def _load_initial_category_batch(self, batch_size):
         if self._is_loading:
             return
         self._is_loading = True
+        self._begin_layout_update()
         self._loading_container.setVisible(True)
         cols = self._current_cols
         for i in range(cols):
@@ -1713,6 +1756,7 @@ class PluginsView(QWidget):
         self._enforce_row_min_heights(max_row_needed)
         QTimer.singleShot(300, self._hide_loading_indicator)
         self._is_loading = False
+        self._finish_layout_update()
     
     def _hide_loading_indicator(self):
         """Hide the loading indicator widget"""
@@ -1852,6 +1896,7 @@ class PluginsView(QWidget):
         # Only rebuild if column count changed
         if new_cols != self._current_cols:
             self._current_cols = new_cols
+            self._stop_deferred_loads()
             # Use optimized layout update instead of full rebuild
             self._update_grid_layout()
     
@@ -1860,51 +1905,57 @@ class PluginsView(QWidget):
         if not self._all_cards:
             self.populate_app_cards()
             return
+        if self._is_layouting:
+            return
+        self._begin_layout_update()
         
-        # Clear layout items
-        while self.grid_layout.count():
-            _ = self.grid_layout.takeAt(0)
-        
-        # Reset row stretches before re-layout
-        self._reset_row_stretches()
-        
-        # Get filtered cards
-        filtered_cards = self._all_cards
-        if self._selected_category:
-            if hasattr(self, '_category_filtered_plugins') and self._category_loaded_count:
-                filtered_cards = [self._get_or_create_card(p) for p in self._category_filtered_plugins[:self._category_loaded_count]]
+        try:
+            # Clear layout items
+            while self.grid_layout.count():
+                _ = self.grid_layout.takeAt(0)
+            
+            # Reset row stretches before re-layout
+            self._reset_row_stretches()
+            
+            # Get filtered cards
+            filtered_cards = self._all_cards
+            if self._selected_category:
+                if hasattr(self, '_category_filtered_plugins') and self._category_loaded_count:
+                    filtered_cards = [self._get_or_create_card(p) for p in self._category_filtered_plugins[:self._category_loaded_count]]
+                else:
+                    # Fallback build from full dataset
+                    if not self._all_plugins:
+                        self._all_plugins = get_all_plugins_data()
+                    filtered_cards = [self._get_or_create_card(p) for p in self._all_plugins if self._category_for(p) == self._selected_category]
+            
+            # Re-layout with new column count
+            cols = self._current_cols
+            for i in range(cols):
+                self.grid_layout.setColumnStretch(i, 1)
+                try:
+                    self.grid_layout.setColumnMinimumWidth(i, 340)
+                except Exception:
+                    pass
+            
+            for i, card_data in enumerate(filtered_cards):
+                row = i // cols
+                col = i % cols
+                self.grid_layout.addWidget(card_data['widget'], row, col)
+            max_row = ((len(filtered_cards) - 1) // cols) if filtered_cards else 0
+            self.grid_layout.setRowStretch(max_row + 1, 1)
+            self._enforce_row_min_heights(max_row)
+            # Adjust the bottom stretch so we don't keep a big empty row once scrolling is available
+            QTimer.singleShot(10, self._adjust_bottom_stretch)
+            if self._selected_category:
+                QTimer.singleShot(50, self._ensure_category_scrollbar_visible)
             else:
-                # Fallback build from full dataset
-                if not self._all_plugins:
-                    self._all_plugins = get_all_plugins_data()
-                filtered_cards = [self._get_or_create_card(p) for p in self._all_plugins if self._category_for(p) == self._selected_category]
-        
-        # Re-layout with new column count
-        cols = self._current_cols
-        for i in range(cols):
-            self.grid_layout.setColumnStretch(i, 1)
-            try:
-                self.grid_layout.setColumnMinimumWidth(i, 340)
-            except Exception:
-                pass
-        
-        for i, card_data in enumerate(filtered_cards):
-            row = i // cols
-            col = i % cols
-            self.grid_layout.addWidget(card_data['widget'], row, col)
-        max_row = ((len(filtered_cards) - 1) // cols) if filtered_cards else 0
-        self.grid_layout.setRowStretch(max_row + 1, 1)
-        self._enforce_row_min_heights(max_row)
-        # Adjust the bottom stretch so we don't keep a big empty row once scrolling is available
-        QTimer.singleShot(10, self._adjust_bottom_stretch)
-        if self._selected_category:
-            QTimer.singleShot(50, self._ensure_category_scrollbar_visible)
-        else:
-            QTimer.singleShot(50, self._ensure_scrollbar_visible)
+                QTimer.singleShot(50, self._ensure_scrollbar_visible)
+        finally:
+            self._finish_layout_update()
     
     def _on_scroll(self, value):
         """Handle scroll events to detect when user reaches bottom"""
-        if self._is_loading or not hasattr(self, '_scroll_area'):
+        if self._is_loading or self._is_layouting or not hasattr(self, '_scroll_area'):
             return
             
         scrollbar = self._scroll_area.verticalScrollBar()
@@ -1933,6 +1984,7 @@ class PluginsView(QWidget):
             return
             
         self._is_loading = True
+        self._begin_layout_update()
         self._loading_container.setVisible(True)
         
         # Calculate how many more plugins to load; align with row boundaries
@@ -1993,11 +2045,13 @@ class PluginsView(QWidget):
         # Hide loading indicator after a short delay
         QTimer.singleShot(100, self._hide_loading_indicator)
         self._is_loading = False
+        self._finish_layout_update()
     
     def _load_more_category(self):
         if self._is_loading or self._category_loaded_count >= len(self._category_filtered_plugins):
             return
         self._is_loading = True
+        self._begin_layout_update()
         self._loading_container.setVisible(True)
         remaining = len(self._category_filtered_plugins) - self._category_loaded_count
         try:

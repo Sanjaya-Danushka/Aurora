@@ -3,8 +3,8 @@ LargeSearchBox Component - Large search box for package discovery
 """
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel, QPushButton, QFrame, QGridLayout, QProgressBar, QGraphicsDropShadowEffect
-from PyQt6.QtCore import Qt, pyqtSignal, QSize, QRectF, QTimer, QPropertyAnimation, QEasingCurve, pyqtProperty
-from PyQt6.QtGui import QPixmap, QPainter, QIcon, QColor, QResizeEvent, QLinearGradient, QBrush, QPen, QFont
+from PyQt6.QtCore import Qt, pyqtSignal, QSize, QRectF, QTimer, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QPixmap, QPainter, QIcon, QColor, QResizeEvent
 from PyQt6.QtSvg import QSvgRenderer
 import os
 import psutil

@@ -1060,7 +1060,7 @@ class PluginsView(QWidget):
             else:
                 source_icon_label.setText("📦")
                 source_icon_label.setStyleSheet("font-size: 10px;")
-        except:
+        except Exception:
             source_icon_label.setText("📦")
             source_icon_label.setStyleSheet("font-size: 10px;")
         

@@ -386,7 +386,7 @@ class LargeSearchBox(QWidget):
                 return f"{minutes}m ago"
             else:
                 return "Just now"
-        except:
+        except Exception:
             return "Unknown"
 
     def load_recent_updates(self):
@@ -519,7 +519,7 @@ class LargeSearchBox(QWidget):
         try:
             pkg_count = self.get_package_count()
             self.create_status_item("📦", "Installed Packages", f"{pkg_count} packages", "System packages")
-        except:
+        except Exception:
             self.create_status_item("📦", "Installed Packages", "Unknown", "System packages")
     
     def load_update_info(self):
@@ -527,7 +527,7 @@ class LargeSearchBox(QWidget):
         try:
             available_updates = self.check_available_updates()
             self.create_status_item("🔄", "Available Updates", available_updates, "Package manager")
-        except:
+        except Exception:
             self.create_status_item("🔄", "Available Updates", "Check manually", "Package manager")
 
     def get_cached_system_data(self, key, fetch_func):
@@ -545,7 +545,7 @@ class LargeSearchBox(QWidget):
             self.system_data_cache[key] = data
             self.cache_timestamp = current_time
             return data
-        except:
+        except Exception:
             # Return cached data if available, otherwise default
             return self.system_data_cache.get(key, "Unknown")
     

@@ -863,7 +863,7 @@ class PluginsView(QWidget):
             
             # Clear existing layout items (but don't delete widgets)
             while self.grid_layout.count():
-                child = self.grid_layout.takeAt(0)
+                _ = self.grid_layout.takeAt(0)
             
             # Hide all cards first
             for card_data in self._all_cards:
@@ -1206,7 +1206,6 @@ class PluginsView(QWidget):
 
     def _icon_for(self, spec):
         try:
-            icons_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "icons", "plugins"))
             path = spec.get('icon')
             if path and os.path.exists(path):
                 return self.get_icon_callback(os.path.normpath(path), 36)
@@ -1404,7 +1403,7 @@ class PluginsView(QWidget):
         
         # Clear the grid layout
         while self.grid_layout.count():
-            child = self.grid_layout.takeAt(0)
+            _ = self.grid_layout.takeAt(0)
         
         # Hide all cards first
         for card_data in self._all_cards:
@@ -1482,7 +1481,7 @@ class PluginsView(QWidget):
             
             # Clear existing grid
             while self.grid_layout.count():
-                child = self.grid_layout.takeAt(0)
+                _ = self.grid_layout.takeAt(0)
             
             # Load first batch of plugins (20 instead of 10 for initial load)
             initial_batch = min(20, len(self._all_plugins))
@@ -1574,7 +1573,7 @@ class PluginsView(QWidget):
         
         # Clear layout items
         while self.grid_layout.count():
-            child = self.grid_layout.takeAt(0)
+            _ = self.grid_layout.takeAt(0)
         
         # Get filtered cards
         filtered_cards = self._all_cards
@@ -1694,24 +1693,10 @@ class PluginsView(QWidget):
         # Get source states
         show_pacman = self._current_source_states.get('pacman', True)
         show_aur = self._current_source_states.get('AUR', True)
-        show_flatpak = self._current_source_states.get('Flatpak', True)
-        show_npm = self._current_source_states.get('npm', True)
-        
-        # Clear the grid layout
-        while self.grid_layout.count():
-            child = self.grid_layout.takeAt(0)
-        
-        # Hide all cards first
-        for card_data in self._all_cards:
-            card_data['widget'].hide()
-        
-        # Filter and display cards based on both status and source filters
-        filtered_cards = []
-        for card_data in self._all_cards:
-            is_installed = card_data['installed']
-            plugin = card_data['plugin']
-            source = self._get_package_source(plugin).lower()
             
+        # Include card only if both filters match
+        if status_match and source_match:
+            filtered_cards.append(card_data)
             # Check status filter
             status_match = (is_installed and show_installed) or (not is_installed and show_available)
             

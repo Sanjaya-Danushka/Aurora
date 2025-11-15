@@ -2,3 +2,4 @@ PyQt6==6.6.1
 requests
 # description
 #comments
+# performance

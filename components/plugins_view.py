@@ -664,7 +664,7 @@ class PluginsView(QWidget):
                 categories_menu.addSeparator()
                 
                 # Get unique categories from plugins
-                unique_categories = sorted(set(p.get('category', 'Utility') for p in self.plugins))
+                unique_categories = sorted({p.get('category', 'Utility') for p in self.plugins})
                 
                 for category in unique_categories:
                     action = QAction(category, self)

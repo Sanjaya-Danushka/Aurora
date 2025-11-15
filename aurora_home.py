@@ -1055,7 +1055,7 @@ class ArchPkgManagerUniGetUI(QMainWindow):
             # Switch to plugins view and show community tab
             self.switch_view("settings")
             # Wait a moment for the settings UI to load
-            QTimer.singleShot(100, lambda: self.switch_to_community_tab())
+            QTimer.singleShot(100, self.switch_to_community_tab)
         except Exception as e:
             self._show_message("Community Hub", f"Error opening community hub: {e}")
     

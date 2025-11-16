@@ -52,7 +52,14 @@ def load_updates(app):
                 if sync_result.returncode == 0:
                     app.log("Package database synced successfully")
                 else:
-                    app.log(f"Warning: Database sync failed: {sync_result.stderr}")
+                    err = sync_result.stderr or ""
+                    app.log(f"Warning: Database sync failed: {err}")
+                    low = err.lower()
+                    if ("could not lock database" in low) or ("unable to lock database" in low):
+                        try:
+                            app.ui_call.emit(lambda: app.show_busy_pm_warning(err))
+                        except Exception:
+                            pass
             except Exception as e:
                 app.log(f"Warning: Could not sync database: {str(e)}")
 

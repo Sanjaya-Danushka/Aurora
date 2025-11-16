@@ -4223,8 +4223,36 @@ def on_tick(app):
         """Public method to show a message in the console"""
         self.log(f"{title}: {text}")
     
+    def show_busy_pm_warning(self, details: str = "", retry_action=None):
+        try:
+            dlg = QMessageBox(self)
+            dlg.setIcon(QMessageBox.Icon.Warning)
+            dlg.setWindowTitle("Package Manager Busy")
+            dlg.setText("Another package manager is running")
+            dlg.setInformativeText("The package database is locked. Close other package tools (pacman, pamac, yay/paru) and retry.")
+            if details:
+                dlg.setDetailedText(details)
+            if callable(retry_action):
+                retry_btn = dlg.addButton("Retry", QMessageBox.ButtonRole.AcceptRole)
+                dlg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+                dlg.setDefaultButton(retry_btn)
+                dlg.exec()
+                if dlg.clickedButton() == retry_btn:
+                    try:
+                        retry_action()
+                    except Exception:
+                        pass
+            else:
+                dlg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                dlg.exec()
+        except Exception:
+            pass
+    
     def log(self, message):
-        self.console.append(message)
+        try:
+            self.ui_call.emit(lambda: self.console.append(message))
+        except Exception:
+            pass
     
     def _on_ui_call(self, fn):
         try:

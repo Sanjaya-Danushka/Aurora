@@ -10,12 +10,23 @@ from utils import sys_utils
 def update_packages(app, packages_by_source: dict):
     def update():
         try:
+            overall_success = True
+            lock_detected = False
+            lock_details = ""
             for source, pkgs in packages_by_source.items():
                 if source == 'pacman':
                     cmd = ["pacman", "-S", "--noconfirm"] + pkgs
                     worker = CommandWorker(cmd, sudo=True)
                     worker.output.connect(app.log)
-                    worker.error.connect(app.log)
+                    def _on_err(msg):
+                        nonlocal overall_success, lock_detected, lock_details
+                        app.log(msg)
+                        m = (msg or '').lower()
+                        if 'could not lock database' in m or 'unable to lock database' in m:
+                            lock_detected = True
+                            lock_details = msg
+                        overall_success = False
+                    worker.error.connect(_on_err)
                     worker.run()
                 elif source == 'AUR':
                     # Get the configured AUR helper
@@ -23,19 +34,28 @@ def update_packages(app, packages_by_source: dict):
                     aur_helper = sys_utils.get_aur_helper(None if preferred == 'auto' else preferred)
                     if not aur_helper:
                         app.log("Error: No AUR helper available. Install yay, paru, trizen, or pikaur.")
+                        overall_success = False
                         continue
                     
                     env, _ = app.prepare_askpass_env()
                     cmd = [aur_helper, "-S", "--noconfirm"] + pkgs
                     worker = CommandWorker(cmd, sudo=False, env=env)
                     worker.output.connect(app.log)
-                    worker.error.connect(app.log)
+                    def _on_err_aur(msg):
+                        nonlocal overall_success
+                        app.log(msg)
+                        overall_success = False
+                    worker.error.connect(_on_err_aur)
                     worker.run()
                 elif source == 'Flatpak':
                     cmd = ["flatpak", "update", "-y", "--noninteractive"] + pkgs
                     worker = CommandWorker(cmd, sudo=False)
                     worker.output.connect(app.log)
-                    worker.error.connect(app.log)
+                    def _on_err_fp(msg):
+                        nonlocal overall_success
+                        app.log(msg)
+                        overall_success = False
+                    worker.error.connect(_on_err_fp)
                     worker.run()
                 elif source == 'npm':
                     # Determine where each package is installed and update in that scope
@@ -89,14 +109,22 @@ def update_packages(app, packages_by_source: dict):
                         cmd_u = ["npm", "update", "-g"] + user_pkgs
                         w_u = CommandWorker(cmd_u, sudo=False, env=env_user)
                         w_u.output.connect(app.log)
-                        w_u.error.connect(app.log)
+                        def _on_err_np_u(msg):
+                            nonlocal overall_success
+                            app.log(msg)
+                            overall_success = False
+                        w_u.error.connect(_on_err_np_u)
                         w_u.run()
                     if sys_pkgs:
                         cmd_s = ["npm", "update", "-g"] + sys_pkgs
                         # Use pkexec (sudo=True) for system-global updates
                         w_s = CommandWorker(cmd_s, sudo=True, env=env_sys)
                         w_s.output.connect(app.log)
-                        w_s.error.connect(app.log)
+                        def _on_err_np_s(msg):
+                            nonlocal overall_success
+                            app.log(msg)
+                            overall_success = False
+                        w_s.error.connect(_on_err_np_s)
                         w_s.run()
                 elif source == 'Local':
                     entries = { (e.get('id') or e.get('name')): e for e in app.load_local_update_entries() }
@@ -118,9 +146,18 @@ def update_packages(app, packages_by_source: dict):
                             _, stderr = process.communicate()
                             if process.returncode != 0 and stderr:
                                 app.log(f"Error: {stderr}")
+                                overall_success = False
                         except Exception as ex:
                             app.log(str(ex))
-            app.show_message.emit("Update Complete", f"Successfully updated {sum(len(v) for v in packages_by_source.values())} package(s).")
+            if lock_detected:
+                try:
+                    app.ui_call.emit(lambda: app.show_busy_pm_warning(lock_details, retry_action=lambda: update_packages(app, packages_by_source)))
+                except Exception:
+                    pass
+            if overall_success:
+                app.show_message.emit("Update Complete", f"Successfully updated {sum(len(v) for v in packages_by_source.values())} package(s).")
+            else:
+                app.show_message.emit("Update Failed", "Some updates failed. See console for details.")
             try:
                 app.ui_call.emit(app.refresh_packages)
             except Exception:

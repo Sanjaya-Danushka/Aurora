@@ -4,8 +4,6 @@ NeoArch is a modern, user-friendly package manager designed specifically for Arc
 
 website: https://sanjaya-danushka.github.io/Neoarch/
 
-<a href="https://www.buymeacoffee.com/sanjayadanushka" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
-
 preview: https://drive.google.com/file/d/17cfs7VEui4zfFhghsIWBp2duqpPjWtEQ/view?usp=sharing
 
 <img width="1229" height="851" alt="Screenshot_20251111_185003" src="https://github.com/user-attachments/assets/1539d8eb-7d18-41e9-bc16-96ff061c1b4a" />

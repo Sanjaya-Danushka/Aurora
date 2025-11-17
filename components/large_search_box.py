@@ -17,12 +17,13 @@ import re
 class LargeSearchBox(QWidget):
     """Large search box component for discover page"""
 
-    search_requested = pyqtSignal(str)  # Emits query when search is triggered
+    search_requested = pyqtSignal(str)  # Emits query for auto-search
+    search_submitted = pyqtSignal(str)  # Emits query for explicit submit (enter/button)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.search_timer = QTimer()
-        self.search_timer.setInterval(300)  # Faster response
+        self.search_timer.setInterval(800)  # Faster response
         self.search_timer.setSingleShot(True)
         self.search_timer.timeout.connect(self.on_auto_search)
         self.highlight_widgets = []
@@ -991,7 +992,7 @@ class LargeSearchBox(QWidget):
         query = self.search_input.text().strip()
         if query:
             self.search_timer.stop()  # Stop any pending auto-search
-            self.search_requested.emit(query)
+            self.search_submitted.emit(query)
 
     def set_compact_mode(self, compact: bool):
         self.compact_mode = compact

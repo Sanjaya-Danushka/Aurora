@@ -222,8 +222,38 @@ class ArchPkgManagerUniGetUI(QMainWindow):
 
     def on_large_search_requested(self, query):
         """Handle search request from large search box"""
-        self.search_input.setText(query)
+        try:
+            self.search_input.blockSignals(True)
+            self.search_input.setText(query)
+        finally:
+            try:
+                self.search_input.blockSignals(False)
+            except Exception:
+                pass
+        # Ensure user can continue typing seamlessly in the top search field
+        try:
+            self.search_input.setFocus()
+            self.search_input.setCursorPosition(len(query))
+        except Exception:
+            pass
         self.perform_search()
+
+    def on_large_search_submitted(self, query):
+        """Handle explicit submit from large search box (enter/button)"""
+        try:
+            self.search_input.blockSignals(True)
+            self.search_input.setText(query)
+        finally:
+            try:
+                self.search_input.blockSignals(False)
+            except Exception:
+                pass
+        self.perform_search()
+        try:
+            self.search_input.setFocus()
+            self.search_input.setCursorPosition(len(query))
+        except Exception:
+            pass
 
     def on_search_text_changed(self):
         try:
@@ -1259,6 +1289,11 @@ class ArchPkgManagerUniGetUI(QMainWindow):
         # Large search box for discover page
         self.large_search_box = LargeSearchBox()
         self.large_search_box.search_requested.connect(self.on_large_search_requested)
+        # Explicit submit from large box (enter or button)
+        try:
+            self.large_search_box.search_submitted.connect(self.on_large_search_submitted)
+        except Exception:
+            pass
         self.packages_panel_layout.addWidget(self.large_search_box)
         
         # Loading spinner widget

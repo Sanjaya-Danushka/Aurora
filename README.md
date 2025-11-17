@@ -2,7 +2,11 @@
 
 NeoArch is a modern, user-friendly package manager designed specifically for Arch Linux. It provides an intuitive graphical interface for managing packages from multiple sources including pacman, AUR, Flatpak, and npm.
 
-https://drive.google.com/file/d/17cfs7VEui4zfFhghsIWBp2duqpPjWtEQ/view?usp=sharing
+website: https://sanjaya-danushka.github.io/Neoarch/
+
+<script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="sanjayadanushka" data-color="#FFDD00" data-emoji=""  data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" ></script>
+
+preview: https://drive.google.com/file/d/17cfs7VEui4zfFhghsIWBp2duqpPjWtEQ/view?usp=sharing
 
 <img width="1229" height="851" alt="Screenshot_20251111_185003" src="https://github.com/user-attachments/assets/1539d8eb-7d18-41e9-bc16-96ff061c1b4a" />
 
